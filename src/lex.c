@@ -4,31 +4,50 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "lex.h"
+
 #define WHITE " \t\v\f\n"
 
-enum lex_tok {
-	tok_eol,
-	tok_sep,
-	tok_pipe,
-	tok_str,
-	tok_word
-};
-
-struct lex_state {
-	char c;
-};
-
-enum lex_tok
+static enum lex_tok
 lex_push(const char **p, const char **s, const char **e)
 {
+#if 0
+	size_t i;
+
+	struct {
+		enum lex_tok tok;
+		const char *name;
+	} keywords[] = {
+		{ tok_if,    "if"    },
+		{ tok_else,  "else"  },
+		{ tok_while, "while" }
+	};
+#endif
+
 	assert(p != NULL);
 
 	*p += strspn(*p, WHITE);
 
 	switch (**p) {
-	case '\0': *s = *p; *e = *s;             return tok_eol;
-	case ';':  *s = *p; *e = *s + 1; (*p)++; return tok_sep;
-	case '|':  *s = *p; *e = *s + 1; (*p)++; return tok_pipe;
+	case '\0':
+		*s = *p;
+		*e = *s;
+		return tok_nl;
+
+	case ';':
+	case '=':
+	case '.':
+	case '`':
+	case '$':
+	case '|':
+	case '{':
+	case '}':
+	case '(':
+	case ')':
+		*s = *p;
+		*e = *s + 1;
+		(*p)++;
+		return **s;
 
 	case '\'':
 		(*p)++;
@@ -42,15 +61,29 @@ lex_push(const char **p, const char **s, const char **e)
 		*s = *p;
 		*p += strcspn(*p, WHITE ";|'");
 		*e = *p;
-		return tok_word;
 	}
+
+#if 0
+	for (i = 0; i < sizeof keywords / sizeof *keywords; i++) {
+		if (*e - *s != (int) strlen(keywords[i].name)) {
+			continue;
+		}
+
+		if (0 == strncmp(*s, keywords[i].name, *e - *s)) {
+			return keywords[i].tok;
+		}
+	}
+#endif
+
+	return tok_str;
 }
 
-enum lex_tok
+int
 lex_next(const char **s, const char **e)
 {
 	static char buf[4096];
 	static const char *p = buf;
+	enum lex_tok t;
 
 	if (*p == '\0') {
 		buf[sizeof buf - 1] = 'x';
@@ -62,7 +95,7 @@ lex_next(const char **s, const char **e)
 				return -1;
 			}
 
-			return tok_eol;
+			return tok_eof;
 		}
 
 		if (buf[sizeof buf - 1] == '\0' && buf[sizeof buf - 2] != '\n') {
@@ -77,50 +110,12 @@ lex_next(const char **s, const char **e)
 		}
 	}
 
-	return lex_push(&p, s, e);
-}
+	t = lex_push(&p, s, e);
 
-static struct ast *
-parse(void)
-{
-	const char *s, *e;
-	struct ast *ast;
-	enum lex_tok t;
+	fprintf(stderr, "<%d:%c '%.*s'>\n",
+		(unsigned char) t, (unsigned char) t,
+		(int) (*e - *s), *s);
 
-	do {
-		/* TODO: recursive descent parser here */
-		t = lex_next(&s, &e);
-		if (t == -1) {
-/* TODO: free ast in progress */
-			return NULL;
-		}
-
-		printf("<#%d '%.*s'>\n", t, (int) (e - s), s);
-	} while (t != tok_eol);
-
-	ast = NULL;
-
-	return ast;
-}
-
-int
-main(void)
-{
-	struct ast *ast;
-
-	/* TODO: feed from -c string or from stdin, or from filename */
-	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
-
-	for (;;) {
-		ast = parse();
-		if (ast == NULL) {
-			perror("parse");
-			return -1;
-		}
-
-		/* TODO: do something with ast */
-	}
-
-	return 0;
+	return t;
 }
 
