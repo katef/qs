@@ -4,9 +4,12 @@
 #include <errno.h>
 
 #include "lex.h"
+#include "ast.h"
+#include "parse.h"
 
 static int
-parse_list(int *t, const char **s, const char **e);
+parse_list(int *t, const char **s, const char **e,
+	struct ast_node **node_out);
 
 /*
  * <exec>
@@ -14,15 +17,37 @@ parse_list(int *t, const char **s, const char **e);
  *   ;
  */ 
 static int
-parse_exec(int *t, const char **s, const char **e)
+parse_exec(int *t, const char **s, const char **e,
+	struct ast_exec **exec_out)
 {
+	struct ast_arg  *arg;
+	struct ast_arg  **next;
+
+	/* TODO: possibly e and s can just be const char * */
+
+	assert(t != NULL && *t != -1);
+	assert(s != NULL && *s != NULL);
+	assert(e != NULL && *e != NULL);
+	assert(exec_out != NULL);
+
 	if (*t != tok_str) {
 		return -1;
 	}
 
+	*exec_out = ast_new_exec(*e - *s, *s);
+	if (*exec_out == NULL) {
+		return -1;
+	}
+
+	next = &(*exec_out)->arg;
+
+	assert(*next == NULL);
+
 	for (;;) {
 		*t = lex_next(s, e);
 		if (*t == -1) {
+			/* TODO: free *exec_out here */
+
 			return -1;
 		}
 
@@ -30,8 +55,15 @@ parse_exec(int *t, const char **s, const char **e)
 			break;
 		}
 
-		/* TODO: ast_new_cmd() should emit &cmd->next for the arg list */
-		/* TODO: write arg to *next here, at end of list */
+		arg = ast_new_arg(*e - *s, *s);
+		if (arg == NULL) {
+			/* TODO: free *exec_out here */
+
+			return -1;
+		}
+
+		*next = arg;
+		next = &arg->next;
 	}
 
 	fprintf(stderr, "<exec> : <str> { <str> } ;\n"); /* TODO: show actual strs */
@@ -47,8 +79,17 @@ parse_exec(int *t, const char **s, const char **e)
  *   ;
  */
 static int
-parse_cmd(int *t, const char **s, const char **e)
+parse_cmd(int *t, const char **s, const char **e,
+	struct ast_node **node_out)
 {
+	struct ast_exec *exec;
+	struct ast_node *child;
+
+	assert(t != NULL && *t != -1);
+	assert(s != NULL && *s != NULL);
+	assert(e != NULL && *e != NULL);
+	assert(node_out != NULL);
+
 	switch (*t) {
 	case tok_obrace:
 		*t = lex_next(s, e);
@@ -56,7 +97,7 @@ parse_cmd(int *t, const char **s, const char **e)
 			return -1;
 		}
 
-		if (-1 == parse_list(t, s, e)) {
+		if (-1 == parse_list(t, s, e, &child)) {
 			return -1;
 		}
 
@@ -71,20 +112,32 @@ parse_cmd(int *t, const char **s, const char **e)
 			return -1;
 		}
 
+		*node_out = ast_new_node_node(child);
+		if (*node_out == NULL) {
+			return -1;
+		}
+
 		return 0;
 
 	default:
-		if (-1 == parse_exec(t, s, e)) {
+		if (-1 == parse_exec(t, s, e, &exec)) {
 			break;
 		}
 
 		fprintf(stderr, "<cmd> : <exec> ;\n");
+
+		*node_out = ast_new_node_exec(exec);
+		if (*node_out == NULL) {
+			return -1;
+		}
 
 		return 0;
 	}
 
 	if (errno == 0) {
 		fprintf(stderr, "<cmd> : ;\n");
+
+		*node_out = NULL;
 
 		return 0;
 	}
@@ -98,11 +151,18 @@ parse_cmd(int *t, const char **s, const char **e)
  *   ;
  */
 static int
-parse_list(int *t, const char **s, const char **e)
+parse_list(int *t, const char **s, const char **e,
+	struct ast_node **node_out)
 {
-	if (-1 == parse_cmd(t, s, e)) {
+	assert(t != NULL && *t != -1);
+	assert(s != NULL && *s != NULL);
+	assert(e != NULL && *e != NULL);
+
+	if (-1 == parse_cmd(t, s, e, node_out)) {
 		return -1;
 	}
+
+	assert(*node_out == NULL || (*node_out)->next == NULL);
 
 	if (*t != tok_semi && *t != tok_nl) {
 		fprintf(stderr, "<list> : <cmd> ;\n");
@@ -112,14 +172,19 @@ parse_list(int *t, const char **s, const char **e)
 
 	*t = lex_next(s, e);
 	if (*t == -1) {
+		/* TODO: free *node_out */
+
 		return -1;
 	}
 
-	if (0 == parse_list(t, s, e)) {
+	/* TODO: this would probably be be saner as a loop */
+	if (0 == parse_list(t, s, e, *node_out == NULL ? node_out : &(*node_out)->next)) {
 		fprintf(stderr, "<list> : <cmd> \"%c\" <list> ;\n", *t);
 
 		return 0;
 	}
+
+	/* TODO: free *node_out */
 
 	errno = 0;
 
@@ -132,9 +197,14 @@ parse_list(int *t, const char **s, const char **e)
  *   ;
  */
 static int
-parse_entry(int *t, const char **s, const char **e)
+parse_entry(int *t, const char **s, const char **e,
+	struct ast_node **node_out)
 {
-	if (-1 == parse_list(t, s, e)) {
+	assert(t != NULL && *t != -1);
+	assert(s != NULL && *s != NULL);
+	assert(e != NULL && *e != NULL);
+
+	if (-1 == parse_list(t, s, e, node_out)) {
 		return -1;
 	}
 
@@ -144,42 +214,32 @@ parse_entry(int *t, const char **s, const char **e)
 		return 0;
 	}
 
+	/* TODO: free child */
+
 	errno = 0;
 
 	return -1;
 }
 
-static int
+struct ast_node *
 parse(void)
 {
+	struct ast_node *node;
 	const char *s, *e;
 	int t;
 
 	t = lex_next(&s, &e);
 	if (t == -1) {
-		return -1;
+		return NULL;
 	}
 
-	/* TODO: pass &ast as argument to populate */
-	return parse_entry(&t, &s, &e);
-}
+	assert(s != NULL);
+	assert(e != NULL);
 
-int
-main(void)
-{
-	/* TODO: feed from -c string or from stdin, or from filename */
-	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
-
-	if (-1 == parse()) {
-		perror("parse");
-		/* TODO: free ast */
-		return -1;
+	if (-1 == parse_entry(&t, &s, &e, &node)) {
+		return NULL;
 	}
 
-	/* TODO: do something with ast */
-
-	/* TODO: free ast */
-
-	return 0;
+	return node;
 }
 
