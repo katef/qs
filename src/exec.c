@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "debug.h"
 #include "ast.h"
 
 static char **
@@ -70,7 +71,9 @@ exec_exec(struct ast_exec *exec)
 			return -1;
 		}
 
-		dump_argv("execv", argv);
+		if (debug & DEBUG_EXEC) {
+			dump_argv("execv", argv);
+		}
 
 		(void) execv(argv[0], argv);
 
@@ -81,7 +84,9 @@ exec_exec(struct ast_exec *exec)
 			return -1;
 		}
 
-		fprintf(stderr, "# $?=%d\n", status);
+		if (debug & DEBUG_EXEC) {
+			fprintf(stderr, "# $?=%d\n", status);
+		}
 
 		/* TODO: store $? */
 

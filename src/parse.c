@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "debug.h"
 #include "lex.h"
 #include "ast.h"
 #include "exec.h"
@@ -64,7 +65,9 @@ parse_exec(int *t, const char **s, const char **e,
 		next = &arg->next;
 	}
 
-	fprintf(stderr, "exec -> str { str } ;\n"); /* TODO: show actual strs */
+	if (debug & DEBUG_PARSE) {
+		fprintf(stderr, "exec -> str { str } ;\n"); /* TODO: show actual strs */
+	}
 
 	return 0;
 
@@ -113,7 +116,9 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
-		fprintf(stderr, "cmd -> \"{\" block \"}\" ;\n");
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "cmd -> \"{\" block \"}\" ;\n");
+		}
 
 		*t = lex_next(s, e);
 		if (*t == -1) {
@@ -132,7 +137,9 @@ parse_cmd(int *t, const char **s, const char **e,
 			break;
 		}
 
-		fprintf(stderr, "cmd -> exec ;\n");
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "cmd -> exec ;\n");
+		}
 
 		*node_out = ast_new_node_exec(exec);
 		if (*node_out == NULL) {
@@ -143,7 +150,9 @@ parse_cmd(int *t, const char **s, const char **e,
 	}
 
 	if (errno == 0) {
-		fprintf(stderr, "cmd -> ;\n");
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "cmd -> ;\n");
+		}
 
 		*node_out = NULL;
 
@@ -155,7 +164,9 @@ parse_cmd(int *t, const char **s, const char **e,
 accept:
 
 	if (execute) {
-		ast_dump(*node_out);
+		if (debug & DEBUG_AST) {
+			ast_dump(*node_out);
+		}
 
 		exec_node(*node_out);
 
@@ -207,13 +218,15 @@ parse_list(int *t, const char **s, const char **e,
 		}
 	}
 
-	fprintf(stderr, "list -> cmd");
+	if (debug & DEBUG_PARSE) {
+		fprintf(stderr, "list -> cmd");
 
-	while (n--) {
-		fprintf(stderr, " \";\" cmd");
+		while (n--) {
+			fprintf(stderr, " \";\" cmd");
+		}
+
+		fprintf(stderr, " ;\n");
 	}
-
-	fprintf(stderr, " ;\n");
 
 	return 0;
 
@@ -247,7 +260,9 @@ parse_entry(int *t, const char **s, const char **e,
 	}
 
 	if (*t == tok_eof) {
-		fprintf(stderr, "entry -> list eof ;\n");
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "entry -> list eof ;\n");
+		}
 
 		return 0;
 	}

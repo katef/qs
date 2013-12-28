@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "debug.h"
 #include "lex.h"
 
 #define WHITE " \t\v\f\n"
@@ -101,7 +102,9 @@ lex_next(const char **s, const char **e)
 			return tok_eof;
 		}
 
-		fprintf(stderr, "[%s]\n", buf);
+		if (debug & DEBUG_BUF) {
+			fprintf(stderr, "[%s]\n", buf);
+		}
 
 		if (buf[sizeof buf - 1] == '\0' && buf[sizeof buf - 2] != '\n') {
 			int c;
@@ -126,8 +129,10 @@ lex_next(const char **s, const char **e)
 	default:      name = "";     break;
 	}
 
-	fprintf(stderr, "<%s\"%.*s\">\n",
-		name, (int) (*e - *s), *s);
+	if (debug & DEBUG_LEX) {
+		fprintf(stderr, "<%s\"%.*s\">\n",
+			name, (int) (*e - *s), *s);
+	}
 
 	return t;
 }
