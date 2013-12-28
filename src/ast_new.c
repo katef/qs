@@ -58,7 +58,7 @@ ast_new_node_exec(struct ast_exec *exec)
 		return NULL;
 	}
 
-	node->type   = AST_NODE_EXE;
+	node->type   = AST_EXEC;
 	node->u.exec = exec;
 	node->next   = NULL;
 
@@ -77,7 +77,7 @@ ast_new_node_node(struct ast_node *child)
 		return NULL;
 	}
 
-	node->type   = AST_NODE_CMD;
+	node->type   = AST_NODE;
 	node->u.node = child;
 	node->next   = NULL;
 

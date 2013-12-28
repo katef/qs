@@ -22,6 +22,7 @@ parse_exec(int *t, const char **s, const char **e,
 {
 	struct ast_arg  *arg;
 	struct ast_arg  **next;
+	int err;
 
 	/* TODO: possibly e and s can just be const char * */
 
@@ -46,9 +47,7 @@ parse_exec(int *t, const char **s, const char **e,
 	for (;;) {
 		*t = lex_next(s, e);
 		if (*t == -1) {
-			/* TODO: free *exec_out here */
-
-			return -1;
+			goto error;
 		}
 
 		if (*t != tok_str) {
@@ -57,9 +56,7 @@ parse_exec(int *t, const char **s, const char **e,
 
 		arg = ast_new_arg(*e - *s, *s);
 		if (arg == NULL) {
-			/* TODO: free *exec_out here */
-
-			return -1;
+			goto error;
 		}
 
 		*next = arg;
@@ -69,6 +66,16 @@ parse_exec(int *t, const char **s, const char **e,
 	fprintf(stderr, "<exec> : <str> { <str> } ;\n"); /* TODO: show actual strs */
 
 	return 0;
+
+error:
+
+	err = errno;
+
+	ast_free_exec(*exec_out);
+
+	errno = err;
+
+	return -1;
 }
 
 /*
@@ -154,6 +161,8 @@ static int
 parse_list(int *t, const char **s, const char **e,
 	struct ast_node **node_out)
 {
+	int err;
+
 	assert(t != NULL && *t != -1);
 	assert(s != NULL && *s != NULL);
 	assert(e != NULL && *e != NULL);
@@ -172,9 +181,7 @@ parse_list(int *t, const char **s, const char **e,
 
 	*t = lex_next(s, e);
 	if (*t == -1) {
-		/* TODO: free *node_out */
-
-		return -1;
+		goto error;
 	}
 
 	/* TODO: this would probably be be saner as a loop */
@@ -184,9 +191,17 @@ parse_list(int *t, const char **s, const char **e,
 		return 0;
 	}
 
-	/* TODO: free *node_out */
-
 	errno = 0;
+
+error:
+
+	err = errno;
+
+	if (*node_out != NULL) {
+		ast_free_node(*node_out);
+	}
+
+	errno = err;
 
 	return -1;
 }
@@ -213,8 +228,6 @@ parse_entry(int *t, const char **s, const char **e,
 
 		return 0;
 	}
-
-	/* TODO: free child */
 
 	errno = 0;
 

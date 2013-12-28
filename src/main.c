@@ -14,17 +14,22 @@ main(void)
 	node = parse();
 	if (node == NULL) {
 		perror("parse");
-		/* TODO: free ast */
-		return 1;
+		goto error;
 	}
 
 	if (-1 == ast_dump(node)) {
 		perror("ast_dump");
-		return 1;
+		goto error;
 	}
 
-	/* TODO: free ast */
+	ast_free_node(node);
 
 	return 0;
+
+error:
+
+	ast_free_node(node);
+
+	return 1;
 }
 

@@ -2,8 +2,8 @@
 #define AST_H
 
 enum ast_node_type {
-	AST_NODE_EXE,
-	AST_NODE_CMD
+	AST_EXEC,
+	AST_NODE
 };
 
 struct ast_arg {
@@ -40,6 +40,15 @@ ast_new_node_exec(struct ast_exec *exec);
 
 struct ast_node *
 ast_new_node_node(struct ast_node *node);
+
+void
+ast_free_arg(struct ast_arg *arg);
+
+void
+ast_free_exec(struct ast_exec *exec);
+
+void
+ast_free_node(struct ast_node *node);
 
 int
 ast_dump(const struct ast_node *node);

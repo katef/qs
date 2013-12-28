@@ -60,8 +60,8 @@ dump_node(const struct ast_node *node, unsigned n)
 		int r;
 
 		switch (node->type) {
-		case AST_NODE_EXE: r = dump_exec(node->u.exec, n + 1); break;
-		case AST_NODE_CMD: r = dump_node(node->u.node, n + 1); break;
+		case AST_EXEC: r = dump_exec(node->u.exec, n + 1); break;
+		case AST_NODE: r = dump_node(node->u.node, n + 1); break;
 
 		default:
 			errno = EINVAL;
