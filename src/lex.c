@@ -83,6 +83,7 @@ lex_next(const char **s, const char **e)
 {
 	static char buf[4096];
 	static const char *p = buf;
+	const char *name;
 	enum lex_tok t;
 
 	if (*p == '\0') {
@@ -112,9 +113,15 @@ lex_next(const char **s, const char **e)
 
 	t = lex_push(&p, s, e);
 
-	fprintf(stderr, "<%d:%c '%.*s'>\n",
-		(unsigned char) t, (unsigned char) t,
-		(int) (*e - *s), *s);
+	switch (t) {
+	case tok_eof: name = "eof "; break;
+	case tok_nl:  name = "nl ";  break;
+	case tok_str: name = "str "; break;
+	default:      name = "";     break;
+	}
+
+	fprintf(stderr, "<%s'%.*s'>\n",
+		name, (int) (*e - *s), *s);
 
 	return t;
 }
