@@ -9,29 +9,31 @@
 
 #include "debug.h"
 #include "ast.h"
+#include "builtin.h"
 
 static char **
-make_argv(const struct ast_exec *exec)
+make_argv(const struct ast_exec *exec, int *argc)
 {
 	const struct ast_arg *arg;
 	char **argv;
-	int n;
 
-	for (n = 1, arg = exec->arg; arg != NULL; arg = arg->next, n++)
+	assert(argc != NULL);
+
+	for (*argc = 1, arg = exec->arg; arg != NULL; arg = arg->next, (*argc)++)
 		;
 
-	argv = malloc((n + 1) * sizeof *argv);
+	argv = malloc((*argc + 1) * sizeof *argv);
 	if (argv == NULL) {
 		return NULL;
 	}
 
 	argv[0] = exec->s;
 
-	for (n = 1, arg = exec->arg; arg != NULL; arg = arg->next, n++) {
-		argv[n] = arg->s;
+	for (*argc = 1, arg = exec->arg; arg != NULL; arg = arg->next, (*argc)++) {
+		argv[*argc] = arg->s;
 	}
 
-	argv[n] = NULL;
+	argv[*argc] = NULL;
 
 	return argv;
 }
@@ -50,48 +52,32 @@ dump_argv(const char *name, char **argv)
 		fprintf(stderr, " \"%s\"", argv[i]);
 	}
 
-	fprintf(stderr, "]\n");
+	fprintf(stderr, " ]\n");
 }
 
 static int
 exec_exec(struct ast_exec *exec)
 {
 	char **argv;
-	pid_t pid;
-	int status;
+	int argc;
+	int r;
 
-	pid = fork();
-	switch (pid) {
-	case -1:
+	argv = make_argv(exec, &argc);
+	if (argv == NULL) {
 		return -1;
-
-	case 0:
-		argv = make_argv(exec);
-		if (argv == NULL) {
-			return -1;
-		}
-
-		if (debug & DEBUG_EXEC) {
-			dump_argv("execv", argv);
-		}
-
-		(void) execv(argv[0], argv);
-
-		exit(errno);
-
-	default:
-		if (-1 == waitpid(pid, &status, 0)) {
-			return -1;
-		}
-
-		if (debug & DEBUG_EXEC) {
-			fprintf(stderr, "# $?=%d\n", status);
-		}
-
-		/* TODO: store $? */
-
-		return 0;
 	}
+
+	if (debug & DEBUG_EXEC) {
+		dump_argv("execv", argv);
+	}
+
+	assert(argc >= 1);
+
+	r = builtin(argc, argv);
+
+	free(argv);
+
+	return r;
 }
 
 int
