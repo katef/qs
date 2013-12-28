@@ -109,6 +109,8 @@ lex_next(const char **s, const char **e)
 
 			return -1;
 		}
+
+		p = buf;
 	}
 
 	t = lex_push(&p, s, e);
