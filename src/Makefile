@@ -5,6 +5,7 @@ OBJS += parse.o
 OBJS += ast_new.o
 OBJS += ast_free.o
 OBJS += ast_dump.o
+OBJS += exec.o
 OBJS += main.o
 
 kcsh: $(OBJS)

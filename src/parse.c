@@ -5,6 +5,7 @@
 
 #include "lex.h"
 #include "ast.h"
+#include "exec.h"
 #include "parse.h"
 
 static int
@@ -155,6 +156,8 @@ accept:
 
 	if (execute) {
 		ast_dump(*node_out);
+
+		exec_node(*node_out);
 
 		ast_free_node(*node_out);
 
