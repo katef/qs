@@ -17,7 +17,7 @@ builtin_cd(int argc, char *const *argv)
 	assert(argc >= 1);
 	assert(argv != NULL);
 
-	if (argc != 1) {
+	if (argc != 2) {
 		fprintf(stderr, "usage: cd <dir>\n");
 		return 1;
 	}
