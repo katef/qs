@@ -48,8 +48,6 @@ dump_exec(const struct ast_exec *exec, unsigned n)
 static int
 dump_node(const struct ast_node *node, unsigned n)
 {
-	assert(node != NULL);
-
 	if (-1 == indent(n)) {
 		return -1;
 	}
