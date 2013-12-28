@@ -63,7 +63,7 @@ parse_exec(int *t, const char **s, const char **e,
 		next = &arg->next;
 	}
 
-	fprintf(stderr, "<exec> : <str> { <str> } ;\n"); /* TODO: show actual strs */
+	fprintf(stderr, "exec -> str { str } ;\n"); /* TODO: show actual strs */
 
 	return 0;
 
@@ -112,7 +112,7 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
-		fprintf(stderr, "<cmd> : \"{\" <block> \"}\" ;\n");
+		fprintf(stderr, "cmd -> \"{\" block \"}\" ;\n");
 
 		*t = lex_next(s, e);
 		if (*t == -1) {
@@ -131,7 +131,7 @@ parse_cmd(int *t, const char **s, const char **e,
 			break;
 		}
 
-		fprintf(stderr, "<cmd> : <exec> ;\n");
+		fprintf(stderr, "cmd -> exec ;\n");
 
 		*node_out = ast_new_node_exec(exec);
 		if (*node_out == NULL) {
@@ -142,7 +142,7 @@ parse_cmd(int *t, const char **s, const char **e,
 	}
 
 	if (errno == 0) {
-		fprintf(stderr, "<cmd> : ;\n");
+		fprintf(stderr, "cmd -> ;\n");
 
 		*node_out = NULL;
 
@@ -154,14 +154,16 @@ parse_cmd(int *t, const char **s, const char **e,
 
 /*
  * <list>
- *   : <cmd> [ ( ";" | "\n" ) <list> ]
+ *   : <cmd> { ( ";" | "\n" ) <cmd> }
  *   ;
  */
 static int
 parse_list(int *t, const char **s, const char **e,
 	struct ast_node **node_out)
 {
+	struct ast_node **out;
 	int err;
+	int n;
 
 	assert(t != NULL && *t != -1);
 	assert(s != NULL && *s != NULL);
@@ -173,25 +175,32 @@ parse_list(int *t, const char **s, const char **e,
 
 	assert(*node_out == NULL || (*node_out)->next == NULL);
 
-	if (*t != tok_semi && *t != tok_nl) {
-		fprintf(stderr, "<list> : <cmd> ;\n");
+	out = node_out;
 
-		return 0;
+	for (n = 0; *t == tok_semi || *t == tok_nl; n++) {
+		*t = lex_next(s, e);
+		if (*t == -1) {
+			goto error;
+		}
+
+		if (*out != NULL) {
+			out = &(*out)->next;
+		}
+
+		if (-1 == parse_cmd(t, s, e, out)) {
+			goto error;
+		}
 	}
 
-	*t = lex_next(s, e);
-	if (*t == -1) {
-		goto error;
+	fprintf(stderr, "list -> cmd");
+
+	while (n--) {
+		fprintf(stderr, " \";\" cmd");
 	}
 
-	/* TODO: this would probably be be saner as a loop */
-	if (0 == parse_list(t, s, e, *node_out == NULL ? node_out : &(*node_out)->next)) {
-		fprintf(stderr, "<list> : <cmd> \"%c\" <list> ;\n", *t);
+	fprintf(stderr, " ;\n");
 
-		return 0;
-	}
-
-	errno = 0;
+	return 0;
 
 error:
 
@@ -224,7 +233,7 @@ parse_entry(int *t, const char **s, const char **e,
 	}
 
 	if (*t == tok_eof) {
-		fprintf(stderr, "<entry> : <list> <eof> ;\n");
+		fprintf(stderr, "entry -> list eof ;\n");
 
 		return 0;
 	}
