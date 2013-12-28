@@ -6,8 +6,6 @@
 void
 ast_free_arg(struct ast_arg *arg)
 {
-	assert(arg != NULL);
-
 	free(arg);
 }
 
@@ -16,7 +14,9 @@ ast_free_exec(struct ast_exec *exec)
 {
 	struct ast_arg *arg, *next;
 
-	assert(exec != NULL);
+	if (exec == NULL) {
+		return;
+	}
 
 	for (arg = exec->arg; arg != NULL; arg = next) {
 		next = arg->next;
@@ -30,7 +30,9 @@ ast_free_exec(struct ast_exec *exec)
 void
 ast_free_node(struct ast_node *node)
 {
-	assert(node != NULL);
+	if (node == NULL) {
+		return;
+	}
 
 	switch (node->type) {
 	case AST_EXEC: ast_free_exec(node->u.exec); break;
