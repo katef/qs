@@ -32,10 +32,6 @@ ast_free_node(struct ast_node *node)
 {
 	struct ast_node *next;
 
-	if (node == NULL) {
-		return;
-	}
-
 	for ( ; node != NULL; node = next) {
 		next = node->next;
 
