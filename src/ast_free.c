@@ -30,18 +30,24 @@ ast_free_exec(struct ast_exec *exec)
 void
 ast_free_node(struct ast_node *node)
 {
+	struct ast_node *next;
+
 	if (node == NULL) {
 		return;
 	}
 
-	switch (node->type) {
-	case AST_EXEC: ast_free_exec(node->u.exec); break;
-	case AST_NODE: ast_free_node(node->u.node); break;
+	for ( ; node != NULL; node = next) {
+		next = node->next;
 
-	default:
-		;
+		switch (node->type) {
+		case AST_EXEC: ast_free_exec(node->u.exec); break;
+		case AST_NODE: ast_free_node(node->u.node); break;
+
+		default:
+			;
+		}
+
+		free(node);
 	}
-
-	free(node);
 }
 
