@@ -10,7 +10,7 @@
 #include "parse.h"
 
 static int
-parse_list(int *t, const char **s, const char **e,
+parse_block(int *t, const char **s, const char **e,
 	struct ast_node **node_out, int execute);
 
 /*
@@ -108,7 +108,7 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
-		if (-1 == parse_list(t, s, e, &child, 0)) {
+		if (-1 == parse_block(t, s, e, &child, 0)) {
 			return -1;
 		}
 
@@ -179,12 +179,12 @@ accept:
 }
 
 /*
- * <list>
+ * <block>
  *   : <cmd> { ( ";" | "\n" ) <cmd> }
  *   ;
  */
 static int
-parse_list(int *t, const char **s, const char **e,
+parse_block(int *t, const char **s, const char **e,
 	struct ast_node **node_out, int execute)
 {
 	struct ast_node **out;
@@ -219,7 +219,7 @@ parse_list(int *t, const char **s, const char **e,
 	}
 
 	if (debug & DEBUG_PARSE) {
-		fprintf(stderr, "list -> cmd");
+		fprintf(stderr, "block -> cmd");
 
 		while (n--) {
 			fprintf(stderr, " \";\" cmd");
@@ -243,7 +243,7 @@ error:
 
 /*
  * <entry>
- *   : <list> <eof>
+ *   : <block> <eof>
  *   ;
  */
 static int
@@ -255,13 +255,13 @@ parse_entry(int *t, const char **s, const char **e,
 	assert(e != NULL && *e != NULL);
 
 	/* TODO: passing execute here would only be 1 for interactive shells */
-	if (-1 == parse_list(t, s, e, node_out, 1)) {
+	if (-1 == parse_block(t, s, e, node_out, 1)) {
 		return -1;
 	}
 
 	if (*t == tok_eof) {
 		if (debug & DEBUG_PARSE) {
-			fprintf(stderr, "entry -> list eof ;\n");
+			fprintf(stderr, "entry -> block eof ;\n");
 		}
 
 		return 0;
