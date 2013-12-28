@@ -39,6 +39,8 @@ builtin_exec(int argc, char *const *argv)
 
 	(void) execv(argv[0], argv);
 
+	perror(argv[0]);
+
 	return -1;
 }
 
