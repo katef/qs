@@ -11,8 +11,7 @@ main(void)
 	/* TODO: feed from -c string or from stdin, or from filename */
 	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
 
-	node = parse();
-	if (node == NULL) {
+	if (-1 == parse(&node)) {
 		perror("parse");
 		goto error;
 	}

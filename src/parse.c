@@ -9,7 +9,7 @@
 
 static int
 parse_list(int *t, const char **s, const char **e,
-	struct ast_node **node_out);
+	struct ast_node **node_out, int execute);
 
 /*
  * <exec>
@@ -87,7 +87,7 @@ error:
  */
 static int
 parse_cmd(int *t, const char **s, const char **e,
-	struct ast_node **node_out)
+	struct ast_node **node_out, int execute)
 {
 	struct ast_exec *exec;
 	struct ast_node *child;
@@ -104,7 +104,7 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
-		if (-1 == parse_list(t, s, e, &child)) {
+		if (-1 == parse_list(t, s, e, &child, 0)) {
 			return -1;
 		}
 
@@ -124,7 +124,7 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
-		return 0;
+		goto accept;
 
 	default:
 		if (-1 == parse_exec(t, s, e, &exec)) {
@@ -138,7 +138,7 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
-		return 0;
+		goto accept;
 	}
 
 	if (errno == 0) {
@@ -150,6 +150,18 @@ parse_cmd(int *t, const char **s, const char **e,
 	}
 
 	return -1;
+
+accept:
+
+	if (execute) {
+		ast_dump(*node_out);
+
+		ast_free_node(*node_out);
+
+		*node_out = NULL;
+	}
+
+	return 0;
 }
 
 /*
@@ -159,17 +171,17 @@ parse_cmd(int *t, const char **s, const char **e,
  */
 static int
 parse_list(int *t, const char **s, const char **e,
-	struct ast_node **node_out)
+	struct ast_node **node_out, int execute)
 {
 	struct ast_node **out;
-	int err;
 	int n;
+	int err;
 
 	assert(t != NULL && *t != -1);
 	assert(s != NULL && *s != NULL);
 	assert(e != NULL && *e != NULL);
 
-	if (-1 == parse_cmd(t, s, e, node_out)) {
+	if (-1 == parse_cmd(t, s, e, node_out, execute)) {
 		return -1;
 	}
 
@@ -187,7 +199,7 @@ parse_list(int *t, const char **s, const char **e,
 			out = &(*out)->next;
 		}
 
-		if (-1 == parse_cmd(t, s, e, out)) {
+		if (-1 == parse_cmd(t, s, e, out, execute)) {
 			goto error;
 		}
 	}
@@ -206,9 +218,7 @@ error:
 
 	err = errno;
 
-	if (*node_out != NULL) {
-		ast_free_node(*node_out);
-	}
+	ast_free_node(*node_out);
 
 	errno = err;
 
@@ -228,7 +238,8 @@ parse_entry(int *t, const char **s, const char **e,
 	assert(s != NULL && *s != NULL);
 	assert(e != NULL && *e != NULL);
 
-	if (-1 == parse_list(t, s, e, node_out)) {
+	/* TODO: passing execute here would only be 1 for interactive shells */
+	if (-1 == parse_list(t, s, e, node_out, 1)) {
 		return -1;
 	}
 
@@ -243,25 +254,26 @@ parse_entry(int *t, const char **s, const char **e,
 	return -1;
 }
 
-struct ast_node *
-parse(void)
+int
+parse(struct ast_node **node_out)
 {
-	struct ast_node *node;
 	const char *s, *e;
 	int t;
 
+	assert(node_out != NULL);
+
 	t = lex_next(&s, &e);
 	if (t == -1) {
-		return NULL;
+		return -1;
 	}
 
 	assert(s != NULL);
 	assert(e != NULL);
 
-	if (-1 == parse_entry(&t, &s, &e, &node)) {
-		return NULL;
+	if (-1 == parse_entry(&t, &s, &e, node_out)) {
+		return -1;
 	}
 
-	return node;
+	return 0;
 }
 
