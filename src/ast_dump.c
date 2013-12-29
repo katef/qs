@@ -15,19 +15,15 @@ indent(unsigned n)
 }
 
 static int
-dump_exec(const struct ast_exec *exec, unsigned n)
+dump_list(const struct ast_list *list, unsigned n)
 {
-	const struct ast_list *list;
-
-	assert(exec != NULL);
-
 	if (-1 == indent(n)) {
 		return -1;
 	}
 
-	fprintf(stderr, "exec:\n");
+	fprintf(stderr, "list:\n");
 
-	for (list = exec->list; list != NULL; list = list->next) {
+	for ( ; list != NULL; list = list->next) {
 		if (-1 == indent(n + 1)) {
 			return -1;
 		}
@@ -51,7 +47,7 @@ dump_node(const struct ast_node *node, unsigned n)
 		int r;
 
 		switch (node->type) {
-		case AST_EXEC: r = dump_exec(node->u.exec, n + 1); break;
+		case AST_LIST: r = dump_list(node->u.list, n + 1); break;
 		case AST_NODE: r = dump_node(node->u.node, n + 1); break;
 
 		default:

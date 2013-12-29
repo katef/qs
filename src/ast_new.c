@@ -25,35 +25,20 @@ ast_new_list(size_t n, const char *s)
 	return list;
 }
 
-struct ast_exec *
-ast_new_exec(struct ast_list *list)
-{
-	struct ast_exec *exec;
-
-	exec = malloc(sizeof *exec);
-	if (exec == NULL) {
-		return NULL;
-	}
-
-	exec->list = list;
-
-	return exec;
-}
-
 struct ast_node *
-ast_new_node_exec(struct ast_exec *exec)
+ast_new_node_list(struct ast_list *list)
 {
 	struct ast_node *node;
 
-	assert(exec != NULL);
+	assert(list != NULL);
 
 	node = malloc(sizeof *node);
 	if (node == NULL) {
 		return NULL;
 	}
 
-	node->type   = AST_EXEC;
-	node->u.exec = exec;
+	node->type   = AST_LIST;
+	node->u.list = list;
 	node->next   = NULL;
 
 	return node;

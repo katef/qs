@@ -12,32 +12,34 @@
 #include "builtin.h"
 
 static char **
-make_argv(const struct ast_exec *exec, int *argc)
+make_argv(const struct ast_list *list, int *argc)
 {
-	const struct ast_list *list;
+	const struct ast_list *p;
 	char **argv;
+	int i;
 
 	assert(argc != NULL);
-	assert(exec != NULL);
+	assert(list != NULL);
 
-	if (exec->list == NULL) {
+	if (list == NULL) {
 		errno = EINVAL;
 		return NULL;
 	}
 
-	for (*argc = 0, list = exec->list; list != NULL; list = list->next, (*argc)++)
+	for (i = 0, p = list; p != NULL; p = p->next, i++)
 		;
 
-	argv = malloc((*argc + 1) * sizeof *argv);
+	argv = malloc((i + 1) * sizeof *argv);
 	if (argv == NULL) {
 		return NULL;
 	}
 
-	for (*argc = 0, list = exec->list; list != NULL; list = list->next, (*argc)++) {
-		argv[*argc] = list->s;
+	for (i = 0, p = list; p != NULL; p = p->next, i++) {
+		argv[i] = p->s;
 	}
 
-	argv[*argc] = NULL;
+	*argc = i;
+	argv[i] = NULL;
 
 	return argv;
 }
@@ -60,13 +62,13 @@ dump_argv(const char *name, char **argv)
 }
 
 static int
-exec_exec(struct ast_exec *exec)
+exec_list(struct ast_list *list)
 {
 	char **argv;
 	int argc;
 	int r;
 
-	argv = make_argv(exec, &argc);
+	argv = make_argv(list, &argc);
 	if (argv == NULL) {
 		return -1;
 	}
@@ -91,7 +93,7 @@ exec_node(struct ast_node *node)
 		int r;
 
 		switch (node->type) {
-		case AST_EXEC: r = exec_exec(node->u.exec); break;
+		case AST_LIST: r = exec_list(node->u.list); break;
 		case AST_NODE: r = exec_node(node->u.node); break;
 
 		default:

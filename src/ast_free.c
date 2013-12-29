@@ -16,18 +16,6 @@ ast_free_list(struct ast_list *list)
 }
 
 void
-ast_free_exec(struct ast_exec *exec)
-{
-	if (exec == NULL) {
-		return;
-	}
-
-	ast_free_list(exec->list);
-
-	free(exec);
-}
-
-void
 ast_free_node(struct ast_node *node)
 {
 	struct ast_node *next;
@@ -36,7 +24,7 @@ ast_free_node(struct ast_node *node)
 		next = node->next;
 
 		switch (node->type) {
-		case AST_EXEC: ast_free_exec(node->u.exec); break;
+		case AST_LIST: ast_free_list(node->u.list); break;
 		case AST_NODE: ast_free_node(node->u.node); break;
 
 		default:
