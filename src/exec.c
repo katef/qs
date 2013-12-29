@@ -14,12 +14,18 @@
 static char **
 make_argv(const struct ast_exec *exec, int *argc)
 {
-	const struct ast_arg *arg;
+	const struct ast_list *list;
 	char **argv;
 
 	assert(argc != NULL);
+	assert(exec != NULL);
 
-	for (*argc = 1, arg = exec->arg; arg != NULL; arg = arg->next, (*argc)++)
+	if (exec->list == NULL) {
+		errno = EINVAL;
+		return NULL;
+	}
+
+	for (*argc = 0, list = exec->list; list != NULL; list = list->next, (*argc)++)
 		;
 
 	argv = malloc((*argc + 1) * sizeof *argv);
@@ -27,10 +33,8 @@ make_argv(const struct ast_exec *exec, int *argc)
 		return NULL;
 	}
 
-	argv[0] = exec->s;
-
-	for (*argc = 1, arg = exec->arg; arg != NULL; arg = arg->next, (*argc)++) {
-		argv[*argc] = arg->s;
+	for (*argc = 0, list = exec->list; list != NULL; list = list->next, (*argc)++) {
+		argv[*argc] = list->s;
 	}
 
 	argv[*argc] = NULL;

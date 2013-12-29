@@ -4,25 +4,25 @@
 #include "ast.h"
 
 void
-ast_free_arg(struct ast_arg *arg)
+ast_free_list(struct ast_list *list)
 {
-	free(arg);
+	struct ast_list *next;
+
+	for ( ; list != NULL; list = next) {
+		next = list->next;
+
+		free(list);
+	}
 }
 
 void
 ast_free_exec(struct ast_exec *exec)
 {
-	struct ast_arg *arg, *next;
-
 	if (exec == NULL) {
 		return;
 	}
 
-	for (arg = exec->arg; arg != NULL; arg = next) {
-		next = arg->next;
-
-		ast_free_arg(arg);
-	}
+	ast_free_list(exec->list);
 
 	free(exec);
 }

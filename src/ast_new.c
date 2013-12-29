@@ -4,44 +4,38 @@
 
 #include "ast.h"
 
-struct ast_arg *
-ast_new_arg(size_t n, const char *s)
+struct ast_list *
+ast_new_list(size_t n, const char *s)
 {
-	struct ast_arg *arg;
+	struct ast_list *list;
 
 	assert(s != NULL);
 
-	arg = malloc(sizeof *arg + n + 1);
-	if (arg == NULL) {
+	list = malloc(sizeof *list + n + 1);
+	if (list == NULL) {
 		return NULL;
 	}
 
-	arg->s    = (char *) arg + sizeof *arg;
-	arg->next = NULL;
+	list->s    = (char *) list + sizeof *list;
+	list->next = NULL;
 
-	memcpy(arg->s, s, n);
-	arg->s[n] = '\0';
+	memcpy(list->s, s, n);
+	list->s[n] = '\0';
 
-	return arg;
+	return list;
 }
 
 struct ast_exec *
-ast_new_exec(size_t n, const char *s)
+ast_new_exec(struct ast_list *list)
 {
 	struct ast_exec *exec;
 
-	assert(s != NULL);
-
-	exec = malloc(sizeof *exec + n + 1);
+	exec = malloc(sizeof *exec);
 	if (exec == NULL) {
 		return NULL;
 	}
 
-	exec->s   = (char *) exec + sizeof *exec;
-	exec->arg = NULL;
-
-	memcpy(exec->s, s, n);
-	exec->s[n] = '\0';
+	exec->list = list;
 
 	return exec;
 }

@@ -14,16 +14,66 @@ parse_block(int *t, const char **s, const char **e,
 	struct ast_node **node_out, int execute);
 
 /*
+ * <list>
+ *   : { <str> }
+ *   ;
+ */ 
+static int
+parse_list(int *t, const char **s, const char **e,
+	struct ast_list **list_out)
+{
+	struct ast_list **next;
+	int err;
+
+	assert(t != NULL && *t != -1);
+	assert(s != NULL && *s != NULL);
+	assert(e != NULL && *e != NULL);
+	assert(list_out != NULL);
+
+	next = list_out;
+
+	while (*t == tok_str) {
+		*next = ast_new_list(*e - *s, *s);
+		if (*next == NULL) {
+			goto error;
+		}
+
+		next = &(*next)->next;
+
+		*t = lex_next(s, e);
+		if (*t == -1) {
+			goto error;
+		}
+	}
+
+	if (debug & DEBUG_PARSE) {
+		fprintf(stderr, "list -> { str } ;\n"); /* TODO: show actual strs */
+	}
+
+	*next = NULL;
+
+	return 0;
+error:
+
+	err = errno;
+
+	ast_free_list(*list_out);
+
+	errno = err;
+
+	return -1;
+}
+
+/*
  * <exec>
- *   : <str> { <str> }
+ *   : { <list> }
  *   ;
  */ 
 static int
 parse_exec(int *t, const char **s, const char **e,
 	struct ast_exec **exec_out)
 {
-	struct ast_arg  *arg;
-	struct ast_arg  **next;
+	struct ast_list *list;
 	int err;
 
 	/* TODO: possibly e and s can just be const char * */
@@ -33,40 +83,23 @@ parse_exec(int *t, const char **s, const char **e,
 	assert(e != NULL && *e != NULL);
 	assert(exec_out != NULL);
 
-	if (*t != tok_str) {
+	if (-1 == parse_list(t, s, e, &list)) {
 		return -1;
-	}
-
-	*exec_out = ast_new_exec(*e - *s, *s);
-	if (*exec_out == NULL) {
-		return -1;
-	}
-
-	next = &(*exec_out)->arg;
-
-	assert(*next == NULL);
-
-	for (;;) {
-		*t = lex_next(s, e);
-		if (*t == -1) {
-			goto error;
-		}
-
-		if (*t != tok_str) {
-			break;
-		}
-
-		arg = ast_new_arg(*e - *s, *s);
-		if (arg == NULL) {
-			goto error;
-		}
-
-		*next = arg;
-		next = &arg->next;
 	}
 
 	if (debug & DEBUG_PARSE) {
-		fprintf(stderr, "exec -> str { str } ;\n"); /* TODO: show actual strs */
+		fprintf(stderr, "exec -> <list> ;\n");
+	}
+
+	if (list == NULL) {
+		*exec_out = NULL;
+
+		return 0;
+	}
+
+	*exec_out = ast_new_exec(list);
+	if (*exec_out == NULL) {
+		goto error;
 	}
 
 	return 0;
@@ -75,7 +108,7 @@ error:
 
 	err = errno;
 
-	ast_free_exec(*exec_out);
+	ast_free_list(list);
 
 	errno = err;
 
@@ -86,7 +119,6 @@ error:
  * <cmd>
  *   : "{" <block> "}"
  *   | <exec>
- *   |
  *   ;
  */
 static int
@@ -125,43 +157,41 @@ parse_cmd(int *t, const char **s, const char **e,
 			return -1;
 		}
 
+		if (child == NULL) {
+			return 0;
+		}
+
 		*node_out = ast_new_node_node(child);
 		if (*node_out == NULL) {
 			return -1;
 		}
 
-		goto accept;
+		break;
 
 	default:
 		if (-1 == parse_exec(t, s, e, &exec)) {
-			break;
+			return -1;
 		}
 
 		if (debug & DEBUG_PARSE) {
 			fprintf(stderr, "cmd -> exec ;\n");
 		}
 
+		if (exec == NULL) {
+			*node_out = NULL;
+
+			return 0;
+		}
+
+		assert(exec->list != NULL);
+
 		*node_out = ast_new_node_exec(exec);
 		if (*node_out == NULL) {
 			return -1;
 		}
 
-		goto accept;
+		break;
 	}
-
-	if (errno == 0) {
-		if (debug & DEBUG_PARSE) {
-			fprintf(stderr, "cmd -> ;\n");
-		}
-
-		*node_out = NULL;
-
-		return 0;
-	}
-
-	return -1;
-
-accept:
 
 	if (execute) {
 		if (debug & DEBUG_AST) {

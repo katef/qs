@@ -17,10 +17,9 @@ indent(unsigned n)
 static int
 dump_exec(const struct ast_exec *exec, unsigned n)
 {
-	const struct ast_arg *arg;
+	const struct ast_list *list;
 
 	assert(exec != NULL);
-	assert(exec->s != NULL);
 
 	if (-1 == indent(n)) {
 		return -1;
@@ -28,18 +27,12 @@ dump_exec(const struct ast_exec *exec, unsigned n)
 
 	fprintf(stderr, "exec:\n");
 
-	if (-1 == indent(n + 1)) {
-		return -1;
-	}
-
-	fprintf(stderr, "%s\n", exec->s);
-
-	for (arg = exec->arg; arg != NULL; arg = arg->next) {
+	for (list = exec->list; list != NULL; list = list->next) {
 		if (-1 == indent(n + 1)) {
 			return -1;
 		}
 
-		fprintf(stderr, "%s\n", arg->s);
+		fprintf(stderr, "%s\n", list->s);
 	}
 
 	return 0;
