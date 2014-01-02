@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -9,14 +10,14 @@
 
 #define WHITE " \t\v\f\n"
 
-static enum lex_tok
+static enum lex_type
 lex_push(const char **p, const char **s, const char **e)
 {
 #if 0
 	size_t i;
 
 	struct {
-		enum lex_tok tok;
+		enum lex_type type;
 		const char *name;
 	} keywords[] = {
 		{ tok_if,    "if"    },
@@ -81,13 +82,14 @@ lex_push(const char **p, const char **s, const char **e)
 	return tok_str;
 }
 
-int
-lex_next(const char **s, const char **e)
+void
+lex_next(struct lex_tok *t)
 {
 	static char buf[4096];
 	static const char *p = buf;
 	const char *name;
-	enum lex_tok t;
+
+	assert(t != NULL);
 
 	if (*p == '\0') {
 		buf[sizeof buf - 1] = 'x';
@@ -96,10 +98,15 @@ lex_next(const char **s, const char **e)
 		if (!fgets(buf, sizeof buf, stdin)) {
 			if (errno != 0) {
 				perror("fgets");
-				return -1;
+
+				t->type = tok_error;
+
+				return;
 			}
 
-			return tok_eof;
+			t->type = tok_eof;
+
+			return;
 		}
 
 		if (debug & DEBUG_BUF) {
@@ -114,15 +121,17 @@ lex_next(const char **s, const char **e)
 			while (c = fgetc(stdin), c != EOF && c != '\n')
 				;
 
-			return -1;
+			t->type = tok_panic;
+
+			return;
 		}
 
 		p = buf;
 	}
 
-	t = lex_push(&p, s, e);
+	t->type = lex_push(&p, &t->s, &t->e);
 
-	switch (t) {
+	switch (t->type) {
 	case tok_eof: name = "eof "; break;
 	case tok_nl:  name = "nl ";  break;
 	case tok_str: name = "str "; break;
@@ -131,9 +140,9 @@ lex_next(const char **s, const char **e)
 
 	if (debug & DEBUG_LEX) {
 		fprintf(stderr, "<%s\"%.*s\">\n",
-			name, (int) (*e - *s), *s);
+			name, (int) (t->e - t->s), t->s);
 	}
 
-	return t;
+	return;
 }
 
