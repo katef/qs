@@ -29,8 +29,14 @@ struct lex_tok {
 	const char *e;
 };
 
+struct lex_state {
+	char buf[4096];
+	const char *p;
+	FILE *f;
+};
+
 void
-lex_next(struct lex_tok *t);
+lex_next(struct lex_state *l, struct lex_tok *t);
 
 #endif
 

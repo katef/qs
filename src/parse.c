@@ -10,7 +10,7 @@
 #include "parse.h"
 
 static int
-parse_block(struct lex_tok *t,
+parse_block(struct lex_state *l, struct lex_tok *t,
 	struct ast_node **node_out, int execute);
 
 /*
@@ -19,12 +19,13 @@ parse_block(struct lex_tok *t,
  *   ;
  */ 
 static int
-parse_list(struct lex_tok *t,
+parse_list(struct lex_state *l, struct lex_tok *t,
 	struct ast_list **list_out)
 {
 	struct ast_list **next;
 	int e;
 
+	assert(l != NULL);
 	assert(t != NULL && t->type != tok_panic);
 	assert(list_out != NULL);
 
@@ -38,7 +39,7 @@ parse_list(struct lex_tok *t,
 
 		next = &(*next)->next;
 
-		lex_next(t);
+		lex_next(l, t);
 
 		if (t->type == tok_error || t->type == tok_panic) {
 			goto error;
@@ -71,24 +72,25 @@ error:
  *   ;
  */
 static int
-parse_cmd(struct lex_tok *t,
+parse_cmd(struct lex_state *l, struct lex_tok *t,
 	struct ast_node **node_out, int execute)
 {
 	struct ast_list *list;
 	struct ast_node *child;
 
+	assert(l != NULL);
 	assert(t != NULL && t->type != tok_panic);
 	assert(node_out != NULL);
 
 	switch (t->type) {
 	case tok_obrace:
-		lex_next(t);
+		lex_next(l, t);
 
 		if (t->type == tok_error || t->type == tok_panic) {
 			return -1;
 		}
 
-		if (-1 == parse_block(t, &child, 0)) {
+		if (-1 == parse_block(l, t, &child, 0)) {
 			return -1;
 		}
 
@@ -100,7 +102,7 @@ parse_cmd(struct lex_tok *t,
 			fprintf(stderr, "cmd -> \"{\" block \"}\" ;\n");
 		}
 
-		lex_next(t);
+		lex_next(l, t);
 
 		if (t->type == tok_error || t->type == tok_panic) {
 			return -1;
@@ -118,7 +120,7 @@ parse_cmd(struct lex_tok *t,
 		break;
 
 	default:
-		if (-1 == parse_list(t, &list)) {
+		if (-1 == parse_list(l, t, &list)) {
 			return -1;
 		}
 
@@ -161,16 +163,17 @@ parse_cmd(struct lex_tok *t,
  *   ;
  */
 static int
-parse_block(struct lex_tok *t,
+parse_block(struct lex_state *l, struct lex_tok *t,
 	struct ast_node **node_out, int execute)
 {
 	struct ast_node **out;
 	int n;
 	int e;
 
+	assert(l != NULL);
 	assert(t != NULL && t->type != tok_panic);
 
-	if (-1 == parse_cmd(t, node_out, execute)) {
+	if (-1 == parse_cmd(l, t, node_out, execute)) {
 		return -1;
 	}
 
@@ -179,7 +182,7 @@ parse_block(struct lex_tok *t,
 	out = node_out;
 
 	for (n = 0; t->type == tok_semi || t->type == tok_nl; n++) {
-		lex_next(t);
+		lex_next(l, t);
 
 		if (t->type == tok_error || t->type == tok_panic) {
 			return -1;
@@ -189,7 +192,7 @@ parse_block(struct lex_tok *t,
 			out = &(*out)->next;
 		}
 
-		if (-1 == parse_cmd(t, out, execute)) {
+		if (-1 == parse_cmd(l, t, out, execute)) {
 			goto error;
 		}
 	}
@@ -223,13 +226,14 @@ error:
  *   ;
  */
 static int
-parse_entry(struct lex_tok *t,
+parse_entry(struct lex_state *l, struct lex_tok *t,
 	struct ast_node **node_out)
 {
+	assert(l != NULL);
 	assert(t != NULL && t->type != tok_panic);
 
 	/* TODO: passing execute here would only be 1 for interactive shells */
-	if (-1 == parse_block(t, node_out, 1)) {
+	if (-1 == parse_block(l, t, node_out, 1)) {
 		return -1;
 	}
 
@@ -247,16 +251,20 @@ parse_entry(struct lex_tok *t,
 }
 
 int
-parse(struct ast_node **node_out)
+parse(struct lex_state *l, struct ast_node **node_out)
 {
 	struct lex_tok t;
 
+	assert(l != NULL);
+	assert(l->f != NULL);
 	assert(node_out != NULL);
 
-	do {
-		lex_next(&t);
+	l->p  = l->buf;
 
-		if (-1 == parse_entry(&t, node_out)) {
+	do {
+		lex_next(l, &t);
+
+		if (-1 == parse_entry(l, &t, node_out)) {
 			return -1;
 		}
 	} while (t.type == tok_panic);

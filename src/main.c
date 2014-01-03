@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "ast.h"
+#include "lex.h"
 #include "parse.h"
 
 unsigned debug;
@@ -34,9 +35,12 @@ int
 main(int argc, char *argv[])
 {
 	struct ast_node *node;
+	struct lex_state l;
 
 	/* TODO: feed from -c string or from stdin, or from filename */
 	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
+
+	l.f = stdin;
 
 	{
 		int c;
@@ -62,7 +66,7 @@ main(int argc, char *argv[])
 		goto usage;
 	}
 
-	if (-1 == parse(&node)) {
+	if (-1 == parse(&l, &node)) {
 		perror("parse");
 		goto error;
 	}

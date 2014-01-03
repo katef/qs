@@ -83,19 +83,18 @@ lex_push(const char **p, const char **s, const char **e)
 }
 
 void
-lex_next(struct lex_tok *t)
+lex_next(struct lex_state *l, struct lex_tok *t)
 {
-	static char buf[4096];
-	static const char *p = buf;
-	const char *name;
-
+	assert(l != NULL);
+	assert(l->f != NULL);
+	assert(l->p != NULL);
 	assert(t != NULL);
 
-	if (*p == '\0') {
-		buf[sizeof buf - 1] = 'x';
+	if (*l->p == '\0') {
+		l->buf[sizeof l->buf - 1] = 'x';
 		errno = 0;
 
-		if (!fgets(buf, sizeof buf, stdin)) {
+		if (!fgets(l->buf, sizeof l->buf, l->f)) {
 			if (errno != 0) {
 				perror("fgets");
 
@@ -110,15 +109,15 @@ lex_next(struct lex_tok *t)
 		}
 
 		if (debug & DEBUG_BUF) {
-			fprintf(stderr, "[%s]\n", buf);
+			fprintf(stderr, "[%s]\n", l->buf);
 		}
 
-		if (buf[sizeof buf - 1] == '\0' && buf[sizeof buf - 2] != '\n') {
+		if (l->buf[sizeof l->buf - 1] == '\0' && l->buf[sizeof l->buf - 2] != '\n') {
 			int c;
 
 			fprintf(stderr, "underflow; panic\n");
 
-			while (c = fgetc(stdin), c != EOF && c != '\n')
+			while (c = fgetc(l->f), c != EOF && c != '\n')
 				;
 
 			t->type = tok_panic;
@@ -126,19 +125,21 @@ lex_next(struct lex_tok *t)
 			return;
 		}
 
-		p = buf;
+		l->p = l->buf;
 	}
 
-	t->type = lex_push(&p, &t->s, &t->e);
-
-	switch (t->type) {
-	case tok_eof: name = "eof "; break;
-	case tok_nl:  name = "nl ";  break;
-	case tok_str: name = "str "; break;
-	default:      name = "";     break;
-	}
+	t->type = lex_push(&l->p, &t->s, &t->e);
 
 	if (debug & DEBUG_LEX) {
+		const char *name;
+
+		switch (t->type) {
+		case tok_eof: name = "eof "; break;
+		case tok_nl:  name = "nl ";  break;
+		case tok_str: name = "str "; break;
+		default:      name = "";     break;
+		}
+
 		fprintf(stderr, "<%s\"%.*s\">\n",
 			name, (int) (t->e - t->s), t->s);
 	}
