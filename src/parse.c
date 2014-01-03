@@ -264,6 +264,10 @@ parse(struct lex_state *l, struct ast_node **node_out)
 	do {
 		lex_next(l, &t);
 
+		if (t.type == tok_error) {
+			return -1;
+		}
+
 		if (-1 == parse_entry(l, &t, node_out)) {
 			return -1;
 		}
