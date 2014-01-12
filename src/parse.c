@@ -5,270 +5,813 @@
 
 #include "debug.h"
 #include "lex.h"
-#include "ast.h"
-#include "exec.h"
+#include "bet.h"
 #include "parse.h"
 
-static int
-parse_block(struct lex_state *l, struct lex_tok *t,
-	struct ast_node **node_out, int execute);
+enum parse {
+	p_accept,
+	p_reject,
+	p_error,
+	p_panic
+};
 
-/*
- * <list>
- *   : { <str> }
- *   ;
- */ 
-static int
-parse_list(struct lex_state *l, struct lex_tok *t,
-	struct ast_list **list_out)
+#define EXPECT t->type
+#define ACCEPT lex_next(l, t);             \
+               switch (t->type) {          \
+               case tok_error: goto error; \
+               case tok_panic: goto panic; \
+               default:        break;      \
+               }
+
+static enum parse p_expr(struct lex_state *l, struct lex_tok *t, struct bet **bet);
+
+static enum parse p_list_prime(struct lex_state *l, struct lex_tok *t, struct bet **bet);
+static enum parse p_assign_expr_prime(struct lex_state *l, struct lex_tok *t, struct bet **bet);
+static enum parse p_pipe_expr_prime(struct lex_state *l, struct lex_tok *t, struct bet **bet);
+static enum parse p_and_expr_prime(struct lex_state *l, struct lex_tok *t, struct bet **bet);
+static enum parse p_or_expr_prime(struct lex_state *l, struct lex_tok *t, struct bet **bet);
+
+static enum parse
+p_list(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
 {
-	struct ast_list **next;
-	int e;
-
 	assert(l != NULL);
-	assert(t != NULL && t->type != tok_panic);
-	assert(list_out != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
 
-	next = list_out;
+	/* alt1 */
+	switch (EXPECT) {
+	case tok_str:
 
-	while (t->type == tok_str) {
-		*next = ast_new_list(t->e - t->s, t->s);
-		if (*next == NULL) {
-			goto error;
+		ACCEPT;
+
+		switch (p_list_prime(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> 'str' list_prime ;\n", __func__ + 2); /* TODO: show actual str */
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
 		}
-
-		next = &(*next)->next;
-
-		lex_next(l, t);
-
-		if (t->type == tok_error || t->type == tok_panic) {
-			goto error;
-		}
-	}
-
-	if (debug & DEBUG_PARSE) {
-		fprintf(stderr, "list -> { str } ;\n"); /* TODO: show actual strs */
-	}
-
-	*next = NULL;
-
-	return 0;
-
-error:
-
-	e = errno;
-
-	ast_free_list(*list_out);
-
-	errno = e;
-
-	return -1;
-}
-
-/*
- * <cmd>
- *   : "{" <block> "}"
- *   | <list>
- *   ;
- */
-static int
-parse_cmd(struct lex_state *l, struct lex_tok *t,
-	struct ast_node **node_out, int execute)
-{
-	struct ast_list *list;
-	struct ast_node *child;
-
-	assert(l != NULL);
-	assert(t != NULL && t->type != tok_panic);
-	assert(node_out != NULL);
-
-	switch (t->type) {
-	case tok_obrace:
-		lex_next(l, t);
-
-		if (t->type == tok_error || t->type == tok_panic) {
-			return -1;
-		}
-
-		if (-1 == parse_block(l, t, &child, 0)) {
-			return -1;
-		}
-
-		if (t->type != tok_cbrace) {
-			return -1;
-		}
-
-		if (debug & DEBUG_PARSE) {
-			fprintf(stderr, "cmd -> \"{\" block \"}\" ;\n");
-		}
-
-		lex_next(l, t);
-
-		if (t->type == tok_error || t->type == tok_panic) {
-			return -1;
-		}
-
-		if (child == NULL) {
-			return 0;
-		}
-
-		*node_out = ast_new_node_node(child);
-		if (*node_out == NULL) {
-			return -1;
-		}
-
-		break;
 
 	default:
-		if (-1 == parse_list(l, t, &list)) {
-			return -1;
-		}
-
-		if (debug & DEBUG_PARSE) {
-			fprintf(stderr, "cmd -> list ;\n");
-		}
-
-		if (list == NULL) {
-			*node_out = NULL;
-
-			return 0;
-		}
-
-		*node_out = ast_new_node_list(list);
-		if (*node_out == NULL) {
-			return -1;
-		}
 
 		break;
 	}
 
-	if (execute) {
-		if (debug & DEBUG_AST) {
-			ast_dump(*node_out);
-		}
-
-		exec_node(*node_out);
-
-		ast_free_node(*node_out);
-
-		*node_out = NULL;
-	}
-
-	return 0;
-}
-
-/*
- * <block>
- *   : <cmd> { ( ";" | "\n" ) <cmd> }
- *   ;
- */
-static int
-parse_block(struct lex_state *l, struct lex_tok *t,
-	struct ast_node **node_out, int execute)
-{
-	struct ast_node **out;
-	int n;
-	int e;
-
-	assert(l != NULL);
-	assert(t != NULL && t->type != tok_panic);
-
-	if (-1 == parse_cmd(l, t, node_out, execute)) {
-		return -1;
-	}
-
-	assert(*node_out == NULL || (*node_out)->next == NULL);
-
-	out = node_out;
-
-	for (n = 0; t->type == tok_semi || t->type == tok_nl; n++) {
-		lex_next(l, t);
-
-		if (t->type == tok_error || t->type == tok_panic) {
-			return -1;
-		}
-
-		if (*out != NULL) {
-			out = &(*out)->next;
-		}
-
-		if (-1 == parse_cmd(l, t, out, execute)) {
-			goto error;
-		}
-	}
-
-	if (debug & DEBUG_PARSE) {
-		fprintf(stderr, "block -> cmd");
-
-		while (n--) {
-			fprintf(stderr, " \";\" cmd");
-		}
-
-		fprintf(stderr, " ;\n");
-	}
-
-	return 0;
+	return p_reject;
 
 error:
 
-	e = errno;
+	return p_error;
 
-	ast_free_node(*node_out);
+panic:
 
-	errno = e;
-
-	return -1;
+	return p_panic;
 }
 
-/*
- * <entry>
- *   : <block> <eof>
- *   ;
- */
-static int
-parse_entry(struct lex_state *l, struct lex_tok *t,
-	struct ast_node **node_out)
+static enum parse
+p_list_prime(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
 {
 	assert(l != NULL);
-	assert(t != NULL && t->type != tok_panic);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
 
-	/* TODO: passing execute here would only be 1 for interactive shells */
-	if (-1 == parse_block(l, t, node_out, 1)) {
-		return -1;
-	}
+	/* alt1 */
+	switch (p_list(l, t, bet)) {
+	case p_accept:
 
-	if (t->type == tok_eof) {
 		if (debug & DEBUG_PARSE) {
-			fprintf(stderr, "entry -> block eof ;\n");
+			fprintf(stderr, "%s -> list ;\n", __func__ + 2);
 		}
 
-		return 0;
+		return p_accept;
+
+	case p_reject:
+
+		break;
+
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
 	}
 
-	errno = 0;
+	/* alt2 (epsilon) */
+	{
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> ;\n", __func__ + 2);
+		}
 
-	return -1;
+		return p_accept;
+	}
+}
+
+static enum parse
+p_cmd(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_list(l, t, bet)) {
+	case p_accept:
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> list;\n", __func__ + 2);
+		}
+
+		return p_accept;
+
+	case p_reject:
+
+		break;
+
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+
+	/* alt2 */
+	switch (EXPECT) {
+	case tok_obrace:
+
+		ACCEPT;
+
+		switch (p_expr(l, t, bet)) {
+		case p_accept: break;
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+		switch (EXPECT) {
+		case tok_cbrace:
+
+			ACCEPT;
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> \"{\" expr \"}\" ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		default:
+
+			return p_reject;
+		}
+
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	/* alt3 */
+	switch (EXPECT) {
+	case tok_oparen:
+
+		ACCEPT;
+
+		switch (p_expr(l, t, bet)) {
+		case p_accept: break;
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+		switch (EXPECT) {
+		case tok_cparen:
+
+			ACCEPT;
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> \"(\" expr \")\" ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		default:
+
+			return p_reject;
+		}
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	return p_reject;
+
+error:
+
+	return p_error;
+
+panic:
+
+	return p_panic;
+}
+
+static enum parse
+p_assign_expr(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_cmd(l, t, bet)) {
+	case p_accept:
+		switch (p_assign_expr_prime(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> cmd assign_expr_prime ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+	case p_reject: return p_reject;
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+}
+
+static enum parse
+p_assign_expr_prime(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (EXPECT) {
+	case tok_pipe:
+
+		ACCEPT;
+
+		switch (p_assign_expr(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> \"=\" assign_expr ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	/* alt2 (epsilon) */
+	{
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+	}
+
+error:
+
+	return p_error;
+
+panic:
+
+	return p_panic;
+}
+
+static enum parse
+p_pipe_expr(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_assign_expr(l, t, bet)) {
+	case p_accept:
+		switch (p_pipe_expr_prime(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> assign_expr pipe_expr_prime ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+	case p_reject: return p_reject;
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+}
+
+static enum parse
+p_pipe_expr_prime(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (EXPECT) {
+	case tok_pipe:
+
+		ACCEPT;
+
+		switch (p_pipe_expr(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> \"|\" pipe_expr ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	/* alt2 (epsilon) */
+	{
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+	}
+
+error:
+
+	return p_error;
+
+panic:
+
+	return p_panic;
+}
+
+static enum parse
+p_and_expr(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_pipe_expr(l, t, bet)) {
+	case p_accept:
+		switch (p_and_expr_prime(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> pipe_expr and_expr_prime ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+	case p_reject: return p_reject;
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+}
+
+static enum parse
+p_and_expr_prime(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (EXPECT) {
+	case tok_and:
+
+		ACCEPT;
+
+		switch (p_and_expr(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> \"&&\" and_expr ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	/* alt2 (epsilon) */
+	{
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+	}
+
+error:
+
+	return p_error;
+
+panic:
+
+	return p_panic;
+}
+
+static enum parse
+p_or_expr(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_and_expr(l, t, bet)) {
+	case p_accept:
+		switch (p_or_expr_prime(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> and_expr or_expr_prime ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+		}
+
+	case p_reject: return p_reject;
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+}
+
+static enum parse
+p_or_expr_prime(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (EXPECT) {
+	case tok_or:
+
+		ACCEPT;
+
+		switch (p_or_expr(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> \"||\" or_expr ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+
+		default:
+			errno = EINVAL;
+			return p_error;
+		}
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	/* alt2 (epsilon) */
+	{
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+	}
+
+error:
+
+	return p_error;
+
+panic:
+
+	return p_panic;
+}
+
+static enum parse
+p_expr(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_or_expr(l, t, bet)) {
+	case p_accept:
+
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> or_expr ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+
+	case p_reject: return p_reject;
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+}
+
+static enum parse
+p_postfixop(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	switch (EXPECT) {
+	case tok_nl:
+	case tok_semi:
+	case tok_bg:
+
+		ACCEPT;
+
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> \"\\n\" | \";\" | \"&\" ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+
+	default:
+
+		break;
+	}
+
+	return p_reject;
+
+error:
+
+	return p_error;
+
+panic:
+
+	return p_panic;
+}
+
+static enum parse
+p_exprs(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	/* alt1 */
+	switch (p_postfixop(l, t, bet)) {
+	case p_accept:
+		switch (p_exprs(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> postfixop exprs ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+		}
+
+	case p_reject:
+		break;
+
+	case p_error: return p_error;
+	case p_panic: return p_panic;
+	}
+
+	/* alt2 */
+	switch (p_expr(l, t, bet)) {
+	case p_accept:
+		switch (p_postfixop(l, t, bet)) {
+		case p_accept:
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> expr postfixop ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		case p_reject: return p_reject;
+		case p_error:  return p_error;
+		case p_panic:  return p_panic;
+		}
+
+	case p_reject:
+		break;
+
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+	}
+
+	/* alt3 (epsilon) */
+	{
+		if (debug & DEBUG_PARSE) {
+			fprintf(stderr, "%s -> ;\n", __func__ + 2);
+		}
+
+		return p_accept;
+	}
+}
+
+static enum parse
+p_script(struct lex_state *l, struct lex_tok *t,
+	struct bet **bet)
+{
+	assert(l != NULL);
+	assert(t != NULL && t->type != tok_error && t->type != tok_panic);
+	assert(bet != NULL);
+
+	switch (p_exprs(l, t, bet)) {
+	case p_accept:
+
+		switch (EXPECT) {
+		case tok_eof:
+
+			/* no ACCEPT, since we're at EOF */
+
+			if (debug & DEBUG_PARSE) {
+				fprintf(stderr, "%s -> exprs ;\n", __func__ + 2);
+			}
+
+			return p_accept;
+
+		default:
+
+			return p_reject;
+		}
+
+	case p_reject:
+
+		break;
+
+	case p_error:  return p_error;
+	case p_panic:  return p_panic;
+
+	default:
+		errno = EINVAL;
+		return p_error;
+	}
+
+	return p_reject;
 }
 
 int
-parse(struct lex_state *l, struct ast_node **node_out)
+parse(struct lex_state *l, struct bet **bet_out)
 {
 	struct lex_tok t;
 
 	assert(l != NULL);
 	assert(l->f != NULL);
-	assert(node_out != NULL);
+	assert(bet_out != NULL);
 
 	l->p  = l->buf;
 
+	lex_next(l, &t);
+
+	if (t.type == tok_error) {
+		return -1;
+	}
+
 	do {
-		lex_next(l, &t);
-
-		if (t.type == tok_error) {
-			return -1;
-		}
-
-		if (-1 == parse_entry(l, &t, node_out)) {
+		if (p_error == p_script(l, &t, bet_out)) {
 			return -1;
 		}
 	} while (t.type == tok_panic);
