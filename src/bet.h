@@ -31,7 +31,7 @@ struct bet {
 };
 
 struct bet *
-bet_new_leaf(enum bet_type type, const char *s);
+bet_new_leaf(enum bet_type type, size_t n, const char *s);
 
 struct bet *
 bet_new_branch(enum bet_type type, struct bet *a, struct bet *b);

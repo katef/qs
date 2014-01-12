@@ -6,19 +6,20 @@
 #include "bet.h"
 
 struct bet *
-bet_new_leaf(enum bet_type type, const char *s)
+bet_new_leaf(enum bet_type type, size_t n, const char *s)
 {
 	struct bet *new;
 
-	assert(s = NULL);
+	assert(s != NULL);
 
-	new = malloc(sizeof *new + strlen(s) + 1);
+	new = malloc(sizeof *new + n + 1);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->type = type;
-	new->u.s  = strcpy((char *) new + sizeof *new, s);
+	new->type   = type;
+	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
+	new->u.s[n] = '\0';
 
 	return new;
 }
