@@ -63,32 +63,18 @@ bet_free(struct bet *bet)
 }
 
 static int
-indent(unsigned n)
-{
-	while (n--) {
-		fprintf(stderr, "\t");
-	}
-
-	return 0;
-}
-
-static int
-dump_node(const struct bet *bet, unsigned n)
+dump_node(const struct bet *bet, const void *node)
 {
 	const char *op;
 
-	if (-1 == indent(n)) {
-		return -1;
-	}
-
 	if (bet == NULL) {
-		fprintf(stderr, "NULL\n");
+		fprintf(stderr, "\t\"%p\" [ style = invis ];\n", node);
 		return 0;
 	}
 
 	switch (bet->type) {
-	case BET_STR: fprintf(stderr, "'%s'\n", bet->u.s); return 0;
-	case BET_VAR: fprintf(stderr, "$%s\n",  bet->u.s); return 0;
+	case BET_STR: fprintf(stderr, "\t\"%p\" [ label = \"'%s'\" ];\n", node, bet->u.s); return 0;
+	case BET_VAR: fprintf(stderr, "\t\"%p\" [ label = \"$%s\"  ];\n", node, bet->u.s); return 0;
 
 	case BET_AND:    op = "&&"; break;
 	case BET_OR:     op = "||"; break;
@@ -97,17 +83,25 @@ dump_node(const struct bet *bet, unsigned n)
 	case BET_ASSIGN: op = "=";  break;
 	case BET_EXEC:   op = ";";  break;
 	case BET_BG:     op = "&";  break;
-	case BET_LIST:   op = "->"; break;
+	case BET_CONS:   op = ",";  break;
 
 	default:
 		op = "?";
 		break;
 	}
 
-	fprintf(stderr, "%s\n", op);
+	fprintf(stderr, "\t\"%p\" [ shape = box, style = rounded, label = \"%s\" ];\n", node, op);
 
-	dump_node(bet->u.op.a, n + 1);
-	dump_node(bet->u.op.b, n + 1);
+	fprintf(stderr, "\t\"%p\" -- \"%p\" [ style = %s ];\n",
+		node, (void *) &bet->u.op.a,
+		bet->u.op.a == NULL ? "invis" : "solid");
+
+	fprintf(stderr, "\t\"%p\" -- \"%p\" [ style = %s ];\n",
+		node, (void *) &bet->u.op.b,
+		bet->u.op.b == NULL ? "invis" : "solid");
+
+	dump_node(bet->u.op.a, &bet->u.op.a);
+	dump_node(bet->u.op.b, &bet->u.op.b);
 
 	return 0;
 }
@@ -115,6 +109,13 @@ dump_node(const struct bet *bet, unsigned n)
 int
 bet_dump(const struct bet *bet)
 {
-	return dump_node(bet, 0);
+	fprintf(stderr, "graph G {\n");
+	fprintf(stderr, "\tnode [ shape = plaintext ];\n");
+
+	dump_node(bet, &bet);
+
+	fprintf(stderr, "}\n");
+
+	return 0;
 }
 

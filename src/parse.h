@@ -2,7 +2,8 @@
 #define PARSE_H
 
 int
-parse(struct lex_state *l, struct bet **bet_out);
+parse(struct lex_state *l,
+	int (*dispatch)(struct bet *));
 
 #endif
 

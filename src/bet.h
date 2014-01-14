@@ -14,7 +14,7 @@ enum bet_type {
 	BET_ASSIGN, /* a  = b */
 	BET_EXEC,   /* a  ; b */
 	BET_BG,     /* a  & b */
-	BET_LIST    /* a    b */
+	BET_CONS    /* a    b */
 };
 
 struct bet {

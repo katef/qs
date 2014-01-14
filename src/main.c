@@ -4,8 +4,8 @@
 #include <unistd.h>
 
 #include "debug.h"
-#include "ast.h"
 #include "lex.h"
+#include "bet.h"
 #include "parse.h"
 
 unsigned debug;
@@ -19,7 +19,7 @@ debug_flags(const char *s)
 		case 'b': debug |= DEBUG_BUF;   break;
 		case 'l': debug |= DEBUG_LEX;   break;
 		case 'p': debug |= DEBUG_PARSE; break;
-		case 't': debug |= DEBUG_AST;   break;
+		case 't': debug |= DEBUG_BET;   break;
 		case 'x': debug |= DEBUG_EXEC;  break;
 
 		default:
@@ -31,10 +31,28 @@ debug_flags(const char *s)
 	return 0;
 }
 
+static int
+dispatch(struct bet *bet)
+{
+	if (bet == NULL) {
+		return 0;
+	}
+
+	if (debug & DEBUG_BET) {
+		if (-1 == bet_dump(bet)) {
+			perror("bet_dump");
+			return -1;
+		}
+	}
+
+	/* TODO: exec */
+
+	return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
-	struct ast_node *node;
 	struct lex_state l;
 
 	/* TODO: feed from -c string or from stdin, or from filename */
@@ -66,25 +84,14 @@ main(int argc, char *argv[])
 		goto usage;
 	}
 
-	if (-1 == parse(&l, &node)) {
+	if (-1 == parse(&l, dispatch)) {
 		perror("parse");
 		goto error;
 	}
 
-	if (debug & DEBUG_AST) {
-		if (-1 == ast_dump(node)) {
-			perror("ast_dump");
-			goto error;
-		}
-	}
-
-	ast_free_node(node);
-
 	return 0;
 
 error:
-
-	ast_free_node(node);
 
 	return 1;
 
