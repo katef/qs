@@ -687,6 +687,10 @@ parse(struct lex_state *l,
 		case p_panic:  continue;
 		}
 
+		if (bet == NULL) {
+			continue;
+		}
+
 		if (-1 == dispatch(bet)) {
 			return -1;
 		}

@@ -34,10 +34,6 @@ debug_flags(const char *s)
 static int
 dispatch(struct bet *bet)
 {
-	if (bet == NULL) {
-		return 0;
-	}
-
 	if (debug & DEBUG_BET) {
 		if (-1 == bet_dump(bet)) {
 			perror("bet_dump");
