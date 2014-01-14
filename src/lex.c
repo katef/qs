@@ -38,12 +38,27 @@ lex_push(const char **p, const char **s, const char **e)
 		*e = *s;
 		return tok_nl;
 
+	case '&':
+		if (*(*p + 1) == '&') {
+			*s = *p;
+			*e = *s + 2;
+			(*p) += 2;
+			return tok_and;
+		}
+
+	case '|':
+		if (*(*p + 1) == '|') {
+			*s = *p;
+			*e = *s + 2;
+			(*p) += 2;
+			return tok_or;
+		}
+
 	case ';':
 	case '=':
 	case '.':
 	case '`':
 	case '$':
-	case '|':
 	case '{':
 	case '}':
 	case '(':
@@ -63,7 +78,7 @@ lex_push(const char **p, const char **s, const char **e)
 
 	default:
 		*s = *p;
-		*p += strcspn(*p, WHITE ";|'#{}");
+		*p += strcspn(*p, WHITE "&|;=.`$'#{}");
 		*e = *p;
 	}
 
@@ -74,7 +89,7 @@ lex_push(const char **p, const char **s, const char **e)
 		}
 
 		if (0 == strncmp(*s, keywords[i].name, *e - *s)) {
-			return keywords[i].tok;
+			return keywords[i].type;
 		}
 	}
 #endif

@@ -9,6 +9,7 @@ enum lex_type {
 	tok_nl     = '\n',
 	tok_str    = '\'',
 	tok_semi   = ';',
+	tok_bg     = '&',
 	tok_equ    = '=',
 	tok_dot    = '.',
 	tok_back   = '`',
@@ -18,9 +19,9 @@ enum lex_type {
 	tok_cbrace = '}',
 	tok_oparen = '(',
 	tok_cparen = ')',
-	tok_if     = 'i',
-	tok_else   = 'e',
-	tok_while  = 'l'
+	tok_or     = 'o',
+	tok_and    = 'a',
+	tok_exec   = 'e'
 };
 
 struct lex_tok {
