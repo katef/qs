@@ -97,7 +97,8 @@ exec_node(struct ast_node *node)
 		case AST_NODE: r = exec_node(node->u.node); break;
 
 		default:
-			;
+			errno = EINVAL;
+			r = -1;
 		}
 
 		if (r == -1) {
