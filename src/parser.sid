@@ -1,0 +1,151 @@
+%types%
+
+	string;
+
+%terminals%
+
+	!error;
+	!panic;
+
+	eof;
+	nl;
+	str: () -> (:string);
+	semi;
+	bg;
+	equ;
+	!dot;
+	!back;
+	!var;
+	pipe;
+	obrace;
+	cbrace;
+	oparen;
+	cparen;
+	or;
+	and;
+	!exec;
+
+%productions%
+
+	exprs;
+
+	list [
+
+		prime = {
+			list;
+		||
+			$;
+		};
+
+	] = {
+			! = str;
+			prime;
+	};
+
+	cmd = {
+		list;
+	||
+		obrace;
+		exprs;
+		cbrace;
+	||
+		oparen;
+		exprs;
+		cparen;
+	};
+
+	assign-expr [
+
+		prime = {
+			equ;
+			assign-expr;
+		||
+			$;
+		};
+
+	] = {
+		cmd;
+		prime;
+	};
+
+	pipe-expr [
+
+		prime = {
+			pipe;
+			pipe-expr;
+		||
+			$;
+		};
+
+	] = {
+		assign-expr;
+		prime;
+	};
+
+	and-expr [
+
+		prime = {
+			and;
+			and-expr;
+		||
+			$;
+		};
+
+	] = {
+		pipe-expr;
+		prime;
+	};
+
+	or-expr [
+
+		prime = {
+			or;
+			or-expr;
+		||
+			$;
+		};
+
+	] = {
+		and-expr;
+		prime;
+	};
+
+	postfixop = {
+		nl;
+	||
+		semi;
+	||
+		bg;
+	};
+
+	exprs [
+
+		expr = {
+			or-expr;
+			postfixop;
+		||
+			nl;
+		||
+			semi;
+		};
+
+		prime = {
+			expr;
+		||
+			$;
+		};
+
+	] = {
+		expr;
+		prime;
+	};
+
+	script = {
+		exprs;
+		eof;
+	};
+
+%entry%
+
+	script;
+
