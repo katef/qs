@@ -1,6 +1,7 @@
 %types%
 
 	string;
+	bet;
 
 %terminals%
 
@@ -9,13 +10,12 @@
 
 	eof;
 	nl;
-	str: () -> (:string);
 	semi;
 	bg;
 	equ;
 	!dot;
 	!back;
-	!var;
+	var;
 	pipe;
 	obrace;
 	cbrace;
@@ -25,123 +25,155 @@
 	and;
 	!exec;
 
+	str: () -> (:string);
+
 %productions%
 
-	exprs;
+	<new-str>: (:string) -> (:bet);
+	<new-var>: (:string) -> (:bet);
 
-	list [
+	<binop-and>:    (:bet, :bet) -> (:bet);
+	<binop-or>:     (:bet, :bet) -> (:bet);
+	!<binop-join>:  (:bet, :bet) -> (:bet);
+	<binop-pipe>:   (:bet, :bet) -> (:bet);
+	<binop-assign>: (:bet, :bet) -> (:bet);
+	<binop-exec>:   (:bet, :bet) -> (:bet);
+	<binop-bg>:     (:bet, :bet) -> (:bet);
+	<binop-cons>:   (:bet, :bet) -> (:bet);
 
-		prime = {
-			list;
+	<epsilon>: () -> (:bet);
+
+	/* TODO: <free> */
+
+	exprs: () -> (:bet);
+
+	list: () -> (q :bet) [
+
+		term: () -> (q :bet) = {
+			s = str;
+			q = <new-str>(s);
 		||
-			$;
+			var;
+			s = str;
+			q = <new-var>(s);
 		};
 
 	] = {
-			! = str;
-			prime;
+			a = term;
+
+			{
+				b = list;
+			||
+				b = <epsilon>;
+			};
+
+			q = <binop-cons>(a, b);
 	};
 
-	cmd = {
-		list;
+	cmd: () -> (q :bet) = {
+		q = list;
 	||
+		/* TODO: differentiate { ... } and ( ... ), perhaps as BET nodes */
 		obrace;
-		exprs;
+		q = exprs;
 		cbrace;
 	||
 		oparen;
-		exprs;
+		q = exprs;
 		cparen;
 	};
 
-	assign-expr [
+	assign-expr: () -> (q :bet) = {
+		a = cmd;
 
-		prime = {
+		{
 			equ;
-			assign-expr;
+			b = assign-expr;
 		||
-			$;
+			b = <epsilon>;
 		};
 
-	] = {
-		cmd;
-		prime;
+		q = <binop-assign>(a, b);
 	};
 
-	pipe-expr [
+	pipe-expr: () -> (q :bet) = {
+		a = assign-expr;
 
-		prime = {
+		{
 			pipe;
-			pipe-expr;
+			b = pipe-expr;
 		||
-			$;
+			b = <epsilon>;
 		};
 
-	] = {
-		assign-expr;
-		prime;
+		q = <binop-pipe>(a, b);
 	};
 
-	and-expr [
+	and-expr: () -> (q :bet) = {
+		a = pipe-expr;
 
-		prime = {
+		{
 			and;
-			and-expr;
+			b = and-expr;
 		||
-			$;
+			b = <epsilon>;
 		};
 
-	] = {
-		pipe-expr;
-		prime;
+		q = <binop-and>(a, b);
 	};
 
-	or-expr [
+	or-expr: () -> (q :bet) = {
+		a = and-expr;
 
-		prime = {
+		{
 			or;
-			or-expr;
+			b = or-expr;
 		||
-			$;
+			b = <epsilon>;
 		};
 
-	] = {
-		and-expr;
-		prime;
+		q = <binop-or>(a, b);
 	};
 
-	postfixop = {
-		nl;
-	||
-		semi;
-	||
-		bg;
-	};
+	exprs: () -> (q :bet) [
 
-	exprs [
+		expr: () -> (q :bet) = {
+			a = or-expr;
+			b = <epsilon>;
 
-		expr = {
-			or-expr;
-			postfixop;
+			{
+				nl;
+				q = <binop-exec>(a, b);
+			||
+				q = <binop-exec>(a, b);
+				semi;
+			||
+				q = <binop-bg>(a, b);
+				bg;
+			};
+
 		||
+			q = <epsilon>;
 			nl;
 		||
+			q = <epsilon>;
 			semi;
 		};
 
-		prime = {
-			expr;
+	] = {
+		a = expr;
+
+		{
+			b = expr;
 		||
-			$;
+			b = <epsilon>;
 		};
 
-	] = {
-		expr;
-		prime;
+		q = <binop-exec>(a, b);
 	};
 
 	script = {
-		exprs;
+		! = exprs;
 		eof;
 	};
 
