@@ -1,0 +1,213 @@
+%prefixes%
+
+	terminal = tok_;
+	function = p_;
+
+%persistents%
+
+	lex_state :lex_state;
+	act_state :act_state;
+
+%maps%
+
+	string -> string;
+	bet    -> bet;
+
+%header% @{
+
+	#include <assert.h>
+	#include <stdio.h>
+
+	#include "lex.h"
+	#include "bet.h"
+	#include "parser.h"
+
+	struct act_string {
+		const char *s;
+		const char *e;
+	};
+
+	struct act_state {
+		struct lex_tok t;
+		enum lex_type type, save;
+		int (*dispatch)(struct bet *);
+	};
+
+	typedef struct act_string string;
+
+	#define CURRENT_TERMINAL act_state->type
+	#define ERROR_TERMINAL   tok_error
+	#define ADVANCE_LEXER    lex_next(lex_state, &act_state->t); \
+							 act_state->type = act_state->t.type;
+	#define SAVE_LEXER(tok)  act_state->save = tok;
+	#define RESTORE_LEXER    act_state->type = act_state->save;
+
+	static struct bet *
+	binop(enum bet_type type, struct bet *a, struct bet *b)
+	{
+		if (a == NULL) {
+			return b;
+		}
+
+		if (b == NULL) {
+			return a;
+		}
+
+		return bet_new_branch(type, a, b);
+	}
+
+@}, @{
+
+	#include <stdio.h>
+
+	typedef struct lex_state * lex_state;
+	typedef struct act_state * act_state;
+	typedef struct bet *       bet;
+
+	int
+	parse(struct lex_state *l,
+		int (*dispatch)(struct bet *));
+
+@};
+
+%terminals%
+
+	str: () -> (s :string) = @{
+		assert(act_state->t.s != NULL);
+		assert(act_state->t.e >= act_state->t.s);
+
+		@s.s = act_state->t.s;
+		@s.e = act_state->t.e;
+	@};
+
+%actions%
+
+	/* TODO:
+	<free>: (s :string) -> () = @{
+		assert(@s != NULL);
+
+		free(@s);
+	@};
+	*/
+
+	<dispatch>: (q :bet) -> () = @{
+		if (-1 == act_state->dispatch(@q)) {
+			@!;
+		}
+	@};
+
+	<epsilon>: () -> (q :bet) = @{
+		@q = NULL;
+	@};
+
+	<new-str>: (s :string) -> (q :bet) = @{
+		@q = bet_new_leaf(BET_STR, @s.e - @s.s, @s.s);
+		if (@q == NULL) {
+			@!;
+		}
+	@};
+
+	<new-var>: (s :string) -> (q :bet) = @{
+		@q = bet_new_leaf(BET_STR, @s.e - @s.s, @s.s);
+		if (@q == NULL) {
+			@!;
+		}
+	@};
+
+	<binop-and>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = binop(BET_AND, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-or>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = binop(BET_OR, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-join>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = binop(BET_JOIN, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-pipe>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = binop(BET_PIPE, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-assign>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = bet_new_branch(BET_ASSIGN, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-exec>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = bet_new_branch(BET_EXEC, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-bg>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = bet_new_branch(BET_BG, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+	<binop-cons>: (a :bet, b :bet) -> (q :bet) = @{
+		@q = binop(BET_CONS, @a, @b);
+		if (@q == NULL) {
+			bet_free(@a);
+			bet_free(@b);
+			@!;
+		}
+	@};
+
+%trailer% @{
+
+	int
+	parse(struct lex_state *lex_state,
+		int (*dispatch)(struct bet *))
+	{
+		struct act_state a, *act_state = &a;
+
+		assert(lex_state != NULL);
+		assert(dispatch != NULL);
+
+		act_state->dispatch = dispatch;
+
+		lex_state->p = lex_state->buf;
+
+		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
+
+		/* TODO: handle raising an error or ## */
+		p_script(lex_state, act_state);
+	}
+
+@}, @{
+
+@};
+

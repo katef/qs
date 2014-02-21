@@ -29,6 +29,10 @@
 
 %productions%
 
+	<dispatch>: (:bet) -> ();
+
+	<epsilon>: () -> (:bet);
+
 	<new-str>: (:string) -> (:bet);
 	<new-var>: (:string) -> (:bet);
 
@@ -40,8 +44,6 @@
 	<binop-exec>:   (:bet, :bet) -> (:bet);
 	<binop-bg>:     (:bet, :bet) -> (:bet);
 	<binop-cons>:   (:bet, :bet) -> (:bet);
-
-	<epsilon>: () -> (:bet);
 
 	/* TODO: <free> */
 
@@ -59,15 +61,15 @@
 		};
 
 	] = {
-			a = term;
+		a = term;
 
-			{
-				b = list;
-			||
-				b = <epsilon>;
-			};
+		{
+			b = list;
+		||
+			b = <epsilon>;
+		};
 
-			q = <binop-cons>(a, b);
+		q = <binop-cons>(a, b);
 	};
 
 	cmd: () -> (q :bet) = {
@@ -137,7 +139,7 @@
 
 	exprs: () -> (q :bet) [
 
-		expr: () -> (q :bet) = {
+		::expr: () -> (q :bet) = {
 			a = or-expr;
 			b = <epsilon>;
 
@@ -164,7 +166,7 @@
 		a = expr;
 
 		{
-			b = expr;
+			b = exprs;
 		||
 			b = <epsilon>;
 		};
@@ -173,7 +175,15 @@
 	};
 
 	script = {
-		! = exprs;
+		a = expr;
+		<dispatch>(a);
+
+		{
+			script;
+		||
+			$;
+		};
+
 		eof;
 	};
 
