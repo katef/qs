@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "lex.h"
 #include "bet.h"
-#include "parse.h"
+#include "parser.h"
 
 unsigned debug;
 

@@ -1,9 +1,16 @@
-CFLAGS=	-ansi -pedantic -Wall -W -Werror
+SID ?= sid
+CC  ?= gcc
+
+CFLAGS += -ansi -pedantic
+#CFLAGS += -Wall -W -Werror
+CFLAGS += -O2 -g -ggdb
+
+SID_CFLAGS += -s no-numeric-terminals -s no-terminals
 
 OBJS += lex.o
-OBJS += parse.o
+OBJS += parser.o
 OBJS += bet.o
-OBJS += exec.o
+#OBJS += exec.o
 OBJS += builtin.o
 OBJS += main.o
 
@@ -15,4 +22,9 @@ kcsh: $(OBJS)
 
 clean:
 	rm -f $(OBJS)
+
+parser.h: parser.sid parser.act
+parser.c: parser.sid parser.act
+	$(SID) -l test parser.sid
+	$(SID) $(SID_CFLAGS) parser.sid parser.act parser.c parser.h
 
