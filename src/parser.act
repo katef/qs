@@ -11,7 +11,8 @@
 %maps%
 
 	string -> string;
-	bet    -> bet;
+	scope  -> scope;
+	ast    -> ast;
 
 %header% @{
 
@@ -19,7 +20,8 @@
 	#include <stdio.h>
 
 	#include "lex.h"
-	#include "bet.h"
+	#include "ast.h"
+	#include "scope.h"
 	#include "parser.h"
 
 	struct act_string {
@@ -30,7 +32,8 @@
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type type, save;
-		int (*dispatch)(struct bet *);
+		int (*dispatch)(struct ast *);
+		struct scope *k;
 	};
 
 	typedef struct act_string string;
@@ -42,8 +45,8 @@
 	#define SAVE_LEXER(tok)  act_state->save = tok;
 	#define RESTORE_LEXER    act_state->type = act_state->save;
 
-	static struct bet *
-	binop(enum bet_type type, struct bet *a, struct bet *b)
+	static struct ast *
+	binop(enum ast_type type, struct ast *a, struct ast *b)
 	{
 		if (a == NULL) {
 			return b;
@@ -53,7 +56,7 @@
 			return a;
 		}
 
-		return bet_new_branch(type, a, b);
+		return ast_new_op(type, a, b);
 	}
 
 @}, @{
@@ -62,11 +65,11 @@
 
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
-	typedef struct bet *       bet;
+	typedef struct ast *       ast;
 
 	int
 	parse(struct lex_state *l,
-		int (*dispatch)(struct bet *));
+		int (*dispatch)(struct ast *));
 
 @};
 
@@ -82,106 +85,110 @@
 
 %actions%
 
-	/* TODO:
-	<free>: (s :string) -> () = @{
-		assert(@s != NULL);
+	<free>: (q :ast) -> () = @{
+		assert(@q != NULL);
 
-		free(@s);
+		ast_free(@q);
 	@};
-	*/
 
-	<dispatch>: (q :bet) -> () = @{
+	<dispatch>: (q :ast) -> () = @{
 		if (-1 == act_state->dispatch(@q)) {
 			@!;
 		}
 	@};
 
-	<epsilon>: () -> (q :bet) = @{
+	<epsilon>: () -> (q :ast) = @{
 		@q = NULL;
 	@};
 
-	<new-str>: (s :string) -> (q :bet) = @{
-		@q = bet_new_leaf(BET_STR, @s.e - @s.s, @s.s);
+	<scope-push>: () -> () = @{
+		if (!scope_push(&act_state->k)) {
+			@!;
+		}
+	@};
+
+	<scope-pop>: () -> () = @{
+		struct var *v;
+
+		v = scope_pop(&act_state->k);
+		var_free(v);
+	@};
+
+	<new-str>: (s :string) -> (q :ast) = @{
+		@q = ast_new_leaf(AST_STR, @s.e - @s.s, @s.s);
 		if (@q == NULL) {
 			@!;
 		}
 	@};
 
-	<new-var>: (s :string) -> (q :bet) = @{
-		@q = bet_new_leaf(BET_STR, @s.e - @s.s, @s.s);
+	<binop-and>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = binop(AST_AND, @a, @b);
 		if (@q == NULL) {
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-and>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = binop(BET_AND, @a, @b);
+	<binop-or>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = binop(AST_OR, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-or>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = binop(BET_OR, @a, @b);
+	<binop-join>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = binop(AST_JOIN, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-join>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = binop(BET_JOIN, @a, @b);
+	<binop-pipe>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = binop(AST_PIPE, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-pipe>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = binop(BET_PIPE, @a, @b);
+	<binop-assign>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = ast_new_op(AST_ASSIGN, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-assign>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = bet_new_branch(BET_ASSIGN, @a, @b);
+	<binop-exec>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = ast_new_op(AST_EXEC, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-exec>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = bet_new_branch(BET_EXEC, @a, @b);
+	<binop-bg>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = ast_new_op(AST_BG, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
 
-	<binop-bg>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = bet_new_branch(BET_BG, @a, @b);
+	<binop-cons>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = binop(AST_CONS, @a, @b);
 		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-cons>: (a :bet, b :bet) -> (q :bet) = @{
-		@q = binop(BET_CONS, @a, @b);
-		if (@q == NULL) {
-			bet_free(@a);
-			bet_free(@b);
+			ast_free(@a);
+			ast_free(@b);
 			@!;
 		}
 	@};
@@ -190,7 +197,7 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*dispatch)(struct bet *))
+		int (*dispatch)(struct ast *))
 	{
 		struct act_state a, *act_state = &a;
 
@@ -198,6 +205,7 @@
 		assert(dispatch != NULL);
 
 		act_state->dispatch = dispatch;
+		act_state->k        = NULL;
 
 		lex_state->p = lex_state->buf;
 

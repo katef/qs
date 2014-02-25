@@ -9,12 +9,14 @@ SID_CFLAGS += -s no-numeric-terminals -s no-terminals
 
 OBJS += lex.o
 OBJS += parser.o
-OBJS += bet.o
+OBJS += ast.o
 #OBJS += exec.o
 OBJS += builtin.o
 OBJS += main.o
+OBJS += var.o
+OBJS += scope.o
 
-kcsh: $(OBJS)
+qs: $(OBJS)
 	$(CC) -o $@ $>
 
 .c.o:

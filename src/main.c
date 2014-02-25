@@ -5,7 +5,7 @@
 
 #include "debug.h"
 #include "lex.h"
-#include "bet.h"
+#include "ast.h"
 #include "parser.h"
 
 unsigned debug;
@@ -19,7 +19,7 @@ debug_flags(const char *s)
 		case 'b': debug |= DEBUG_BUF;   break;
 		case 'l': debug |= DEBUG_LEX;   break;
 		case 'p': debug |= DEBUG_PARSE; break;
-		case 't': debug |= DEBUG_BET;   break;
+		case 't': debug |= DEBUG_AST;   break;
 		case 'x': debug |= DEBUG_EXEC;  break;
 
 		default:
@@ -32,11 +32,11 @@ debug_flags(const char *s)
 }
 
 static int
-dispatch(struct bet *bet)
+dispatch(struct ast *ast)
 {
-	if (debug & DEBUG_BET) {
-		if (-1 == bet_dump(bet)) {
-			perror("bet_dump");
+	if (debug & DEBUG_AST) {
+		if (-1 == ast_dump(ast)) {
+			perror("ast_dump");
 			return -1;
 		}
 	}

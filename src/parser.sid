@@ -1,7 +1,8 @@
 %types%
 
 	string;
-	bet;
+	!scope;
+	ast;
 
 %terminals%
 
@@ -15,7 +16,7 @@
 	equ;
 	!dot;
 	!back;
-	var;
+	!var;
 	pipe;
 	obrace;
 	cbrace;
@@ -29,35 +30,34 @@
 
 %productions%
 
-	<dispatch>: (:bet) -> ();
+	<free>:     (:ast) -> ();
+	<dispatch>: (:ast) -> ();
 
-	<epsilon>: () -> (:bet);
+	<epsilon>: () -> (:ast);
 
-	<new-str>: (:string) -> (:bet);
-	<new-var>: (:string) -> (:bet);
+    <scope-push>;
+    <scope-pop>;
 
-	<binop-and>:    (:bet, :bet) -> (:bet);
-	<binop-or>:     (:bet, :bet) -> (:bet);
-	!<binop-join>:  (:bet, :bet) -> (:bet);
-	<binop-pipe>:   (:bet, :bet) -> (:bet);
-	<binop-assign>: (:bet, :bet) -> (:bet);
-	<binop-exec>:   (:bet, :bet) -> (:bet);
-	<binop-bg>:     (:bet, :bet) -> (:bet);
-	<binop-cons>:   (:bet, :bet) -> (:bet);
+	<new-str>: (:string) -> (:ast);
+
+	<binop-and>:    (:ast, :ast) -> (:ast);
+	<binop-or>:     (:ast, :ast) -> (:ast);
+	!<binop-join>:  (:ast, :ast) -> (:ast);
+	<binop-pipe>:   (:ast, :ast) -> (:ast);
+	<binop-assign>: (:ast, :ast) -> (:ast);
+	<binop-exec>:   (:ast, :ast) -> (:ast);
+	<binop-bg>:     (:ast, :ast) -> (:ast);
+	<binop-cons>:   (:ast, :ast) -> (:ast);
 
 	/* TODO: <free> */
 
-	exprs: () -> (:bet);
+	exprs: () -> (:ast);
 
-	list: () -> (q :bet) [
+	list: () -> (q :ast) [
 
-		term: () -> (q :bet) = {
+		term: () -> (q :ast) = {
 			s = str;
 			q = <new-str>(s);
-		||
-			var;
-			s = str;
-			q = <new-var>(s);
 		};
 
 	] = {
@@ -72,12 +72,13 @@
 		q = <binop-cons>(a, b);
 	};
 
-	cmd: () -> (q :bet) = {
+	cmd: () -> (q :ast) = {
 		q = list;
 	||
-		/* TODO: differentiate { ... } and ( ... ), perhaps as BET nodes */
 		obrace;
+		<scope-push>;
 		q = exprs;
+		<scope-pop>;
 		cbrace;
 	||
 		oparen;
@@ -85,7 +86,7 @@
 		cparen;
 	};
 
-	assign-expr: () -> (q :bet) = {
+	assign-expr: () -> (q :ast) = {
 		a = cmd;
 
 		{
@@ -98,7 +99,7 @@
 		q = <binop-assign>(a, b);
 	};
 
-	pipe-expr: () -> (q :bet) = {
+	pipe-expr: () -> (q :ast) = {
 		a = assign-expr;
 
 		{
@@ -111,7 +112,7 @@
 		q = <binop-pipe>(a, b);
 	};
 
-	and-expr: () -> (q :bet) = {
+	and-expr: () -> (q :ast) = {
 		a = pipe-expr;
 
 		{
@@ -124,7 +125,7 @@
 		q = <binop-and>(a, b);
 	};
 
-	or-expr: () -> (q :bet) = {
+	or-expr: () -> (q :ast) = {
 		a = and-expr;
 
 		{
@@ -137,9 +138,9 @@
 		q = <binop-or>(a, b);
 	};
 
-	exprs: () -> (q :bet) [
+	exprs: () -> (q :ast) [
 
-		::expr: () -> (q :bet) = {
+		::expr: () -> (q :ast) = {
 			a = or-expr;
 			b = <epsilon>;
 
@@ -174,15 +175,25 @@
 		q = <binop-exec>(a, b);
 	};
 
-	script = {
-		a = expr;
-		<dispatch>(a);
+	script [
 
-		{
-			script;
-		||
-			$;
+		global-exprs = {
+			q = expr;
+
+			<dispatch>(q);
+			<free>(q);
+
+			{
+				global-exprs;
+			||
+				$;
+			};
 		};
+
+	] = {
+		<scope-push>;
+		global-exprs;
+		<scope-pop>;
 
 		eof;
 	};
