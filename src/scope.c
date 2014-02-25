@@ -42,6 +42,10 @@ scope_pop(struct scope **sc)
 
 	*sc = *tmp;
 
+	if (*tmp == NULL) {
+		return NULL;
+	}
+
 	return (*tmp)->var;
 }
 
