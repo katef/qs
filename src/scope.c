@@ -49,6 +49,16 @@ scope_pop(struct scope **sc)
 	return (*tmp)->var;
 }
 
+struct var *
+scope_set(struct scope *sc, const char *name, struct ast *val)
+{
+	assert(sc != NULL);
+	assert(name != NULL);
+	assert(val != NULL);
+
+	return var_set(&sc->var, name, val);
+}
+
 struct ast *
 scope_get(const struct scope *sc, const char *name)
 {

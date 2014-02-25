@@ -10,6 +10,9 @@ scope_push(struct scope **sc);
 struct var *
 scope_pop(struct scope **sc);
 
+struct var *
+scope_set(struct scope *sc, const char *name, struct ast *val);
+
 struct ast *
 scope_get(const struct scope *sc, const char *name);
 
