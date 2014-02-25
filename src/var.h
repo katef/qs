@@ -8,10 +8,10 @@ static struct var *
 var_find(struct var *v, const char *name);
 
 static struct var *
-var_new(struct var **v, const char *name, struct ast *val);
+var_new(struct var **v, const char *name, struct ast *a);
 
 struct var *
-var_set(struct var **v, const char *name, struct ast *val);
+var_set(struct var **v, const char *name, struct ast *a);
 
 struct ast *
 var_get(struct var *v, const char *name);

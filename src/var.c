@@ -3,10 +3,11 @@
 #include <string.h>
 
 #include "var.h"
+#include "ast.h"
 
 struct var {
 	const char *name;
-	struct ast *val;
+	struct ast *a;
 	struct var *next;
 };
 
@@ -25,7 +26,7 @@ var_find(struct var *v, const char *name)
 }
 
 static struct var *
-var_new(struct var **v, const char *name, struct ast *val)
+var_new(struct var **v, const char *name, struct ast *a)
 {
 	struct var *new;
 
@@ -37,13 +38,13 @@ var_new(struct var **v, const char *name, struct ast *val)
 	}
 
 	new->name = name; /* XXX: after struct */
-	new->val  = val;  /* XXX */
+	new->a    = a;
 
 	return new;
 }
 
 struct var *
-var_set(struct var **v, const char *name, struct ast *val)
+var_set(struct var **v, const char *name, struct ast *a)
 {
 	struct var *curr;
 
@@ -51,13 +52,13 @@ var_set(struct var **v, const char *name, struct ast *val)
 
 	curr = var_find(*v, name);
 	if (curr != NULL) {
-		ast_free(curr->val);
-		curr->val = val;
+		ast_free(curr->a);
+		curr->a = a;
 
 		return curr;
 	}
 
-	return var_new(v, name, val);
+	return var_new(v, name, a);
 }
 
 struct ast *
@@ -67,7 +68,7 @@ var_get(struct var *v, const char *name)
 
 	p = var_find(v, name);
 	if (p != NULL) {
-		return p->val;
+		return p->a;
 	}
 
 	return NULL;
@@ -81,9 +82,7 @@ var_free(struct var *v)
 	for (p = v; p != NULL; p = next) {
 		next = p->next;
 
-/* TODO:
-		free_ast(p->val);
-*/
+		ast_free(p->a);
 		free(p);
 	}
 }
