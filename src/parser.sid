@@ -40,6 +40,8 @@
 
 	<new-str>: (:string) -> (:ast);
 
+	<block-scope>: (:ast) -> (:ast);
+
 	<binop-and>:    (:ast, :ast) -> (:ast);
 	<binop-or>:     (:ast, :ast) -> (:ast);
 	!<binop-join>:  (:ast, :ast) -> (:ast);
@@ -77,7 +79,8 @@
 	||
 		obrace;
 		<scope-push>;
-		q = exprs;
+		a = exprs;
+		q = <block-scope>(a);
 		<scope-pop>;
 		cbrace;
 	||
@@ -178,7 +181,9 @@
 	script [
 
 		global-exprs = {
-			q = expr;
+			a = expr;
+
+			q = <block-scope>(a);
 
 			<dispatch>(q);
 			<free>(q);

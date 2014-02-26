@@ -108,15 +108,20 @@
 	@};
 
 	<scope-pop>: () -> () = @{
-		struct var *v;
-
-		v = scope_pop(&act_state->k);
-		var_free(v);
+		(void) scope_pop(&act_state->k);
 	@};
 
 	<new-str>: (s :string) -> (q :ast) = @{
 		@q = ast_new_leaf(AST_STR, @s.e - @s.s, @s.s);
 		if (@q == NULL) {
+			@!;
+		}
+	@};
+
+	<block-scope>: (a :ast) -> (q :ast) = @{
+		@q = ast_new_block(AST_BLOCK, act_state->k, @a);
+		if (@q == NULL) {
+			ast_free(@a);
 			@!;
 		}
 	@};
@@ -158,7 +163,7 @@
 	@};
 
 	<binop-assign>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = ast_new_op(AST_ASSIGN, @a, @b);
+		@q = binop(AST_ASSIGN, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -167,7 +172,8 @@
 	@};
 
 	<binop-exec>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = ast_new_op(AST_EXEC, @a, @b);
+/* XXX: okay to fold here? */
+		@q = binop(AST_EXEC, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -213,6 +219,8 @@
 
 		/* TODO: handle raising an error or ## */
 		p_script(lex_state, act_state);
+
+		return 0;
 	}
 
 @}, @{
