@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "ast.h"
+#include "var.h"
 #include "scope.h"
 
 static int
