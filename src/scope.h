@@ -7,7 +7,7 @@ struct scope;
 struct var **
 scope_push(struct scope **sc);
 
-struct var *
+struct scope *
 scope_pop(struct scope **sc);
 
 struct var *

@@ -16,7 +16,7 @@ scope_push(struct scope **sc)
 
 	assert(sc != NULL);
 
-	new = malloc(sizeof **sc);
+	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -29,24 +29,18 @@ scope_push(struct scope **sc)
 	return &new->var;
 }
 
-struct var *
+struct scope *
 scope_pop(struct scope **sc)
 {
-	struct scope **tmp;
+	struct scope *tmp;
 
 	assert(sc != NULL);
 
-	tmp = &(*sc)->parent;
+	tmp = (*sc)->parent;
 
-	free(*sc);
+	*sc = tmp;
 
-	*sc = *tmp;
-
-	if (*tmp == NULL) {
-		return NULL;
-	}
-
-	return (*tmp)->var;
+	return tmp;
 }
 
 struct var *
