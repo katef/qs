@@ -40,6 +40,9 @@ var_new(struct var **v, const char *name, struct ast *a)
 	new->name = name; /* XXX: after struct */
 	new->a    = a;
 
+	new->next = *v;
+	*v = new;
+
 	return new;
 }
 
