@@ -4,12 +4,6 @@
 struct ast;
 struct var;
 
-static struct var *
-var_find(struct var *v, const char *name);
-
-static struct var *
-var_new(struct var **v, const char *name, struct ast *a);
-
 struct var *
 var_set(struct var **v, const char *name, struct ast *a);
 
