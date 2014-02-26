@@ -4,11 +4,6 @@
 #include "var.h"
 #include "scope.h"
 
-struct scope {
-	struct var *var;
-	struct scope *parent;
-};
-
 struct var **
 scope_push(struct scope **sc)
 {

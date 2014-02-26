@@ -2,7 +2,12 @@
 #define VAR_H
 
 struct ast;
-struct var;
+
+struct var {
+	const char *name;
+	struct ast *a;
+	struct var *next;
+};
 
 struct var *
 var_set(struct var **v, const char *name, struct ast *a);

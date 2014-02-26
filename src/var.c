@@ -5,12 +5,6 @@
 #include "var.h"
 #include "ast.h"
 
-struct var {
-	const char *name;
-	struct ast *a;
-	struct var *next;
-};
-
 static struct var *
 var_find(struct var *v, const char *name)
 {

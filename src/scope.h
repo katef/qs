@@ -2,7 +2,11 @@
 #define SCOPE_H
 
 struct ast;
-struct scope;
+
+struct scope {
+	struct var *var;
+	struct scope *parent;
+};
 
 struct var **
 scope_push(struct scope **sc);
