@@ -97,10 +97,46 @@ ast_free(struct ast *a)
 }
 
 static int
+dump_scope(const struct scope *sc, const void *node)
+{
+	assert(sc != NULL);
+
+	{
+		const struct var *p;
+
+		fprintf(stderr, "\t\"%p\" [ shape = record, color = red, label = \"{",
+			(void *) sc);
+
+		for (p = sc->var; p != NULL; p = p->next) {
+			fprintf(stderr, "%s", p->name);
+
+			if (p->next != NULL) {
+				fprintf(stderr, "|");
+			}
+		}
+
+		fprintf(stderr, "}\" ];\n");
+	}
+
+	fprintf(stderr, "\t{ \"%p\"; \"%p\"; rank = same; };\n", node, (void *) sc);
+
+	fprintf(stderr, "\t\"%p\" -- \"%p\" [ style = dotted ];\n",
+		node, (void *) sc);
+
+	if (sc->parent != NULL) {
+		fprintf(stderr, "\t\"%p\" -- \"%p\" [ dir = back, color = red, constraint=false ];\n",
+			(void *) sc->parent, (void *) sc);
+	}
+
+	return 0;
+}
+
+static int
 dump_block(const char *op, const struct ast *a, const void *node)
 {
 	assert(op != NULL);
 	assert(a != NULL);
+	assert(a->u.block.sc != NULL);
 
 	fprintf(stderr, "\t\"%p\" [ shape = box, style = rounded, label = \"%s\" ];\n", node, op);
 
@@ -108,6 +144,7 @@ dump_block(const char *op, const struct ast *a, const void *node)
 		node, (void *) &a->u.block.a,
 		a->u.block.a == NULL ? "invis" : "solid");
 
+	dump_scope(a->u.block.sc, node);
 	dump_node(a->u.block.a, &a->u.block.a);
 
 	return 0;
@@ -172,6 +209,7 @@ ast_dump(const struct ast *a)
 {
 	fprintf(stderr, "graph G {\n");
 	fprintf(stderr, "\tnode [ shape = plaintext ];\n");
+	fprintf(stderr, "\tsplines = line;\n");
 
 	dump_node(a, &a);
 
