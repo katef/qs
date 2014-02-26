@@ -72,7 +72,7 @@ ast_free(struct ast *a)
 	}
 
 	switch (a->type) {
-		struct var *v;
+		struct scope *sc;
 
 	case AST_STR:
 		break;
@@ -80,8 +80,9 @@ ast_free(struct ast *a)
 	case AST_BLOCK:
 	case AST_DEREF:
 	case AST_CALL:
-		v = scope_pop(&a->u.block.sc);
-		var_free(v);
+		sc = scope_pop(&a->u.block.sc);
+		var_free(sc->var);
+		free(sc);
 		ast_free(a->u.block.a);
 		break;
 
