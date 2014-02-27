@@ -2,7 +2,7 @@
 #define EXEC_H
 
 int
-exec_node(struct ast_node *node);
+exec_cmd(int argc, char **argv);
 
 #endif
 
