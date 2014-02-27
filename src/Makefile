@@ -2,7 +2,8 @@ SID ?= sid
 CC  ?= gcc
 
 CFLAGS += -ansi -pedantic
-#CFLAGS += -Wall -W -Werror
+CFLAGS += -Wall -W
+#CFLAGS += -Werror
 CFLAGS += -O2 -g -ggdb
 
 SID_CFLAGS += -s no-numeric-terminals -s no-terminals
@@ -10,11 +11,14 @@ SID_CFLAGS += -s no-numeric-terminals -s no-terminals
 OBJS += lex.o
 OBJS += parser.o
 OBJS += ast.o
-#OBJS += exec.o
+OBJS += eval.o
+OBJS += exec.o
+OBJS += op.o
 OBJS += builtin.o
 OBJS += main.o
 OBJS += var.o
 OBJS += scope.o
+OBJS += list.o
 
 qs: $(OBJS)
 	$(CC) -o $@ $>

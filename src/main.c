@@ -6,6 +6,7 @@
 #include "debug.h"
 #include "lex.h"
 #include "ast.h"
+#include "eval.h"
 #include "parser.h"
 
 unsigned debug;
@@ -32,16 +33,17 @@ debug_flags(const char *s)
 }
 
 static int
-dispatch(struct ast *ast)
+dispatch(struct ast *a)
 {
 	if (debug & DEBUG_AST) {
-		if (-1 == ast_dump(ast)) {
+		if (-1 == ast_dump(a)) {
 			perror("ast_dump");
 			return -1;
 		}
 	}
 
-	/* TODO: exec */
+	eval_ast(a);
+	/* TODO: $? */
 
 	return 0;
 }
