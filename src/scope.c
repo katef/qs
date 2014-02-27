@@ -43,7 +43,6 @@ scope_set(struct scope *sc, const char *name, struct ast *val)
 {
 	assert(sc != NULL);
 	assert(name != NULL);
-	assert(val != NULL);
 
 	return var_set(&sc->var, name, val);
 }
