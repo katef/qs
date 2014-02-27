@@ -53,6 +53,8 @@
 	<binop-sep>:    (:ast, :ast) -> (:ast);
 	<binop-cons>:   (:ast, :ast) -> (:ast);
 
+	<populate-globals>;
+
 	exprs: () -> (:ast);
 
 	list: () -> (q :ast) [
@@ -202,6 +204,7 @@
 
 	] = {
 		<scope-push>;
+		<populate-globals>;
 		global-exprs;
 		<scope-pop>;
 

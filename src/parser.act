@@ -205,6 +205,26 @@
 		}
 	@};
 
+	<populate-globals>: = @{
+		size_t i;
+
+		struct {
+			const char *name;
+			struct ast *val;
+		} a[] = {
+			{ "?", NULL },
+			{ "$", NULL }, /* TODO: getpid()  */
+			{ "#", NULL }, /* TODO: from argc */
+			{ "*", NULL }  /* TODO: from argv */
+		};
+
+		for (i = 0; i < sizeof a / sizeof *a; i++) {
+			if (!scope_set(act_state->k, a[0].name, a[0].val)) {
+				@!;
+			}
+		}
+	@};
+
 %trailer% @{
 
 	int
