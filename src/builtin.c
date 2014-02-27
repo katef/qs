@@ -49,6 +49,7 @@ builtin_wait(int argc, char *const *argv)
 {
 	int status;
 	pid_t pid;
+	int r;
 
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -68,11 +69,19 @@ builtin_wait(int argc, char *const *argv)
 		return -1;
 	}
 
-	if (debug & DEBUG_EXEC) {
-		fprintf(stderr, "# $?=%d\n", status);
+	if (!WIFEXITED(status)) {
+		/* TODO: call a hook */
+		/* XXX: how to set $? here? */
+		return -1;
 	}
 
-	return status;
+	r = WEXITSTATUS(status);
+
+	if (debug & DEBUG_EXEC) {
+		fprintf(stderr, "# $?=%d\n", r);
+	}
+
+	return r;
 }
 
 static int
