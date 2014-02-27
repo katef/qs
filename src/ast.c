@@ -30,6 +30,41 @@ ast_new_leaf(enum ast_type type, size_t n, const char *s)
 }
 
 struct ast *
+ast_new_list(struct ast_list *l)
+{
+	struct ast *new;
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->type = AST_LIST;
+	new->u.l  = l;
+
+	return new;
+}
+
+struct ast *
+ast_new_exec(enum ast_type type, struct scope *sc, struct ast_list *l)
+{
+	struct ast *new;
+
+	assert(sc != NULL);
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->type      = type;
+	new->u.exec.sc = sc;
+	new->u.exec.l  = l;
+
+	return new;
+}
+
+struct ast *
 ast_new_block(enum ast_type type, struct scope *sc, struct ast *a)
 {
 	struct ast *new;
@@ -108,7 +143,7 @@ dump_scope(const struct scope *sc, const void *node)
 			(void *) sc);
 
 		for (p = sc->var; p != NULL; p = p->next) {
-			fprintf(stderr, "%s", p->name);
+			fprintf(stderr, "$%s", p->name);
 
 			if (p->next != NULL) {
 				fprintf(stderr, "|");
@@ -127,6 +162,36 @@ dump_scope(const struct scope *sc, const void *node)
 		fprintf(stderr, "\t\"%p\" -- \"%p\" [ dir = back, color = red, constraint=false ];\n",
 			(void *) sc->parent, (void *) sc);
 	}
+
+	return 0;
+}
+
+static int
+dump_list(const char *op, const struct ast_list *l, const void *node)
+{
+	const struct ast_list *p;
+
+	fprintf(stderr, "\t\"%p\" [ shape = record, style = rounded, label = \"{<op>%s|{", node, op);
+
+	for (p = l; p != NULL; p = p->next) {
+		fprintf(stderr, "<%p> ", (void *) p);
+
+		switch (p->a->type) {
+		case AST_STR:
+			fprintf(stderr, "%s", p->a->u.s);
+			break;
+
+		default:
+			fprintf(stderr, "?");
+			break;
+		}
+
+		if (p->next) {
+			fprintf(stderr, "|");
+		}
+	}
+
+	fprintf(stderr, "}}\" ];\n");
 
 	return 0;
 }
@@ -185,11 +250,17 @@ dump_node(const struct ast *a, const void *node)
 		fprintf(stderr, "\t\"%p\" [ label = \"'%s'\" ];\n", node, a->u.s);
 		return 0;
 
+	case AST_EXEC:
+		fprintf(stderr, "\t\"%p\" -- \"%p\":op:c [ dir = back, color = red, constraint=false ];\n",
+			(void *) a->u.exec.sc, node);
+		return dump_list("!", a->u.exec.l, node);
+
+	case AST_LIST:  return dump_list("( )", a->u.l, node);
+
 	case AST_DEREF: return dump_block("$",   a, node);
 	case AST_BLOCK: return dump_block("{ }", a, node);
 	case AST_CALL:  return dump_block("()",  a, node);
-	case AST_RUNFG: return dump_block("fg",  a, node);
-	case AST_RUNBG: return dump_block("bg",  a, node);
+	case AST_SETBG: return dump_block("bg",  a, node);
 
 	case AST_AND:    return dump_op("&&", a, node);
 	case AST_OR:     return dump_op("||", a, node);
@@ -197,10 +268,10 @@ dump_node(const struct ast *a, const void *node)
 	case AST_PIPE:   return dump_op("|",  a, node);
 	case AST_ASSIGN: return dump_op("=",  a, node);
 	case AST_SEP:    return dump_op(";",  a, node);
-	case AST_CONS:   return dump_op(",",  a, node);
 
 	default:
-		fprintf(stderr, "\t\"%p\" [ shape = box, style = rounded, label = \"%s\" ];\n", node, "?");
+		fprintf(stderr, "\t\"%p\" [ shape = box, style = rounded, label = \"%s %d\" ];\n",
+			node, "?", a->type);
 		return 0;
 	}
 }

@@ -3,6 +3,7 @@
 	string;
 	!scope;
 	ast;
+	list;
 
 %terminals%
 
@@ -38,12 +39,13 @@
     <scope-push>;
     <scope-pop>;
 
-	<new-str>: (:string) -> (:ast);
+	<new-str>:  (:string) -> (:ast);
+	<new-list>: (:list)   -> (:ast);
 
 	/* TODO: call these <frame-*> perhaps */
-	<block-scope>: (:ast) -> (:ast);
-	<block-runfg>: (:ast) -> (:ast);
-	<block-runbg>: (:ast) -> (:ast);
+	<block-scope>: (:ast)  -> (:ast);
+	<block-setbg>: (:ast)  -> (:ast);
+	<block-exec>:  (:list) -> (:ast);
 
 	<binop-and>:    (:ast, :ast) -> (:ast);
 	<binop-or>:     (:ast, :ast) -> (:ast);
@@ -51,15 +53,18 @@
 	<binop-pipe>:   (:ast, :ast) -> (:ast);
 	<binop-assign>: (:ast, :ast) -> (:ast);
 	<binop-sep>:    (:ast, :ast) -> (:ast);
-	<binop-cons>:   (:ast, :ast) -> (:ast);
+
+	<list-null>: () -> (:list);
+	<list-cat>:  (:list, :ast) -> (:list);
 
 	<populate-globals>;
 
 	exprs: () -> (:ast);
 
-	list: () -> (q :ast) [
+	ast-list: () -> (l :list) [
 
 		term: () -> (q :ast) = {
+		/* TODO: || $deref || backtick */
 			s = str;
 			q = <new-str>(s);
 		};
@@ -68,16 +73,22 @@
 		a = term;
 
 		{
-			b = list;
+			t = ast-list;
 		||
-			b = <epsilon>;
+			t = <list-null>;
 		};
 
-		q = <binop-cons>(a, b);
+		l = <list-cat>(t, a);
 	};
 
 	cmd: () -> (q :ast) = {
-		q = list;
+		oparen;
+		l = ast-list;
+		q = <new-list>(l);
+		cparen;
+	||
+		l = ast-list;
+		q = <block-exec>(l);
 	||
 		obrace;
 		<scope-push>;
@@ -85,10 +96,6 @@
 		q = <block-scope>(a);
 		<scope-pop>;
 		cbrace;
-	||
-		oparen;
-		q = exprs;
-		cparen;
 	};
 
 /* XXX: needs different grammar */
@@ -154,13 +161,13 @@
 
 			{
 				nl;
-				q = <block-runfg>(a);
+				q = a;
 			||
 				semi;
-				q = <block-runfg>(a);
+				q = a;
 			||
 				bg;
-				q = <block-runbg>(a);
+				q = <block-setbg>(a);
 			};
 
 			<scope-pop>;

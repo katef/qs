@@ -3,14 +3,16 @@
 
 enum ast_type {
 	/* leaves */
-	AST_STR,    /* 'xyz' */
+	AST_STR,    /*  'xyz'  */
+	AST_LIST,   /* (x y z) */
+	AST_EXEC,   /*  x y z  */
 
 	/* block scope */
 	AST_BLOCK,  /* { a } */
-	AST_DEREF,  /*  $a   */
 	AST_CALL,   /*   a() */
-	AST_RUNFG,  /*   a   */
-	AST_RUNBG,  /*   a & */
+	AST_TICK,   /*  `a  */
+	AST_DEREF,  /*  $a  */
+	AST_SETBG,  /*   a & */
 
 	/* binary operators */
 	AST_AND,    /* a && b */
@@ -18,8 +20,12 @@ enum ast_type {
 	AST_JOIN,   /* a  ^ b */
 	AST_PIPE,   /* a  | b */
 	AST_ASSIGN, /* a  = b */
-	AST_SEP,    /* a  ; b */
-	AST_CONS    /* a    b */
+	AST_SEP     /* a  ; b */
+};
+
+struct ast_list {
+	struct ast *a;
+	struct ast_list *next;
 };
 
 struct ast {
@@ -27,6 +33,13 @@ struct ast {
 
 	union {
 		char *s;
+
+		struct ast_list *l;
+
+		struct {
+			struct scope *sc;
+			struct ast_list *l;
+		} exec;
 
 		struct {
 			struct scope *sc;
@@ -42,6 +55,12 @@ struct ast {
 
 struct ast *
 ast_new_leaf(enum ast_type type, size_t n, const char *s);
+
+struct ast *
+ast_new_list(struct ast_list *l);
+
+struct ast *
+ast_new_exec(enum ast_type type, struct scope *sc, struct ast_list *l);
 
 struct ast *
 ast_new_block(enum ast_type type, struct scope *sc, struct ast *a);

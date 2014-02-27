@@ -13,6 +13,7 @@
 	string -> string;
 	scope  -> scope;
 	ast    -> ast;
+	list   -> list;
 
 %header% @{
 
@@ -21,6 +22,7 @@
 
 	#include "lex.h"
 	#include "ast.h"
+	#include "list.h"
 	#include "scope.h"
 	#include "parser.h"
 
@@ -37,6 +39,7 @@
 	};
 
 	typedef struct act_string string;
+	typedef struct ast_list * list;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -118,6 +121,13 @@
 		}
 	@};
 
+	<new-list>: (l :list) -> (q :ast) = @{
+		@q = ast_new_list(@l);
+		if (@q == NULL) {
+			@!;
+		}
+	@};
+
 	<block-scope>: (a :ast) -> (q :ast) = @{
 		@q = ast_new_block(AST_BLOCK, act_state->k, @a);
 		if (@q == NULL) {
@@ -126,18 +136,23 @@
 		}
 	@};
 
-	<block-runfg>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(AST_RUNFG, act_state->k, @a);
+	<block-setbg>: (a :ast) -> (q :ast) = @{
+		@q = ast_new_block(AST_SETBG, act_state->k, @a);
 		if (@q == NULL) {
 			ast_free(@a);
 			@!;
 		}
+
+		/* TODO: $% as jobid */
+		if (!scope_set(act_state->k, "%", NULL)) {
+			@!;
+		}
 	@};
 
-	<block-runbg>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(AST_RUNBG, act_state->k, @a);
+	<block-exec>: (l :list) -> (q :ast) = @{
+		@q = ast_new_exec(AST_EXEC, act_state->k, @l);
 		if (@q == NULL) {
-			ast_free(@a);
+			/* TODO: free something? */
 			@!;
 		}
 	@};
@@ -196,16 +211,19 @@
 		}
 	@};
 
-	<binop-cons>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_CONS, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
+	<list-null>: () -> (l :list) = @{
+		@l = NULL;
+	@};
+
+	<list-cat>: (t :list, a :ast) -> (l :list) = @{
+		@l = list_cat(@t, @a);
+		if (@l == NULL) {
+			/* TODO: free a? */
 			@!;
 		}
 	@};
 
-	<populate-globals>: = @{
+	<populate-globals>: () -> () = @{
 		size_t i;
 
 		struct {
