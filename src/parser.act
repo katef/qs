@@ -49,8 +49,10 @@
 	#define RESTORE_LEXER    act_state->type = act_state->save;
 
 	static struct ast *
-	binop(enum ast_type type, struct ast *a, struct ast *b)
+	binop(struct scope *sc, enum ast_type type, struct ast *a, struct ast *b)
 	{
+		assert(sc != NULL);
+
 		if (a == NULL) {
 			return b;
 		}
@@ -59,7 +61,7 @@
 			return a;
 		}
 
-		return ast_new_op(type, a, b);
+		return ast_new_op(sc, type, a, b);
 	}
 
 @}, @{
@@ -91,7 +93,9 @@
 	<free>: (q :ast) -> () = @{
 		assert(@q != NULL);
 
+/* XXX:
 		ast_free(@q);
+*/
 	@};
 
 	<dispatch>: (q :ast) -> () = @{
@@ -129,7 +133,7 @@
 	@};
 
 	<block-scope>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(AST_BLOCK, act_state->k, @a);
+		@q = ast_new_block(act_state->k, AST_BLOCK, @a);
 		if (@q == NULL) {
 			ast_free(@a);
 			@!;
@@ -137,7 +141,7 @@
 	@};
 
 	<block-setbg>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(AST_SETBG, act_state->k, @a);
+		@q = ast_new_block(act_state->k, AST_SETBG, @a);
 		if (@q == NULL) {
 			ast_free(@a);
 			@!;
@@ -150,7 +154,9 @@
 	@};
 
 	<block-exec>: (l :list) -> (q :ast) = @{
-		@q = ast_new_exec(AST_EXEC, act_state->k, @l);
+		assert(@l != NULL);
+
+		@q = ast_new_exec(act_state->k, AST_EXEC, @l);
 		if (@q == NULL) {
 			/* TODO: free something? */
 			@!;
@@ -158,7 +164,7 @@
 	@};
 
 	<binop-and>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_AND, @a, @b);
+		@q = binop(act_state->k, AST_AND, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -167,7 +173,7 @@
 	@};
 
 	<binop-or>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_OR, @a, @b);
+		@q = binop(act_state->k, AST_OR, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -176,7 +182,7 @@
 	@};
 
 	<binop-join>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_JOIN, @a, @b);
+		@q = binop(act_state->k, AST_JOIN, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -185,7 +191,7 @@
 	@};
 
 	<binop-pipe>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_PIPE, @a, @b);
+		@q = binop(act_state->k, AST_PIPE, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -194,7 +200,7 @@
 	@};
 
 	<binop-assign>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_ASSIGN, @a, @b);
+		@q = binop(act_state->k, AST_ASSIGN, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -203,7 +209,7 @@
 	@};
 
 	<binop-sep>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(AST_SEP, @a, @b);
+		@q = binop(act_state->k, AST_SEP, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);

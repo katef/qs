@@ -121,11 +121,11 @@ eval_ast(struct ast *a)
 			return a;
 
 		case AST_EXEC:
-			a = eval_exec(a->u.exec.l);
+			a = eval_exec(a->u.l);
 			continue;
 
 		case AST_BLOCK:
-			a = a->u.block.a;
+			a = a->u.a;
 			/* TODO: DEBUG_ to dump symbol table after executing a block */
 			continue;
 
