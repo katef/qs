@@ -3,6 +3,7 @@
 
 enum ast_type {
 	/* leaves */
+	AST_STATUS, /*  $?     */
 	AST_STR,    /*  'xyz'  */
 	AST_LIST,   /* (x y z) */
 	AST_EXEC,   /*  x y z  */
@@ -10,8 +11,8 @@ enum ast_type {
 	/* block scope */
 	AST_BLOCK,  /* { a } */
 	AST_CALL,   /*   a() */
-	AST_TICK,   /*  `a  */
-	AST_DEREF,  /*  $a  */
+	AST_TICK,   /*  `a   */
+	AST_DEREF,  /*  $a   */
 	AST_SETBG,  /*   a & */
 
 	/* binary operators */
@@ -33,6 +34,7 @@ struct ast {
 
 	union {
 		char *s;
+		int r;
 
 		struct ast_list *l;
 
@@ -52,6 +54,9 @@ struct ast {
 		} op;
 	} u;
 };
+
+struct ast *
+ast_new_status(int r);
 
 struct ast *
 ast_new_leaf(enum ast_type type, size_t n, const char *s);

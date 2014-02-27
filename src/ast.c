@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "ast.h"
 #include "var.h"
@@ -9,6 +10,22 @@
 
 static int
 dump_node(const struct ast *a, const void *node);
+
+struct ast *
+ast_new_status(int r)
+{
+	struct ast *new;
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->type   = AST_STATUS;
+	new->u.r    = r;
+
+	return new;
+}
 
 struct ast *
 ast_new_leaf(enum ast_type type, size_t n, const char *s)
@@ -51,6 +68,11 @@ ast_new_exec(enum ast_type type, struct scope *sc, struct ast_list *l)
 	struct ast *new;
 
 	assert(sc != NULL);
+
+	if (l == NULL) {
+		errno = EINVAL;
+		return NULL;
+	}
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -174,7 +196,7 @@ dump_list(const char *op, const struct ast_list *l, const void *node)
 	fprintf(stderr, "\t\"%p\" [ shape = record, style = rounded, label = \"{<op>%s|{", node, op);
 
 	for (p = l; p != NULL; p = p->next) {
-		fprintf(stderr, "<%p> ", (void *) p);
+		fprintf(stderr, "<%p>", (void *) p);
 
 		switch (p->a->type) {
 		case AST_STR:
@@ -246,6 +268,10 @@ dump_node(const struct ast *a, const void *node)
 	}
 
 	switch (a->type) {
+	case AST_STATUS:
+		fprintf(stderr, "\t\"%p\" [ label = \"%d\" ];\n", node, a->u.r);
+		return 0;
+
 	case AST_STR:
 		fprintf(stderr, "\t\"%p\" [ label = \"'%s'\" ];\n", node, a->u.s);
 		return 0;
