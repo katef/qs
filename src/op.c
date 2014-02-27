@@ -5,28 +5,49 @@
 #include "eval.h"
 #include "ast.h"
 #include "op.h"
+#include "status.h"
 
 int
 op_and(struct ast *a, struct ast *b)
 {
+	struct ast *x;
+	struct ast *y;
+	int r;
+
 	/* XXX: i don't like this at all */
-	a = eval_ast(a);
-	if (a->type != AST_STATUS) {
+	x = eval_ast(a);
+	if (x == NULL) {
+		return -1;
+	}
+
+	if (x->type != AST_STATUS) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (0 != a->u.r) {
+	if (-1 == status_get(a->sc, &r)) {
+		return -1;
+	}
+
+	if (r != EXIT_SUCCESS) {
 		return EXIT_FAILURE;
 	}
 
-	b = eval_ast(b);
-	if (b->type != AST_STATUS) {
+	y = eval_ast(b);
+	if (y == NULL) {
+		return -1;
+	}
+
+	if (y->type != AST_STATUS) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (0 != b->u.r) {
+	if (-1 == status_get(a->sc, &r)) {
+		return -1;
+	}
+
+	if (r != EXIT_SUCCESS) {
 		return EXIT_FAILURE;
 	}
 
@@ -36,24 +57,44 @@ op_and(struct ast *a, struct ast *b)
 int
 op_or(struct ast *a, struct ast *b)
 {
+	struct ast *x;
+	struct ast *y;
+	int r;
+
 	/* XXX: i don't like this at all */
-	a = eval_ast(a);
-	if (a->type != AST_STATUS) {
+	x = eval_ast(a);
+	if (x == NULL) {
+		return -1;
+	}
+
+	if (x->type != AST_STATUS) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (0 == a->u.r) {
+	if (-1 == status_get(a->sc, &r)) {
+		return -1;
+	}
+
+	if (r == EXIT_SUCCESS) {
 		return EXIT_SUCCESS;
 	}
 
-	b = eval_ast(b);
-	if (b->type != AST_STATUS) {
+	y = eval_ast(b);
+	if (y == NULL) {
+		return -1;
+	}
+
+	if (y->type != AST_STATUS) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (0 == b->u.r) {
+	if (-1 == status_get(a->sc, &r)) {
+		return -1;
+	}
+
+	if (r == EXIT_SUCCESS) {
 		return EXIT_SUCCESS;
 	}
 
@@ -98,6 +139,10 @@ op_sep(struct ast *a, struct ast *b)
 
 	if (a != NULL) {
 		a = eval_ast(a);
+		if (a == NULL) {
+			return -1;
+		}
+
 		if (a->type != AST_STATUS) {
 			errno = EINVAL;
 			return -1;
@@ -108,6 +153,10 @@ op_sep(struct ast *a, struct ast *b)
 
 	if (b != NULL) {
 		b = eval_ast(b);
+		if (b == NULL) {
+			return -1;
+		}
+
 		if (b->type != AST_STATUS) {
 			errno = EINVAL;
 			return -1;

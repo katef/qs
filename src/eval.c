@@ -8,6 +8,7 @@
 #include "list.h"
 #include "eval.h"
 #include "exec.h"
+#include "scope.h"
 #include "op.h"
 
 static char **
@@ -76,11 +77,14 @@ error:
 }
 
 struct ast *
-eval_exec(struct ast_list *l)
+eval_exec(struct scope *sc, struct ast_list *l)
 {
 	char **argv;
 	int argc;
 	int r;
+	int n;
+
+	assert(sc != NULL);
 
 	argv = make_argv(l, &argc);
 	if (argv == NULL) {
@@ -93,6 +97,10 @@ eval_exec(struct ast_list *l)
 
 	free(argv);
 
+	if (-1 == status_set(sc, r)) {
+		return NULL;
+	}
+
 	return ast_new_status(r);
 }
 
@@ -101,9 +109,14 @@ eval_op(struct ast *a,
 	int (*op)(struct ast *a, struct ast *b))
 {
 	int r;
+	int n;
 
 	r = op(a->u.op.a, a->u.op.b);
 	/* XXX: errors? */
+
+	if (-1 == status_set(a->sc, r)) {
+		return NULL;
+	}
 
 	return ast_new_status(r);
 }
@@ -121,7 +134,7 @@ eval_ast(struct ast *a)
 			return a;
 
 		case AST_EXEC:
-			a = eval_exec(a->u.l);
+			a = eval_exec(a->sc, a->u.l);
 			continue;
 
 		case AST_BLOCK:
@@ -133,6 +146,10 @@ eval_ast(struct ast *a)
 		case AST_TICK:
 		case AST_DEREF:
 		case AST_SETBG:
+			if (!scope_set(a->sc, "?", "1")) {
+				return NULL;
+			}
+
 			/* TODO */
 			errno = ENOSYS;
 			return NULL;
