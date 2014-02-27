@@ -9,6 +9,8 @@ enum ast_type {
 	AST_BLOCK,  /* { a } */
 	AST_DEREF,  /*  $a   */
 	AST_CALL,   /*   a() */
+	AST_RUNFG,  /*   a   */
+	AST_RUNBG,  /*   a & */
 
 	/* binary operators */
 	AST_AND,    /* a && b */
@@ -16,8 +18,7 @@ enum ast_type {
 	AST_JOIN,   /* a  ^ b */
 	AST_PIPE,   /* a  | b */
 	AST_ASSIGN, /* a  = b */
-	AST_EXEC,   /* a  ; b */
-	AST_BG,     /* a  & b */
+	AST_SEP,    /* a  ; b */
 	AST_CONS    /* a    b */
 };
 
@@ -44,6 +45,9 @@ ast_new_leaf(enum ast_type type, size_t n, const char *s);
 
 struct ast *
 ast_new_block(enum ast_type type, struct scope *sc, struct ast *a);
+
+struct ast *
+ast_new_conv(enum ast_type type, struct ast *a);
 
 struct ast *
 ast_new_op(enum ast_type type, struct ast *a, struct ast *b);

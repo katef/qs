@@ -188,14 +188,15 @@ dump_node(const struct ast *a, const void *node)
 	case AST_DEREF: return dump_block("$",   a, node);
 	case AST_BLOCK: return dump_block("{ }", a, node);
 	case AST_CALL:  return dump_block("()",  a, node);
+	case AST_RUNFG: return dump_block("fg",  a, node);
+	case AST_RUNBG: return dump_block("bg",  a, node);
 
 	case AST_AND:    return dump_op("&&", a, node);
 	case AST_OR:     return dump_op("||", a, node);
 	case AST_JOIN:   return dump_op("^",  a, node);
 	case AST_PIPE:   return dump_op("|",  a, node);
 	case AST_ASSIGN: return dump_op("=",  a, node);
-	case AST_EXEC:   return dump_op(";",  a, node);
-	case AST_BG:     return dump_op("&",  a, node);
+	case AST_SEP:    return dump_op(";",  a, node);
 	case AST_CONS:   return dump_op(",",  a, node);
 
 	default:

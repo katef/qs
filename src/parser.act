@@ -126,6 +126,22 @@
 		}
 	@};
 
+	<block-runfg>: (a :ast) -> (q :ast) = @{
+		@q = ast_new_block(AST_RUNFG, act_state->k, @a);
+		if (@q == NULL) {
+			ast_free(@a);
+			@!;
+		}
+	@};
+
+	<block-runbg>: (a :ast) -> (q :ast) = @{
+		@q = ast_new_block(AST_RUNBG, act_state->k, @a);
+		if (@q == NULL) {
+			ast_free(@a);
+			@!;
+		}
+	@};
+
 	<binop-and>: (a :ast, b :ast) -> (q :ast) = @{
 		@q = binop(AST_AND, @a, @b);
 		if (@q == NULL) {
@@ -171,18 +187,8 @@
 		}
 	@};
 
-	<binop-exec>: (a :ast, b :ast) -> (q :ast) = @{
-/* XXX: okay to fold here? */
-		@q = binop(AST_EXEC, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-bg>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = ast_new_op(AST_BG, @a, @b);
+	<binop-sep>: (a :ast, b :ast) -> (q :ast) = @{
+		@q = binop(AST_SEP, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);

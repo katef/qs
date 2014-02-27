@@ -40,18 +40,18 @@
 
 	<new-str>: (:string) -> (:ast);
 
+	/* TODO: call these <frame-*> perhaps */
 	<block-scope>: (:ast) -> (:ast);
+	<block-runfg>: (:ast) -> (:ast);
+	<block-runbg>: (:ast) -> (:ast);
 
 	<binop-and>:    (:ast, :ast) -> (:ast);
 	<binop-or>:     (:ast, :ast) -> (:ast);
 	!<binop-join>:  (:ast, :ast) -> (:ast);
 	<binop-pipe>:   (:ast, :ast) -> (:ast);
 	<binop-assign>: (:ast, :ast) -> (:ast);
-	<binop-exec>:   (:ast, :ast) -> (:ast);
-	<binop-bg>:     (:ast, :ast) -> (:ast);
+	<binop-sep>:    (:ast, :ast) -> (:ast);
 	<binop-cons>:   (:ast, :ast) -> (:ast);
-
-	/* TODO: <free> */
 
 	exprs: () -> (:ast);
 
@@ -89,6 +89,7 @@
 		cparen;
 	};
 
+/* XXX: needs different grammar */
 	assign-expr: () -> (q :ast) = {
 		a = cmd;
 
@@ -145,18 +146,22 @@
 
 		::expr: () -> (q :ast) = {
 			a = or-expr;
-			b = <epsilon>;
+
+			/* for $? */
+			<scope-push>;
 
 			{
 				nl;
-				q = <binop-exec>(a, b);
+				q = <block-runfg>(a);
 			||
-				q = <binop-exec>(a, b);
 				semi;
+				q = <block-runfg>(a);
 			||
-				q = <binop-bg>(a, b);
 				bg;
+				q = <block-runbg>(a);
 			};
+
+			<scope-pop>;
 
 		||
 			q = <epsilon>;
@@ -175,7 +180,7 @@
 			b = <epsilon>;
 		};
 
-		q = <binop-exec>(a, b);
+		q = <binop-sep>(a, b);
 	};
 
 	script [
