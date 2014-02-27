@@ -72,9 +72,7 @@ builtin_wait(int argc, char *const *argv)
 		fprintf(stderr, "# $?=%d\n", status);
 	}
 
-	/* TODO: store $? */
-
-	return -1;
+	return status;
 }
 
 static int
