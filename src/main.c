@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 2
 
+#include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -7,6 +8,7 @@
 #include "lex.h"
 #include "ast.h"
 #include "eval.h"
+#include "frame.h"
 #include "parser.h"
 
 unsigned debug;
@@ -14,6 +16,8 @@ unsigned debug;
 static int
 debug_flags(const char *s)
 {
+	assert(s != NULL);
+
 	for ( ; *s != '\0'; s++) {
 		switch (*s) {
 		case 'a': debug = ~0U;          break;
@@ -33,7 +37,35 @@ debug_flags(const char *s)
 }
 
 static int
-dispatch(struct ast *a)
+populate_globals(struct frame *f)
+{
+	size_t i;
+
+	struct {
+		const char *name;
+		struct ast *val;
+	} a[] = {
+		{ "?", NULL },
+		{ "_", NULL },
+		{ "$", NULL }, /* TODO: getpid()  */
+		{ "#", NULL }, /* TODO: from argc */
+		{ "*", NULL }, /* TODO: from argv */
+		{ "^", NULL }  /* TODO: "\t" */
+	};
+
+	assert(f != NULL);
+
+	for (i = 0; i < sizeof a / sizeof *a; i++) {
+		if (!frame_set(f, a[i].name, a[i].val)) {
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int
+dispatch(struct frame *f, struct ast *a)
 {
 	struct ast *out;
 
@@ -45,14 +77,20 @@ dispatch(struct ast *a)
 	}
 
 	if (-1 == eval_ast(a, &out)) {
-		return -1;
+		goto error;
 	}
 
-	if (out == NULL) {
-		return 0;
+	if (!frame_set(f, "_", out)) {
+		goto error;
 	}
 
-	/* TODO: error about something left on the stack */
+	ast_free(out);
+
+	return 0;
+
+error:
+
+	perror("dispatch");
 
 	ast_free(out);
 
@@ -93,7 +131,7 @@ main(int argc, char *argv[])
 		goto usage;
 	}
 
-	if (-1 == parse(&l, dispatch)) {
+	if (-1 == parse(&l, populate_globals, dispatch)) {
 		perror("parse");
 		goto error;
 	}

@@ -34,8 +34,9 @@
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type type, save;
-		int (*dispatch)(struct ast *);
 		struct frame *f;
+		int (*dispatch)(struct frame *f, struct ast *);
+		int (*populate_globals)(struct frame *f);
 	};
 
 	typedef struct act_string string;
@@ -74,7 +75,8 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*dispatch)(struct ast *));
+		int (*populate_globals)(struct frame *f),
+		int (*dispatch)(struct frame *f, struct ast *));
 
 @};
 
@@ -99,7 +101,13 @@
 	@};
 
 	<dispatch>: (q :ast) -> () = @{
-		if (-1 == act_state->dispatch(@q)) {
+		if (-1 == act_state->dispatch(act_state->f, @q)) {
+			@!;
+		}
+	@};
+
+	<populate-globals>: () -> () = @{
+		if (-1 == act_state->populate_globals(act_state->f)) {
 			@!;
 		}
 	@};
@@ -229,41 +237,23 @@
 		}
 	@};
 
-	<populate-globals>: () -> () = @{
-		size_t i;
-
-		struct {
-			const char *name;
-			struct ast *val;
-		} a[] = {
-			{ "?", NULL },
-			{ "$", NULL }, /* TODO: getpid()  */
-			{ "#", NULL }, /* TODO: from argc */
-			{ "*", NULL }, /* TODO: from argv */
-			{ "^", NULL }  /* TODO: "\t" */
-		};
-
-		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			if (!frame_set(act_state->f, a[i].name, a[i].val)) {
-				@!;
-			}
-		}
-	@};
-
 %trailer% @{
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*dispatch)(struct ast *))
+		int (*populate_globals)(struct frame *f),
+		int (*dispatch)(struct frame *f, struct ast *))
 	{
 		struct act_state a, *act_state = &a;
 
 		assert(lex_state != NULL);
 		assert(dispatch != NULL);
+		assert(populate_globals != NULL);
 
-		act_state->dispatch = dispatch;
-		act_state->f        = NULL;
+		act_state->dispatch         = dispatch;
+		act_state->populate_globals = populate_globals;
 
+		act_state->f = NULL;
 		lex_state->p = lex_state->buf;
 
 		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
