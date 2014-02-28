@@ -105,7 +105,6 @@ frame_get(const struct frame *f, const char *name)
 int
 frame_export(const struct frame *f)
 {
-	const struct frame *p;
 	const struct var *v;
 
 	if (f == NULL) {
