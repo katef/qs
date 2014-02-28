@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "scope.h"
+#include "frame.h"
 #include "eval.h"
 #include "ast.h"
 #include "op.h"

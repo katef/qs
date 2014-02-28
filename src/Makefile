@@ -17,7 +17,7 @@ OBJS += op.o
 OBJS += builtin.o
 OBJS += main.o
 OBJS += var.o
-OBJS += scope.o
+OBJS += frame.o
 OBJS += list.o
 
 qs: $(OBJS)

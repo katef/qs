@@ -30,7 +30,7 @@ struct ast_list {
 
 struct ast {
 	enum ast_type type;
-	struct scope *sc;
+	struct frame *f;
 
 	union {
 		char *s;
@@ -51,13 +51,13 @@ struct ast *
 ast_new_list(struct ast_list *l);
 
 struct ast *
-ast_new_exec(struct scope *sc, enum ast_type type, struct ast_list *l);
+ast_new_exec(struct frame *f, enum ast_type type, struct ast_list *l);
 
 struct ast *
-ast_new_block(struct scope *sc, enum ast_type type, struct ast *a);
+ast_new_block(struct frame *f, enum ast_type type, struct ast *a);
 
 struct ast *
-ast_new_op(struct scope *sc, enum ast_type type, struct ast *a, struct ast *b);
+ast_new_op(struct frame *f, enum ast_type type, struct ast *a, struct ast *b);
 
 void
 ast_free(struct ast *bet);

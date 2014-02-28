@@ -7,16 +7,16 @@
 
 #include "ast.h"
 #include "var.h"
-#include "scope.h"
+#include "frame.h"
 
 int status; /* this is $? */
 
 struct var **
-scope_push(struct scope **sc)
+frame_push(struct frame **f)
 {
-	struct scope *new;
+	struct frame *new;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -25,50 +25,50 @@ scope_push(struct scope **sc)
 
 	new->var = NULL;
 
-	new->parent = *sc;
-	*sc = new;
+	new->parent = *f;
+	*f = new;
 
 	return &new->var;
 }
 
-struct scope *
-scope_pop(struct scope **sc)
+struct frame *
+frame_pop(struct frame **f)
 {
-	struct scope *tmp;
+	struct frame *tmp;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 
-	tmp = (*sc)->parent;
+	tmp = (*f)->parent;
 
-	*sc = tmp;
+	*f = tmp;
 
 	return tmp;
 }
 
 struct var *
-scope_set(struct scope *sc, const char *name, struct ast *val)
+frame_set(struct frame *f, const char *name, struct ast *val)
 {
-	assert(sc != NULL);
+	assert(f != NULL);
 	assert(name != NULL);
 
-	return var_set(&sc->var, name, val);
+	return var_set(&f->var, name, val);
 }
 
 struct ast *
-scope_get(const struct scope *sc, const char *name)
+frame_get(const struct frame *f, const char *name)
 {
-	const struct scope *p;
+	const struct frame *p;
 	struct ast *a;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 	assert(name != NULL);
 
 	/* special case for $? */
-	if (sc->parent == NULL && 0 == strcmp(name, "?")) {
+	if (f->parent == NULL && 0 == strcmp(name, "?")) {
 		static char s[32];
 		int n;
 
-		a = var_get(sc->var, name);
+		a = var_get(f->var, name);
 		if (a == NULL) {
 			errno = EINVAL;
 			return NULL;
@@ -89,7 +89,7 @@ scope_get(const struct scope *sc, const char *name)
 		return a;
 	}
 
-	for (p = sc; p != NULL; p = p->parent) {
+	for (p = f; p != NULL; p = p->parent) {
 		a = var_get(p->var, name);
 		if (a != NULL) {
 			return a;

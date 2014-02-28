@@ -11,7 +11,7 @@
 %maps%
 
 	string -> string;
-	scope  -> scope;
+	frame  -> frame;
 	ast    -> ast;
 	list   -> list;
 
@@ -23,7 +23,7 @@
 	#include "lex.h"
 	#include "ast.h"
 	#include "list.h"
-	#include "scope.h"
+	#include "frame.h"
 	#include "parser.h"
 
 	struct act_string {
@@ -35,7 +35,7 @@
 		struct lex_tok t;
 		enum lex_type type, save;
 		int (*dispatch)(struct ast *);
-		struct scope *k;
+		struct frame *f;
 	};
 
 	typedef struct act_string string;
@@ -49,9 +49,9 @@
 	#define RESTORE_LEXER    act_state->type = act_state->save;
 
 	static struct ast *
-	binop(struct scope *sc, enum ast_type type, struct ast *a, struct ast *b)
+	binop(struct frame *f, enum ast_type type, struct ast *a, struct ast *b)
 	{
-		assert(sc != NULL);
+		assert(f != NULL);
 
 		if (a == NULL) {
 			return b;
@@ -61,7 +61,7 @@
 			return a;
 		}
 
-		return ast_new_op(sc, type, a, b);
+		return ast_new_op(f, type, a, b);
 	}
 
 @}, @{
@@ -108,14 +108,14 @@
 		@q = NULL;
 	@};
 
-	<scope-push>: () -> () = @{
-		if (!scope_push(&act_state->k)) {
+	<frame-push>: () -> () = @{
+		if (!frame_push(&act_state->f)) {
 			@!;
 		}
 	@};
 
-	<scope-pop>: () -> () = @{
-		(void) scope_pop(&act_state->k);
+	<frame-pop>: () -> () = @{
+		(void) frame_pop(&act_state->f);
 	@};
 
 	<new-str>: (s :string) -> (q :ast) = @{
@@ -132,8 +132,8 @@
 		}
 	@};
 
-	<block-scope>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(act_state->k, AST_BLOCK, @a);
+	<block-frame>: (a :ast) -> (q :ast) = @{
+		@q = ast_new_block(act_state->f, AST_BLOCK, @a);
 		if (@q == NULL) {
 			ast_free(@a);
 			@!;
@@ -141,14 +141,14 @@
 	@};
 
 	<block-setbg>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(act_state->k, AST_SETBG, @a);
+		@q = ast_new_block(act_state->f, AST_SETBG, @a);
 		if (@q == NULL) {
 			ast_free(@a);
 			@!;
 		}
 
 		/* TODO: $% as jobid */
-		if (!scope_set(act_state->k, "%", NULL)) {
+		if (!frame_set(act_state->f, "%", NULL)) {
 			@!;
 		}
 	@};
@@ -156,7 +156,7 @@
 	<block-exec>: (l :list) -> (q :ast) = @{
 		assert(@l != NULL);
 
-		@q = ast_new_exec(act_state->k, AST_EXEC, @l);
+		@q = ast_new_exec(act_state->f, AST_EXEC, @l);
 		if (@q == NULL) {
 			/* TODO: free something? */
 			@!;
@@ -164,7 +164,7 @@
 	@};
 
 	<binop-and>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->k, AST_AND, @a, @b);
+		@q = binop(act_state->f, AST_AND, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -173,7 +173,7 @@
 	@};
 
 	<binop-or>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->k, AST_OR, @a, @b);
+		@q = binop(act_state->f, AST_OR, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -182,7 +182,7 @@
 	@};
 
 	<binop-join>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->k, AST_JOIN, @a, @b);
+		@q = binop(act_state->f, AST_JOIN, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -191,7 +191,7 @@
 	@};
 
 	<binop-pipe>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->k, AST_PIPE, @a, @b);
+		@q = binop(act_state->f, AST_PIPE, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -200,7 +200,7 @@
 	@};
 
 	<binop-assign>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->k, AST_ASSIGN, @a, @b);
+		@q = binop(act_state->f, AST_ASSIGN, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -209,7 +209,7 @@
 	@};
 
 	<binop-sep>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->k, AST_SEP, @a, @b);
+		@q = binop(act_state->f, AST_SEP, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);
@@ -243,7 +243,7 @@
 		};
 
 		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			if (!scope_set(act_state->k, a[0].name, a[0].val)) {
+			if (!frame_set(act_state->f, a[0].name, a[0].val)) {
 				@!;
 			}
 		}
@@ -261,7 +261,7 @@
 		assert(dispatch != NULL);
 
 		act_state->dispatch = dispatch;
-		act_state->k        = NULL;
+		act_state->f        = NULL;
 
 		lex_state->p = lex_state->buf;
 

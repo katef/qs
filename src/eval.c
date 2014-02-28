@@ -8,7 +8,7 @@
 #include "list.h"
 #include "eval.h"
 #include "exec.h"
-#include "scope.h"
+#include "frame.h"
 #include "op.h"
 
 static char **
@@ -77,13 +77,13 @@ error:
 }
 
 int
-eval_exec(struct scope *sc, struct ast_list *l)
+eval_exec(struct frame *f, struct ast_list *l)
 {
 	char **argv;
 	int argc;
 	int r;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 
 	argv = make_argv(l, &argc);
 	if (argv == NULL) {
@@ -134,7 +134,7 @@ eval_ast(struct ast *a, struct ast **out)
 		return 0;
 
 	case AST_EXEC:
-		return eval_exec(a->sc, a->u.l);
+		return eval_exec(a->f, a->u.l);
 
 	case AST_BLOCK:
 		return eval_ast(a->u.a, out);

@@ -1,7 +1,7 @@
 %types%
 
 	string;
-	!scope;
+	!frame;
 	ast;
 	list;
 
@@ -36,14 +36,13 @@
 
 	<epsilon>: () -> (:ast);
 
-    <scope-push>;
-    <scope-pop>;
+    <frame-push>;
+    <frame-pop>;
 
 	<new-str>:  (:string) -> (:ast);
 	<new-list>: (:list)   -> (:ast);
 
-	/* TODO: call these <frame-*> perhaps */
-	<block-scope>: (:ast)  -> (:ast);
+	<block-frame>: (:ast)  -> (:ast);
 	<block-setbg>: (:ast)  -> (:ast);
 	<block-exec>:  (:list) -> (:ast);
 
@@ -91,10 +90,10 @@
 		q = <block-exec>(l);
 	||
 		obrace;
-		<scope-push>;
+		<frame-push>;
 		a = exprs;
-		q = <block-scope>(a);
-		<scope-pop>;
+		q = <block-frame>(a);
+		<frame-pop>;
 		cbrace;
 	};
 
@@ -156,9 +155,6 @@
 		::expr: () -> (q :ast) = {
 			a = or-expr;
 
-			/* for $? */
-			<scope-push>;
-
 			{
 				nl;
 				q = a;
@@ -169,9 +165,6 @@
 				bg;
 				q = <block-setbg>(a);
 			};
-
-			<scope-pop>;
-
 		||
 			q = <epsilon>;
 			nl;
@@ -197,7 +190,7 @@
 		global-exprs = {
 			a = expr;
 
-			q = <block-scope>(a);
+			q = <block-frame>(a);
 
 			<dispatch>(q);
 			<free>(q);
@@ -210,10 +203,10 @@
 		};
 
 	] = {
-		<scope-push>;
+		<frame-push>;
 		<populate-globals>;
 		global-exprs;
-		<scope-pop>;
+		<frame-pop>;
 
 		eof;
 	};

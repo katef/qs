@@ -6,7 +6,7 @@
 
 #include "ast.h"
 #include "var.h"
-#include "scope.h"
+#include "frame.h"
 
 static int
 dump_node(const struct ast *a, const void *node);
@@ -24,7 +24,7 @@ ast_new_leaf(enum ast_type type, size_t n, const char *s)
 	}
 
 	new->type   = type;
-	new->sc     = NULL;
+	new->f      = NULL;
 	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
 	new->u.s[n] = '\0';
 
@@ -42,18 +42,18 @@ ast_new_list(struct ast_list *l)
 	}
 
 	new->type = AST_LIST;
-	new->sc   = NULL;
+	new->f    = NULL;
 	new->u.l  = l;
 
 	return new;
 }
 
 struct ast *
-ast_new_exec(struct scope *sc, enum ast_type type, struct ast_list *l)
+ast_new_exec(struct frame *f, enum ast_type type, struct ast_list *l)
 {
 	struct ast *new;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 
 	if (l == NULL) {
 		errno = EINVAL;
@@ -66,37 +66,37 @@ ast_new_exec(struct scope *sc, enum ast_type type, struct ast_list *l)
 	}
 
 	new->type = type;
-	new->sc   = sc;
+	new->f    = f;
 	new->u.l  = l;
 
 	return new;
 }
 
 struct ast *
-ast_new_block(struct scope *sc, enum ast_type type, struct ast *a)
+ast_new_block(struct frame *f, enum ast_type type, struct ast *a)
 {
 	struct ast *new;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->type = type;
-	new->sc   = sc;
-	new->u.a  = a;
+	new->type  = type;
+	new->f     = f;
+	new->u.a   = a;
 
 	return new;
 }
 
 struct ast *
-ast_new_op(struct scope *sc, enum ast_type type, struct ast *a, struct ast *b)
+ast_new_op(struct frame *f, enum ast_type type, struct ast *a, struct ast *b)
 {
 	struct ast *new;
 
-	assert(sc != NULL);
+	assert(f != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -104,7 +104,7 @@ ast_new_op(struct scope *sc, enum ast_type type, struct ast *a, struct ast *b)
 	}
 
 	new->type   = type;
-	new->sc     = sc;
+	new->f      = f;
 	new->u.op.a = a;
 	new->u.op.b = b;
 
@@ -119,7 +119,7 @@ ast_free(struct ast *a)
 	}
 
 	switch (a->type) {
-		struct scope *sc;
+		struct frame *f;
 
 	case AST_STR:
 		break;
@@ -127,9 +127,9 @@ ast_free(struct ast *a)
 	case AST_BLOCK:
 	case AST_DEREF:
 	case AST_CALL:
-		sc = scope_pop(&a->sc);
-		var_free(sc->var);
-		free(sc);
+		f = frame_pop(&a->f);
+		var_free(f->var);
+		free(f);
 		ast_free(a->u.a);
 		break;
 
@@ -143,17 +143,17 @@ ast_free(struct ast *a)
 }
 
 static int
-dump_scope(const struct scope *sc, const void *node)
+dump_frame(const struct frame *f, const void *node)
 {
-	assert(sc != NULL);
+	assert(f != NULL);
 
 	{
 		const struct var *p;
 
 		fprintf(stderr, "\t\"%p\" [ shape = record, color = red, label = \"{",
-			(void *) sc);
+			(void *) f);
 
-		for (p = sc->var; p != NULL; p = p->next) {
+		for (p = f->var; p != NULL; p = p->next) {
 			fprintf(stderr, "$%s", p->name);
 
 			if (p->next != NULL) {
@@ -164,14 +164,14 @@ dump_scope(const struct scope *sc, const void *node)
 		fprintf(stderr, "}\" ];\n");
 	}
 
-	fprintf(stderr, "\t{ \"%p\"; \"%p\"; rank = same; };\n", node, (void *) sc);
+	fprintf(stderr, "\t{ \"%p\"; \"%p\"; rank = same; };\n", node, (void *) f);
 
 	fprintf(stderr, "\t\"%p\" -- \"%p\" [ style = dotted ];\n",
-		node, (void *) sc);
+		node, (void *) f);
 
-	if (sc->parent != NULL) {
+	if (f->parent != NULL) {
 		fprintf(stderr, "\t\"%p\" -- \"%p\" [ dir = back, color = red, constraint=false ];\n",
-			(void *) sc->parent, (void *) sc);
+			(void *) f->parent, (void *) f);
 	}
 
 	return 0;
@@ -212,7 +212,7 @@ dump_block(const char *op, const struct ast *a, const void *node)
 {
 	assert(op != NULL);
 	assert(a != NULL);
-	assert(a->sc != NULL);
+	assert(a->f != NULL);
 
 	fprintf(stderr, "\t\"%p\" [ shape = box, style = rounded, label = \"%s\" ];\n", node, op);
 
@@ -220,7 +220,7 @@ dump_block(const char *op, const struct ast *a, const void *node)
 		node, (void *) &a->u.a,
 		a->u.a == NULL ? "invis" : "solid");
 
-	dump_scope(a->sc, node);
+	dump_frame(a->f, node);
 	dump_node(a->u.a, &a->u.a);
 
 	return 0;
@@ -263,7 +263,7 @@ dump_node(const struct ast *a, const void *node)
 
 	case AST_EXEC:
 		fprintf(stderr, "\t\"%p\" -- \"%p\":op:c [ dir = back, color = red, constraint=false ];\n",
-			(void *) a->sc, node);
+			(void *) a->f, node);
 		return dump_list("!", a->u.l, node);
 
 	case AST_LIST:  return dump_list("( )", a->u.l, node);
