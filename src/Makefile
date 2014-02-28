@@ -18,7 +18,6 @@ OBJS += builtin.o
 OBJS += main.o
 OBJS += var.o
 OBJS += scope.o
-OBJS += status.o
 OBJS += list.o
 
 qs: $(OBJS)

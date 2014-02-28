@@ -10,7 +10,6 @@
 #include "exec.h"
 #include "scope.h"
 #include "op.h"
-#include "status.h"
 
 static char **
 make_argv(const struct ast_list *l, int *argc)
@@ -95,9 +94,7 @@ eval_exec(struct scope *sc, struct ast_list *l)
 
 	free(argv);
 
-	if (-1 == status_set(sc, r)) {
-		return -1;
-	}
+	status = r;
 
 	return 0;
 }
@@ -113,9 +110,7 @@ eval_op(struct ast *a,
 		return -1;
 	}
 
-	if (-1 == status_set(a->sc, r)) {
-		return -1;
-	}
+	status = r;
 
 	return r;
 }

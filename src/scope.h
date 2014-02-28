@@ -8,6 +8,8 @@ struct scope {
 	struct scope *parent;
 };
 
+extern int status;
+
 struct var **
 scope_push(struct scope **sc);
 

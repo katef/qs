@@ -2,17 +2,15 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "scope.h"
 #include "eval.h"
 #include "ast.h"
 #include "op.h"
-#include "status.h"
 
 int
 op_and(struct ast *a, struct ast *b)
 {
 	struct ast *q;
-	int r;
-/* TODO: return -1 for error, 0 for success. use $? seperately */
 
 	/* XXX: i don't like this at all */
 	if (-1 == eval_ast(a, &q)) {
@@ -24,11 +22,7 @@ op_and(struct ast *a, struct ast *b)
 		return -1;
 	}
 
-	if (-1 == status_get(a->sc, &r)) {
-		return -1;
-	}
-
-	if (r != EXIT_SUCCESS) {
+	if (status != EXIT_SUCCESS) {
 		return EXIT_FAILURE;
 	}
 
@@ -41,11 +35,7 @@ op_and(struct ast *a, struct ast *b)
 		return -1;
 	}
 
-	if (-1 == status_get(b->sc, &r)) {
-		return -1;
-	}
-
-	if (r != EXIT_SUCCESS) {
+	if (status != EXIT_SUCCESS) {
 		return EXIT_FAILURE;
 	}
 
@@ -56,7 +46,6 @@ int
 op_or(struct ast *a, struct ast *b)
 {
 	struct ast *q;
-	int r;
 
 	/* XXX: i don't like this at all */
 	if (-1 == eval_ast(a, &q)) {
@@ -68,11 +57,7 @@ op_or(struct ast *a, struct ast *b)
 		return -1;
 	}
 
-	if (-1 == status_get(a->sc, &r)) {
-		return -1;
-	}
-
-	if (r == EXIT_SUCCESS) {
+	if (status == EXIT_SUCCESS) {
 		return EXIT_SUCCESS;
 	}
 
@@ -85,11 +70,7 @@ op_or(struct ast *a, struct ast *b)
 		return -1;
 	}
 
-	if (-1 == status_get(b->sc, &r)) {
-		return -1;
-	}
-
-	if (r == EXIT_SUCCESS) {
+	if (status == EXIT_SUCCESS) {
 		return EXIT_SUCCESS;
 	}
 
