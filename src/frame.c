@@ -1,9 +1,12 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "ast.h"
 #include "var.h"
@@ -97,5 +100,55 @@ frame_get(const struct frame *f, const char *name)
 	}
 
 	return NULL;
+}
+
+int
+frame_export(const struct frame *f)
+{
+	const struct frame *p;
+	const struct var *v;
+
+	if (f == NULL) {
+		return 0;
+	}
+
+	/*
+	 * This non-tail recursion is to setenv() variables from parent frames first,
+	 * and then overwrite those values by values from inner frames.
+	 *
+	 * Variables beginning with a non-alpha character are not exported.
+	 */
+
+	if (-1 == frame_export(f->parent)) {
+		return -1;
+	}
+
+	for (v = f->var; v != NULL; v = v->next) {
+		const struct ast *a;
+		const char *s;
+
+		if (!isalpha((unsigned char) v->name[0])) {
+			continue;
+		}
+
+		a = v->a;
+
+		if (a == NULL) {
+			s = "";
+		} else {
+			/* TODO: evaulate and join lists */
+			if (a->type != AST_STR) {
+				continue;
+			}
+
+			s = a->u.s;
+		}
+
+		if (-1 == setenv(v->name, s, 1)) {
+			return -1;
+		}
+	}
+
+	return 0;
 }
 

@@ -22,5 +22,8 @@ frame_set(struct frame *f, const char *name, struct ast *val);
 struct ast *
 frame_get(const struct frame *f, const char *name);
 
+int
+frame_export(const struct frame *f);
+
 #endif
 
