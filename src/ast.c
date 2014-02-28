@@ -12,23 +12,6 @@ static int
 dump_node(const struct ast *a, const void *node);
 
 struct ast *
-ast_new_status(int r)
-{
-	struct ast *new;
-
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
-
-	new->type = AST_STATUS;
-	new->sc   = NULL;
-	new->u.r  = r;
-
-	return new;
-}
-
-struct ast *
 ast_new_leaf(enum ast_type type, size_t n, const char *s)
 {
 	struct ast *new;
@@ -274,10 +257,6 @@ dump_node(const struct ast *a, const void *node)
 	}
 
 	switch (a->type) {
-	case AST_STATUS:
-		fprintf(stderr, "\t\"%p\" [ label = \"%d\" ];\n", node, a->u.r);
-		return 0;
-
 	case AST_STR:
 		fprintf(stderr, "\t\"%p\" [ label = \"'%s'\" ];\n", node, a->u.s);
 		return 0;

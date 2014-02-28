@@ -10,6 +10,7 @@
 #include "exec.h"
 #include "scope.h"
 #include "op.h"
+#include "status.h"
 
 static char **
 make_argv(const struct ast_list *l, int *argc)
@@ -37,18 +38,18 @@ make_argv(const struct ast_list *l, int *argc)
 	for (i = 0, p = l; p != NULL; p = p->next, i++) {
 		struct ast *a;
 
-		a = eval_ast(p->a);
-		if (a == NULL) {
+		if (-1 == eval_ast(p->a, &a)) {
 			goto error;
+		}
+
+		if (a == NULL) {
+			/* TODO: maybe a syntax error */
+			argv[i] = "";
+			continue;
 		}
 
 		/* TODO: i don't like this. so many types here! */
 		switch (a->type) {
-		case AST_STATUS:
-			/* TODO: maybe a syntax error */
-			argv[i] = "";
-			break;
-
 		case AST_STR:
 			argv[i] = a->u.s;
 			break;
@@ -76,98 +77,92 @@ error:
 	return NULL;
 }
 
-struct ast *
+int
 eval_exec(struct scope *sc, struct ast_list *l)
 {
 	char **argv;
 	int argc;
 	int r;
-	int n;
 
 	assert(sc != NULL);
 
 	argv = make_argv(l, &argc);
 	if (argv == NULL) {
-		return NULL;
+		return -1;
 	}
-
-	assert(l != NULL);
 
 	r = exec_cmd(argc, argv);
 
 	free(argv);
 
 	if (-1 == status_set(sc, r)) {
-		return NULL;
+		return -1;
 	}
 
-	return ast_new_status(r);
+	return 0;
 }
 
-static struct ast *
+static int
 eval_op(struct ast *a,
 	int (*op)(struct ast *a, struct ast *b))
 {
 	int r;
-	int n;
 
 	r = op(a->u.op.a, a->u.op.b);
-	/* XXX: errors? */
+	if (r == -1) {
+		return -1;
+	}
 
 	if (-1 == status_set(a->sc, r)) {
-		return NULL;
+		return -1;
 	}
 
-	return ast_new_status(r);
+	return r;
 }
 
-struct ast *
-eval_ast(struct ast *a)
+int
+eval_ast(struct ast *a, struct ast **out)
 {
-	while (a != NULL) {
-		switch (a->type) {
+	assert(out != NULL);
 
-		/* identities */
-		case AST_STATUS:
-		case AST_STR:
-		case AST_LIST:
-			return a;
+	*out = NULL;
 
-		case AST_EXEC:
-			a = eval_exec(a->sc, a->u.l);
-			continue;
-
-		case AST_BLOCK:
-			a = a->u.a;
-			/* TODO: DEBUG_ to dump symbol table after executing a block */
-			continue;
-
-		case AST_CALL:
-		case AST_TICK:
-		case AST_DEREF:
-		case AST_SETBG:
-			if (!scope_set(a->sc, "?", "1")) {
-				return NULL;
-			}
-
-			/* TODO */
-			errno = ENOSYS;
-			return NULL;
-
-		/* binary operators */
-		case AST_AND:    a = eval_op(a, op_and);    continue;
-		case AST_OR:     a = eval_op(a, op_or);     continue;
-		case AST_JOIN:   a = eval_op(a, op_join);   continue;
-		case AST_PIPE:   a = eval_op(a, op_pipe);   continue;
-		case AST_ASSIGN: a = eval_op(a, op_assign); continue;
-		case AST_SEP:    a = eval_op(a, op_sep);    continue;
-
-		default:
-			errno = EINVAL;
-			return NULL;
-		}
+	if (a == NULL) {
+		return 0;
 	}
 
-	return NULL;
+	switch (a->type) {
+	/* identities */
+	case AST_STR:
+	case AST_LIST:
+		*out = a;
+		return 0;
+
+	case AST_EXEC:
+		return eval_exec(a->sc, a->u.l);
+
+	case AST_BLOCK:
+		return eval_ast(a->u.a, out);
+
+	case AST_CALL:
+	case AST_TICK:
+	case AST_DEREF:
+	case AST_SETBG:
+		/* TODO */
+		errno = ENOSYS;
+		return -1;
+
+	/* binary operators */
+	case AST_AND:    return eval_op(a, op_and);
+	case AST_OR:     return eval_op(a, op_or);
+	case AST_JOIN:   return eval_op(a, op_join);
+	case AST_PIPE:   return eval_op(a, op_pipe);
+	case AST_ASSIGN: return eval_op(a, op_assign);
+	case AST_SEP:    return eval_op(a, op_sep);
+
+	default:
+		errno = EINVAL;
+		return -1;
+	}
 }
 

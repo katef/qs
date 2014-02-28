@@ -35,6 +35,8 @@ debug_flags(const char *s)
 static int
 dispatch(struct ast *a)
 {
+	struct ast *out;
+
 	if (debug & DEBUG_AST) {
 		if (-1 == ast_dump(a)) {
 			perror("ast_dump");
@@ -42,10 +44,19 @@ dispatch(struct ast *a)
 		}
 	}
 
-	eval_ast(a);
-	/* TODO: $? */
+	if (-1 == eval_ast(a, &out)) {
+		return -1;
+	}
 
-	return 0;
+	if (out == NULL) {
+		return 0;
+	}
+
+	/* TODO: error about something left on the stack */
+
+	ast_free(out);
+
+	return -1;
 }
 
 int
@@ -86,6 +97,8 @@ main(int argc, char *argv[])
 		perror("parse");
 		goto error;
 	}
+
+	/* TODO: retrieve $? */
 
 	return 0;
 

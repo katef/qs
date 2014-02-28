@@ -10,17 +10,16 @@
 int
 op_and(struct ast *a, struct ast *b)
 {
-	struct ast *x;
-	struct ast *y;
+	struct ast *q;
 	int r;
+/* TODO: return -1 for error, 0 for success. use $? seperately */
 
 	/* XXX: i don't like this at all */
-	x = eval_ast(a);
-	if (x == NULL) {
+	if (-1 == eval_ast(a, &q)) {
 		return -1;
 	}
 
-	if (x->type != AST_STATUS) {
+	if (q != NULL) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -33,17 +32,16 @@ op_and(struct ast *a, struct ast *b)
 		return EXIT_FAILURE;
 	}
 
-	y = eval_ast(b);
-	if (y == NULL) {
+	if (-1 == eval_ast(b, &q)) {
 		return -1;
 	}
 
-	if (y->type != AST_STATUS) {
+	if (q != NULL) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (-1 == status_get(a->sc, &r)) {
+	if (-1 == status_get(b->sc, &r)) {
 		return -1;
 	}
 
@@ -57,17 +55,15 @@ op_and(struct ast *a, struct ast *b)
 int
 op_or(struct ast *a, struct ast *b)
 {
-	struct ast *x;
-	struct ast *y;
+	struct ast *q;
 	int r;
 
 	/* XXX: i don't like this at all */
-	x = eval_ast(a);
-	if (x == NULL) {
+	if (-1 == eval_ast(a, &q)) {
 		return -1;
 	}
 
-	if (x->type != AST_STATUS) {
+	if (q != NULL) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -80,17 +76,16 @@ op_or(struct ast *a, struct ast *b)
 		return EXIT_SUCCESS;
 	}
 
-	y = eval_ast(b);
-	if (y == NULL) {
+	if (-1 == eval_ast(b, &q)) {
 		return -1;
 	}
 
-	if (y->type != AST_STATUS) {
+	if (q != NULL) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (-1 == status_get(a->sc, &r)) {
+	if (-1 == status_get(b->sc, &r)) {
 		return -1;
 	}
 
@@ -105,7 +100,8 @@ int
 op_join(struct ast *a, struct ast *b)
 {
 	/* TODO: map down based on $FS (field seperator) */
-	(void) a, b;
+	(void) a;
+	(void) b;
 
 	return -1;
 }
@@ -114,7 +110,8 @@ int
 op_pipe(struct ast *a, struct ast *b)
 {
 	/* TODO */
-	(void) a, b;
+	(void) a;
+	(void) b;
 
 	errno = ENOSYS;
 	return -1;
@@ -124,7 +121,8 @@ int
 op_assign(struct ast *a, struct ast *b)
 {
 	/* TODO */
-	(void) a, b;
+	(void) a;
+	(void) b;
 
 	errno = ENOSYS;
 	return -1;
@@ -133,42 +131,30 @@ op_assign(struct ast *a, struct ast *b)
 int
 op_sep(struct ast *a, struct ast *b)
 {
-	struct ast *r;
-
-	r = NULL;
+	struct ast *q;
 
 	if (a != NULL) {
-		a = eval_ast(a);
-		if (a == NULL) {
+		if (-1 == eval_ast(a, &q)) {
 			return -1;
 		}
 
-		if (a->type != AST_STATUS) {
+		if (q != NULL) {
 			errno = EINVAL;
 			return -1;
 		}
-
-		r = a;
 	}
 
 	if (b != NULL) {
-		b = eval_ast(b);
-		if (b == NULL) {
+		if (-1 == eval_ast(b, &q)) {
 			return -1;
 		}
 
-		if (b->type != AST_STATUS) {
+		if (q != NULL) {
 			errno = EINVAL;
 			return -1;
 		}
-
-		r = b;
 	}
 
-	if (r == NULL) {
-		return EXIT_SUCCESS;
-	}
-
-	return r->u.r;
+	return 0;
 }
 
