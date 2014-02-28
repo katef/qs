@@ -29,6 +29,7 @@ debug_flags(const char *s)
 		case 'l': debug |= DEBUG_LEX;   break;
 		case 'p': debug |= DEBUG_PARSE; break;
 		case 't': debug |= DEBUG_AST;   break;
+		case 'f': debug |= DEBUG_FRAME; break;
 		case 'x': debug |= DEBUG_EXEC;  break;
 
 		default:
@@ -85,9 +86,9 @@ dispatch(struct frame *f, struct ast *a)
 {
 	struct ast *out;
 
-	if (debug & DEBUG_AST) {
-		if (-1 == out_dot(a)) {
-			perror("ast_dump");
+	if (debug & DEBUG_AST || debug & DEBUG_FRAME) {
+		if (-1 == (debug & DEBUG_AST ? out_ast : out_frame)(a)) {
+			perror("out_ast");
 			return -1;
 		}
 	}
@@ -169,7 +170,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablptx]\n");
+	fprintf(stderr, "usage: kcsh [-d ablptfx]\n");
 
 	return 1;
 }

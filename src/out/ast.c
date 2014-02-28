@@ -1,51 +1,17 @@
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <errno.h>
 
 #include "../ast.h"
 #include "../var.h"
-#include "../frame.h"
+#include "../debug.h"
 
 #include "../out.h"
 
+int
+dump_frame(const struct frame *f);
+
 static int
 dump_node(const struct ast *a, const void *node);
-
-static int
-dump_frame(const struct frame *f, const void *node)
-{
-	assert(f != NULL);
-
-	{
-		const struct var *p;
-
-		fprintf(stderr, "\t\"%p\" [ shape = record, color = red, label = \"{",
-			(void *) f);
-
-		for (p = f->var; p != NULL; p = p->next) {
-			fprintf(stderr, "$%s", p->name);
-
-			if (p->next != NULL) {
-				fprintf(stderr, "|");
-			}
-		}
-
-		fprintf(stderr, "}\" ];\n");
-	}
-
-	fprintf(stderr, "\t{ \"%p\"; \"%p\"; rank = same; };\n", node, (void *) f);
-
-	fprintf(stderr, "\t\"%p\" -- \"%p\" [ style = dotted ];\n",
-		node, (void *) f);
-
-	if (f->parent != NULL) {
-		fprintf(stderr, "\t\"%p\" -- \"%p\" [ dir = back, color = red, constraint=false ];\n",
-			(void *) f->parent, (void *) f);
-	}
-
-	return 0;
-}
 
 static int
 dump_list(const char *op, const struct ast_list *l, const void *node)
@@ -90,7 +56,15 @@ dump_block(const char *op, const struct ast *a, const void *node)
 		node, (void *) &a->u.a,
 		a->u.a == NULL ? "invis" : "solid");
 
-	dump_frame(a->f, node);
+	if (debug & DEBUG_FRAME) {
+		fprintf(stderr, "\t{ \"%p\"; \"%p\"; rank = same; };\n", node, (void *) a->f);
+
+		fprintf(stderr, "\t\"%p\" -- \"%p\" [ style = dotted ];\n",
+			node, (void *) a->f);
+
+		dump_frame(a->f);
+	}
+
 	dump_node(a->u.a, &a->u.a);
 
 	return 0;
@@ -132,8 +106,6 @@ dump_node(const struct ast *a, const void *node)
 		return 0;
 
 	case AST_EXEC:
-		fprintf(stderr, "\t\"%p\" -- \"%p\":op:c [ dir = back, color = red, constraint=false ];\n",
-			(void *) a->f, node);
 		return dump_list("!", a->u.l, node);
 
 	case AST_LIST:  return dump_list("( )", a->u.l, node);
@@ -158,7 +130,7 @@ dump_node(const struct ast *a, const void *node)
 }
 
 int
-out_dot(const struct ast *a)
+out_ast(const struct ast *a)
 {
 	fprintf(stderr, "graph G {\n");
 	fprintf(stderr, "\tnode [ shape = plaintext ];\n");

@@ -21,7 +21,8 @@ OBJS += frame.o
 OBJS += list.o
 
 OBJS += out/qs.o
-OBJS += out/dot.o
+OBJS += out/ast.o
+OBJS += out/frame.o
 
 qs: $(OBJS)
 	$(CC) -o $@ $>
