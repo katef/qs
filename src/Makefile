@@ -20,6 +20,7 @@ OBJS += var.o
 OBJS += frame.o
 OBJS += list.o
 
+OBJS += out/qs.o
 OBJS += out/dot.o
 
 qs: $(OBJS)
