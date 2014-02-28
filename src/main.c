@@ -12,6 +12,7 @@
 #include "eval.h"
 #include "frame.h"
 #include "parser.h"
+#include "list.h"
 #include "out.h"
 
 unsigned debug;
@@ -40,7 +41,7 @@ debug_flags(const char *s)
 }
 
 static int
-populate_globals(struct frame *f)
+populate(struct frame *f)
 {
 	size_t i;
 	static char pid[32];
@@ -91,8 +92,6 @@ dispatch(struct frame *f, struct ast *a)
 		}
 	}
 
-	/* TODO: !call hook here, passed (argv list). the hook sets $# and $* */
-
 	if (-1 == eval_ast(a, &out)) {
 		goto error;
 	}
@@ -119,6 +118,7 @@ error:
 int
 main(int argc, char *argv[])
 {
+	struct ast_list *args;
 	struct lex_state l;
 
 	/* TODO: feed from -c string or from stdin, or from filename */
@@ -146,14 +146,18 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (argc != 0) {
-		goto usage;
+	args = list_args(argc, argv);
+	if (argc > 0 && args == NULL) {
+		perror("list_args");
+		goto error;
 	}
 
-	if (-1 == parse(&l, populate_globals, dispatch)) {
+	if (-1 == parse(&l, populate, dispatch, args)) {
 		perror("parse");
 		goto error;
 	}
+
+	/* TODO: free args */
 
 	/* TODO: retrieve $? */
 

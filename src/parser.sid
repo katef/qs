@@ -32,6 +32,7 @@
 %productions%
 
 	<dispatch>: (:ast) -> ();
+	<populate>;
 
 	<epsilon>: () -> (:ast);
 
@@ -55,8 +56,6 @@
 
 	<list-null>: () -> (:list);
 	<list-cat>:  (:list, :ast) -> (:list);
-
-	<populate-globals>;
 
 	exprs: () -> (:ast);
 
@@ -205,7 +204,7 @@
 
 	] = {
 		<frame-push>;
-		<populate-globals>;
+		<populate>;
 		global-exprs;
 		<frame-pop>;
 

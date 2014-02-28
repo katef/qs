@@ -36,7 +36,8 @@
 		enum lex_type type, save;
 		struct frame *f;
 		int (*dispatch)(struct frame *f, struct ast *);
-		int (*populate_globals)(struct frame *f);
+		int (*populate)(struct frame *f);
+		struct ast *args;
 	};
 
 	typedef struct act_string string;
@@ -75,8 +76,9 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*populate_globals)(struct frame *f),
-		int (*dispatch)(struct frame *f, struct ast *));
+		int (*populate)(struct frame *f),
+		int (*dispatch)(struct frame *f, struct ast *),
+		struct ast_list *args);
 
 @};
 
@@ -98,8 +100,12 @@
 		}
 	@};
 
-	<populate-globals>: () -> () = @{
-		if (-1 == act_state->populate_globals(act_state->f)) {
+	<populate>: () -> () = @{
+		if (-1 == act_state->populate(act_state->f)) {
+			@!;
+		}
+
+		if (!frame_set(act_state->f, "*", act_state->args)) {
 			@!;
 		}
 	@};
@@ -252,17 +258,23 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*populate_globals)(struct frame *f),
-		int (*dispatch)(struct frame *f, struct ast *))
+		int (*populate)(struct frame *f),
+		int (*dispatch)(struct frame *f, struct ast *),
+		struct ast_list *args)
 	{
 		struct act_state a, *act_state = &a;
 
 		assert(lex_state != NULL);
 		assert(dispatch != NULL);
-		assert(populate_globals != NULL);
+		assert(populate != NULL);
 
-		act_state->dispatch         = dispatch;
-		act_state->populate_globals = populate_globals;
+		act_state->dispatch = dispatch;
+		act_state->populate = populate;
+
+		act_state->args = ast_new_list(args);
+		if (act_state->args == NULL) {
+			return -1;
+		}
 
 		act_state->f = NULL;
 		lex_state->p = lex_state->buf;
