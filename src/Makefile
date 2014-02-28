@@ -20,11 +20,13 @@ OBJS += var.o
 OBJS += frame.o
 OBJS += list.o
 
+OBJS += out/dot.o
+
 qs: $(OBJS)
 	$(CC) -o $@ $>
 
 .c.o:
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
 	rm -f $(OBJS)

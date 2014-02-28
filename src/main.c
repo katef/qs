@@ -10,6 +10,7 @@
 #include "eval.h"
 #include "frame.h"
 #include "parser.h"
+#include "out.h"
 
 unsigned debug;
 
@@ -70,7 +71,7 @@ dispatch(struct frame *f, struct ast *a)
 	struct ast *out;
 
 	if (debug & DEBUG_AST) {
-		if (-1 == ast_dump(a)) {
+		if (-1 == out_dot(a)) {
 			perror("ast_dump");
 			return -1;
 		}
@@ -84,7 +85,9 @@ dispatch(struct frame *f, struct ast *a)
 		goto error;
 	}
 
+/* XXX:
 	ast_free(out);
+*/
 
 	return 0;
 

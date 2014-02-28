@@ -62,8 +62,5 @@ ast_new_op(struct frame *f, enum ast_type type, struct ast *a, struct ast *b);
 void
 ast_free(struct ast *bet);
 
-int
-ast_dump(const struct ast *bet);
-
 #endif
 
