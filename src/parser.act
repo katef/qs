@@ -239,11 +239,12 @@
 			{ "?", NULL },
 			{ "$", NULL }, /* TODO: getpid()  */
 			{ "#", NULL }, /* TODO: from argc */
-			{ "*", NULL }  /* TODO: from argv */
+			{ "*", NULL }, /* TODO: from argv */
+			{ "^", NULL }  /* TODO: "\t" */
 		};
 
 		for (i = 0; i < sizeof a / sizeof *a; i++) {
-			if (!frame_set(act_state->f, a[0].name, a[0].val)) {
+			if (!frame_set(act_state->f, a[i].name, a[i].val)) {
 				@!;
 			}
 		}
