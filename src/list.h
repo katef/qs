@@ -8,5 +8,8 @@ struct ast;
 struct ast_list *
 list_cat(struct ast_list *l, struct ast *a);
 
+struct ast_list *
+list_args(int argc, char *argv[]);
+
 #endif
 
