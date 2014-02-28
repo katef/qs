@@ -31,7 +31,6 @@
 
 %productions%
 
-	<free>:     (:ast) -> ();
 	<dispatch>: (:ast) -> ();
 
 	<epsilon>: () -> (:ast);
@@ -43,6 +42,7 @@
 	<new-list>: (:list)   -> (:ast);
 
 	<block-frame>: (:ast)  -> (:ast);
+	<block-free>:  (:ast)  -> ();
 	<block-setbg>: (:ast)  -> (:ast);
 	<block-exec>:  (:list) -> (:ast);
 
@@ -193,7 +193,8 @@
 			q = <block-frame>(a);
 
 			<dispatch>(q);
-			<free>(q);
+
+			<block-free>(q);
 
 			{
 				global-exprs;

@@ -92,14 +92,6 @@
 
 %actions%
 
-	<free>: (q :ast) -> () = @{
-		assert(@q != NULL);
-
-/* XXX:
-		ast_free(@q);
-*/
-	@};
-
 	<dispatch>: (q :ast) -> () = @{
 		if (-1 == act_state->dispatch(act_state->f, @q)) {
 			@!;
@@ -146,6 +138,25 @@
 			ast_free(@a);
 			@!;
 		}
+
+		if (!frame_set(@q->f, ".", @q)) {
+			ast_free(@q);
+			ast_free(@a);
+			@!;
+		}
+	@};
+
+	<block-free>: (q :ast) -> () = @{
+		assert(@q != NULL);
+
+		if (!frame_set(@q->f, ".", NULL)) {
+			ast_free(@q);
+			@!;
+		}
+
+/* XXX:
+		ast_free(@q);
+*/
 	@};
 
 	<block-setbg>: (a :ast) -> (q :ast) = @{
