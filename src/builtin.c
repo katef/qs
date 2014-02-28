@@ -9,11 +9,13 @@
 #include <errno.h>
 
 #include "debug.h"
+#include "frame.h"
 #include "builtin.h"
 
 static int
-builtin_cd(int argc, char *const *argv)
+builtin_cd(struct frame *f, int argc, char *const *argv)
 {
+	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
 
@@ -21,6 +23,8 @@ builtin_cd(int argc, char *const *argv)
 		fprintf(stderr, "usage: cd <dir>\n");
 		return 1;
 	}
+
+	(void) f;
 
 	/* TODO: support argc=0 to chdir to $home */
 
@@ -32,10 +36,15 @@ builtin_cd(int argc, char *const *argv)
 }
 
 static int
-builtin_exec(int argc, char *const *argv)
+builtin_exec(struct frame *f, int argc, char *const *argv)
 {
+	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
+
+	if (-1 == frame_export(f)) {
+		return -1;
+	}
 
 	(void) execv(argv[0], argv);
 
@@ -45,12 +54,13 @@ builtin_exec(int argc, char *const *argv)
 }
 
 static int
-builtin_wait(int argc, char *const *argv)
+builtin_wait(struct frame *f, int argc, char *const *argv)
 {
 	int status;
 	pid_t pid;
 	int r;
 
+	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
 
@@ -58,6 +68,8 @@ builtin_wait(int argc, char *const *argv)
 		fprintf(stderr, "usage: wait <pid>\n");
 		return 1;
 	}
+
+	(void) f;
 
 	/* TODO: support argc=0 to wait() for all children */
 
@@ -85,10 +97,11 @@ builtin_wait(int argc, char *const *argv)
 }
 
 static int
-builtin_fork(int argc, char *const *argv)
+builtin_fork(struct frame *f, int argc, char *const *argv)
 {
 	pid_t pid;
 
+	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
 
@@ -96,6 +109,8 @@ builtin_fork(int argc, char *const *argv)
 		fprintf(stderr, "usage: fork\n");
 		return -1;
 	}
+
+	(void) f;
 
 	/* TODO: support argc=1 for various rfork-style flags */
 
@@ -116,23 +131,24 @@ builtin_fork(int argc, char *const *argv)
 
 /* TODO: eventually to be replaced by a shell function */
 static int
-builtin_spawn(int argc, char *const *argv)
+builtin_spawn(struct frame *f, int argc, char *const *argv)
 {
 	char *fork_argv[] = { "fork", NULL };
 	char *wait_argv[] = { "wait", NULL, NULL };
 	pid_t pid;
 	char s[128];
 
+	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
 
-	pid = builtin_fork(1, fork_argv);
+	pid = builtin_fork(f, 1, fork_argv);
 	switch (pid) {
 	case -1:
 		return -1;
 
 	case 0:
-		(void) builtin_exec(argc, argv);
+		(void) builtin_exec(f, argc, argv);
 
 		exit(errno);
 
@@ -141,7 +157,7 @@ builtin_spawn(int argc, char *const *argv)
 
 		wait_argv[1] = s;
 
-		if (-1 == builtin_wait(2, wait_argv)) {
+		if (-1 == builtin_wait(f, 2, wait_argv)) {
 			return -1;
 		}
 
@@ -150,13 +166,13 @@ builtin_spawn(int argc, char *const *argv)
 }
 
 int
-builtin(int argc, char *const *argv)
+builtin(struct frame *f, int argc, char *const *argv)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		int (*f)(int, char *const *);
+		int (*f)(struct frame *f, int, char *const *);
 	} a[] = {
 		{ "cd",    builtin_cd    },
 		{ "exec",  builtin_exec  },
@@ -170,16 +186,17 @@ builtin(int argc, char *const *argv)
 		return -1;
 	}
 
+	assert(f != NULL);
 	assert(argv != NULL);
 	assert(argv[0] != NULL);
 
 	/* TODO: bsearch */
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(argv[0], a[i].name)) {
-			return a[i].f(argc, argv);
+			return a[i].f(f, argc, argv);
 		}
 	}
 
-	return builtin_spawn(argc, argv);
+	return builtin_spawn(f, argc, argv);
 }
 

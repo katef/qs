@@ -1,8 +1,10 @@
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
+struct frame;
+
 int
-builtin(int argc, char *const *argv);
+builtin(struct frame *f, int argc, char *const *argv);
 
 #endif
 

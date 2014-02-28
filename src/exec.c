@@ -30,9 +30,11 @@ dump_argv(const char *name, char **argv)
 }
 
 int
-exec_cmd(int argc, char **argv)
+exec_cmd(struct frame *f, int argc, char **argv)
 {
 	int r;
+
+	assert(f != NULL);
 
 	if (debug & DEBUG_EXEC) {
 		dump_argv("execv", argv);
@@ -42,7 +44,7 @@ exec_cmd(int argc, char **argv)
 
 	/* TODO: run pre/post-command hook here */
 
-	r = builtin(argc, argv);
+	r = builtin(f, argc, argv);
 
 	return r;
 }

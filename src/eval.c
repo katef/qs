@@ -90,7 +90,7 @@ eval_exec(struct frame *f, struct ast_list *l)
 		return -1;
 	}
 
-	r = exec_cmd(argc, argv);
+	r = exec_cmd(f, argc, argv);
 
 	free(argv);
 
