@@ -140,6 +140,7 @@ eval_ast(struct ast *a, struct ast **out)
 		return eval_ast(a->u.a, out);
 
 	case AST_CALL:
+		/* TODO: !call hook here */
 	case AST_TICK:
 	case AST_DEREF:
 	case AST_SETBG:

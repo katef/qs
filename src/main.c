@@ -1,8 +1,10 @@
 #define _POSIX_C_SOURCE 2
 
-#include <assert.h>
-#include <stdio.h>
 #include <unistd.h>
+
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "debug.h"
 #include "lex.h"
@@ -41,23 +43,35 @@ static int
 populate_globals(struct frame *f)
 {
 	size_t i;
+	static char pid[32];
 
 	struct {
 		const char *name;
-		struct ast *val;
+		const char *s;
 	} a[] = {
-		{ "?", NULL },
+		{ "?", "0"  },
 		{ "_", NULL },
-		{ "$", NULL }, /* TODO: getpid()  */
-		{ "#", NULL }, /* TODO: from argc */
-		{ "*", NULL }, /* TODO: from argv */
-		{ "^", NULL }  /* TODO: "\t" */
+		{ "$", pid  }, /* TODO: getpid()  */
+		{ "^", "\t" }
 	};
 
 	assert(f != NULL);
 
+	sprintf(pid,  "%ld", (long) getpid()); /* XXX */
+
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (!frame_set(f, a[i].name, a[i].val)) {
+		struct ast *q;
+
+		if (a[i].s != NULL) {
+			q = ast_new_leaf(AST_STR, strlen(a[i].s), a[i].s);
+			if (q == NULL) {
+				return -1;
+			}
+		} else {
+			q = NULL;
+		}
+
+		if (!frame_set(f, a[i].name, q)) {
 			return -1;
 		}
 	}
@@ -76,6 +90,8 @@ dispatch(struct frame *f, struct ast *a)
 			return -1;
 		}
 	}
+
+	/* TODO: !call hook here, passed (argv list). the hook sets $# and $* */
 
 	if (-1 == eval_ast(a, &out)) {
 		goto error;
