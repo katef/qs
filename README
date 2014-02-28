@@ -1,0 +1,12 @@
+
+Pre-populated variables:
+
+ $? command exit status  global
+ $_ command value        global
+ $$ process ID           global
+ $# argc                 per call
+ $* argv                 per call
+ $^ field separator      local
+ $% job ID               per job
+ $. current block        local
+
