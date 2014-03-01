@@ -50,13 +50,13 @@ make_argv(const struct ast_list *l, int *argc)
 		}
 
 		/* TODO: i don't like this. so many types here! */
+		/* TODO: evaulate a block here; this is the function call mechanism */
+		/* TODO: this means we deal with all types; merge it to the switch in eval_ast() below
+		 * so - this loop (trying to build an argv) should be the main entry point */
+		/* TODO: idea: ast_eval() should output depth-first to a list. make_argv and exec() it when complete */
+
 		switch (a->type) {
 		case AST_STR:
-			argv[i] = a->u.s;
-			break;
-
-		case AST_VAR:
-			/* TODO: look p variable in a->f, and eval result */
 			argv[i] = a->u.s;
 			break;
 
@@ -64,9 +64,6 @@ make_argv(const struct ast_list *l, int *argc)
 			/* TODO: splice in AST_LIST by recursion */
 			errno = ENOSYS;
 			goto error;
-
-		/* TODO: evaulate a block here; this is the function call mechanism */
-		/* TODO: this means we deal with all types; merge it to the switch in eval_ast() below */
 
 		default:
 			errno = EINVAL;
@@ -141,6 +138,10 @@ eval_ast(struct ast *a, struct ast **out)
 	case AST_STR:
 	case AST_LIST:
 		*out = a;
+		return 0;
+
+	case AST_VAR:
+		*out = frame_get(a->f, a->u.s);
 		return 0;
 
 	case AST_EXEC:
