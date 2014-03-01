@@ -82,7 +82,7 @@ dump_frame(FILE *f, const struct frame *fr)
 			fprintf(f, "<TD ALIGN='LEFT'>");
 
 			/* TODO: centralise */
-			{
+			if (p->a != NULL) {
 				FILE *fp;
 
 				fp = tmpfile();
@@ -152,9 +152,10 @@ dump_node(FILE *f, const struct ast *a)
 }
 
 int
-out_frame(FILE *f, const struct ast *a)
+out_frame(FILE *f, struct ast *a)
 {
 	assert(f != NULL);
+	assert(a != NULL);
 
 	fprintf(f, "graph G {\n");
 	fprintf(f, "\tsplines = line;\n");

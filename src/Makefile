@@ -11,9 +11,7 @@ SID_CFLAGS += -s no-numeric-terminals -s no-terminals
 OBJS += lex.o
 OBJS += parser.o
 OBJS += ast.o
-OBJS += eval.o
 OBJS += exec.o
-OBJS += op.o
 OBJS += builtin.o
 OBJS += main.o
 OBJS += var.o
@@ -23,6 +21,8 @@ OBJS += list.o
 OBJS += out/qs.o
 OBJS += out/ast.o
 OBJS += out/frame.o
+OBJS += out/eval.o
+OBJS += out/op.o
 
 qs: $(OBJS)
 	$(CC) -o $@ $>

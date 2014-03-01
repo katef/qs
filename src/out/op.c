@@ -2,13 +2,16 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "frame.h"
-#include "eval.h"
-#include "ast.h"
+#include "../frame.h"
+#include "../ast.h"
+
 #include "op.h"
 
 int
-op_and(struct ast *a, struct ast *b)
+eval_ast(struct ast *a, struct ast **out);
+
+int
+eval_op_and(struct ast *a, struct ast *b)
 {
 	struct ast *q;
 
@@ -43,7 +46,7 @@ op_and(struct ast *a, struct ast *b)
 }
 
 int
-op_or(struct ast *a, struct ast *b)
+eval_op_or(struct ast *a, struct ast *b)
 {
 	struct ast *q;
 
@@ -78,7 +81,7 @@ op_or(struct ast *a, struct ast *b)
 }
 
 int
-op_join(struct ast *a, struct ast *b)
+eval_op_join(struct ast *a, struct ast *b)
 {
 	/* TODO: map down based on $FS (field seperator) */
 	(void) a;
@@ -88,7 +91,7 @@ op_join(struct ast *a, struct ast *b)
 }
 
 int
-op_pipe(struct ast *a, struct ast *b)
+eval_op_pipe(struct ast *a, struct ast *b)
 {
 	/* TODO */
 	(void) a;
@@ -99,7 +102,7 @@ op_pipe(struct ast *a, struct ast *b)
 }
 
 int
-op_assign(struct ast *a, struct ast *b)
+eval_op_assign(struct ast *a, struct ast *b)
 {
 	/* TODO */
 	(void) a;
@@ -110,7 +113,7 @@ op_assign(struct ast *a, struct ast *b)
 }
 
 int
-op_sep(struct ast *a, struct ast *b)
+eval_op_sep(struct ast *a, struct ast *b)
 {
 	struct ast *q;
 

@@ -8,7 +8,6 @@
 
 #include "debug.h"
 #include "ast.h"
-#include "eval.h"
 #include "exec.h"
 #include "builtin.h"
 

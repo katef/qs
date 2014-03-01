@@ -9,7 +9,6 @@
 #include "debug.h"
 #include "lex.h"
 #include "ast.h"
-#include "eval.h"
 #include "frame.h"
 #include "parser.h"
 #include "list.h"
@@ -82,9 +81,9 @@ populate(struct frame *f)
 }
 
 static int
-dispatch(struct frame *f, struct ast *a)
+dispatch(struct ast *a)
 {
-	struct ast *out;
+	assert(a != NULL);
 
 	if (debug & DEBUG_AST || debug & DEBUG_FRAME) {
 		if (-1 == (debug & DEBUG_AST ? out_ast : out_frame)(stderr, a)) {
@@ -93,25 +92,18 @@ dispatch(struct frame *f, struct ast *a)
 		}
 	}
 
-	if (-1 == eval_ast(a, &out)) {
-		goto error;
+/* TODO: -e dot, -e eval */
+	if (a != NULL) {
+		if (-1 == out_eval(stdout, a)) {
+			goto error;
+		}
 	}
-
-	if (!frame_set(f, "_", out)) {
-		goto error;
-	}
-
-/* XXX:
-	ast_free(out);
-*/
 
 	return 0;
 
 error:
 
 	perror("dispatch");
-
-	ast_free(out);
 
 	return -1;
 }

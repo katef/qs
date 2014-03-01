@@ -135,9 +135,10 @@ dump_node(FILE *f, const struct ast *a, const void *node)
 }
 
 int
-out_ast(FILE *f, const struct ast *a)
+out_ast(FILE *f, struct ast *a)
 {
 	assert(f != NULL);
+	assert(a != NULL);
 
 	fprintf(f, "graph G {\n");
 	fprintf(f, "\tnode [ shape = plaintext ];\n");

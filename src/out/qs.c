@@ -145,9 +145,10 @@ dump_node(FILE *f, const struct ast *a)
 }
 
 int
-out_qs(FILE *f, const struct ast *a)
+out_qs(FILE *f, struct ast *a)
 {
 	assert(f != NULL);
+	assert(a != NULL);
 
 	dump_node(f, a);
 

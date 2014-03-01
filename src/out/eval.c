@@ -3,13 +3,15 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "debug.h"
-#include "ast.h"
-#include "list.h"
-#include "eval.h"
-#include "exec.h"
-#include "frame.h"
+#include "../ast.h"
+#include "../list.h"
+#include "../exec.h"
+#include "../frame.h"
+
 #include "op.h"
+
+int
+eval_ast(struct ast *a, struct ast **out);
 
 static char **
 make_argv(const struct ast_list *l, int *argc)
@@ -149,16 +151,42 @@ eval_ast(struct ast *a, struct ast **out)
 		return -1;
 
 	/* binary operators */
-	case AST_AND:    return eval_op(a, op_and);
-	case AST_OR:     return eval_op(a, op_or);
-	case AST_JOIN:   return eval_op(a, op_join);
-	case AST_PIPE:   return eval_op(a, op_pipe);
-	case AST_ASSIGN: return eval_op(a, op_assign);
-	case AST_SEP:    return eval_op(a, op_sep);
+	case AST_AND:    return eval_op(a, eval_op_and);
+	case AST_OR:     return eval_op(a, eval_op_or);
+	case AST_JOIN:   return eval_op(a, eval_op_join);
+	case AST_PIPE:   return eval_op(a, eval_op_pipe);
+	case AST_ASSIGN: return eval_op(a, eval_op_assign);
+	case AST_SEP:    return eval_op(a, eval_op_sep);
 
 	default:
 		errno = EINVAL;
 		return -1;
 	}
+}
+
+int
+out_eval(FILE *f, struct ast *a)
+{
+	struct ast *out;
+
+	assert(f != NULL);
+	assert(a != NULL);
+
+	/* TODO: attach to stdout for eval */
+	(void) f;
+
+	if (-1 == eval_ast(a, &out)) {
+		return -1;
+	}
+
+	if (!frame_set(a->f, "_", out)) {
+		return -1;
+	}
+
+/* XXX:
+	ast_free(out);
+*/
+
+	return 0;
 }
 
