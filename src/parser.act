@@ -144,6 +144,8 @@
 		if (@q == NULL) {
 			@!;
 		}
+
+		@q->f = act_state->f;
 	@};
 
 	<new-list>: (l :list) -> (q :ast) = @{
