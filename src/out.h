@@ -1,9 +1,10 @@
 #ifndef OUT_H
 #define OUT_H
 
-int out_qs   (FILE *f, const struct ast *a);
-int out_ast  (FILE *f, const struct ast *a);
-int out_frame(FILE *f, const struct ast *a);
+int out_qs   (FILE *f, struct ast *a);
+int out_ast  (FILE *f, struct ast *a);
+int out_frame(FILE *f, struct ast *a);
+int out_eval (FILE *f, struct ast *a);
 
 #endif
 
