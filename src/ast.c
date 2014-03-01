@@ -119,10 +119,10 @@ ast_free(struct ast *a)
 		struct frame *f;
 
 	case AST_STR:
+	case AST_VAR:
 		break;
 
 	case AST_BLOCK:
-	case AST_DEREF:
 	case AST_CALL:
 		f = frame_pop(&a->f);
 		var_free(f->var);

@@ -14,6 +14,7 @@ enum lex_type {
 	tok_dot    = '.',
 	tok_back   = '`',
 	tok_var    = '$',
+	tok_join   = '^',
 	tok_pipe   = '|',
 	tok_obrace = '{',
 	tok_cbrace = '}',

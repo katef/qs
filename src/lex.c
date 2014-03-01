@@ -54,11 +54,11 @@ lex_push(const char **p, const char **s, const char **e)
 			return tok_or;
 		}
 
+	case '^':
 	case ';':
 	case '=':
 	case '.':
 	case '`':
-	case '$':
 	case '{':
 	case '}':
 	case '(':
@@ -76,9 +76,17 @@ lex_push(const char **p, const char **s, const char **e)
 		(*p) += **p == '\'';
 		return tok_str;
 
+	case '$':
+		(*p)++;
+		*s = *p;
+		*p += !!strcspn(*p, WHITE);
+		*p += strcspn(*p, WHITE "&^|;=.`$'#{}");
+		*e = *p;
+		return tok_var;
+
 	default:
 		*s = *p;
-		*p += strcspn(*p, WHITE "&|;=.`$'#{}");
+		*p += strcspn(*p, WHITE "&^|;=.`$'#{}");
 		*e = *p;
 	}
 
@@ -152,6 +160,7 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		case tok_eof: name = "eof "; break;
 		case tok_nl:  name = "nl ";  break;
 		case tok_str: name = "str "; break;
+		case tok_var: name = "var "; break;
 		default:      name = "";     break;
 		}
 

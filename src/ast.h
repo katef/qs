@@ -4,6 +4,7 @@
 enum ast_type {
 	/* leaves */
 	AST_STR,    /*  'xyz'  */
+	AST_VAR,    /*  $xyz   */
 	AST_LIST,   /* (x y z) */
 	AST_EXEC,   /*  x y z  */
 
@@ -11,7 +12,6 @@ enum ast_type {
 	AST_BLOCK,  /* { a } */
 	AST_CALL,   /*   a() */
 	AST_TICK,   /*  `a   */
-	AST_DEREF,  /*  $a   */
 	AST_SETBG,  /*   a & */
 
 	/* binary operators */
