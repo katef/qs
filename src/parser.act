@@ -92,6 +92,14 @@
 		@s.e = act_state->t.e;
 	@};
 
+	var: () -> (s :string) = @{
+		assert(act_state->t.s != NULL);
+		assert(act_state->t.e >= act_state->t.s);
+
+		@s.s = act_state->t.s;
+		@s.e = act_state->t.e;
+	@};
+
 %actions%
 
 	<dispatch>: (q :ast) -> () = @{
@@ -126,6 +134,13 @@
 
 	<new-str>: (s :string) -> (q :ast) = @{
 		@q = ast_new_leaf(AST_STR, @s.e - @s.s, @s.s);
+		if (@q == NULL) {
+			@!;
+		}
+	@};
+
+	<new-var>: (s :string) -> (q :ast) = @{
+		@q = ast_new_leaf(AST_VAR, @s.e - @s.s, @s.s);
 		if (@q == NULL) {
 			@!;
 		}

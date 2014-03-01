@@ -13,20 +13,38 @@ static int
 dump_node(FILE *f, const struct ast *a, const void *node);
 
 static int
+dump_str(FILE *f, const char *op, const char *s, const void *node)
+{
+	assert(f != NULL);
+	assert(op != NULL);
+	assert(s != NULL);
+
+	/* TODO: quote and escape (centralise that perhaps) */
+	fprintf(f, "\t\"%p\" [ label = \"%s%s\" ];\n", node, op, s);
+	return 0;
+}
+
+static int
 dump_list(FILE *f, const char *op, const struct ast_list *l, const void *node)
 {
 	const struct ast_list *p;
 
 	assert(f != NULL);
+	assert(op != NULL);
 
 	fprintf(f, "\t\"%p\" [ shape = record, style = rounded, label = \"{<op>%s|{", node, op);
 
 	for (p = l; p != NULL; p = p->next) {
 		fprintf(f, "<%p>", (void *) p);
 
+		/* TODO: centralise with frame.c thing for printing names (use qs.c for both) */
 		switch (p->a->type) {
 		case AST_STR:
 			fprintf(f, "%s", p->a->u.s);
+			break;
+
+		case AST_VAR:
+			fprintf(f, "$%s", p->a->u.s);
 			break;
 
 		default:
@@ -106,16 +124,14 @@ dump_node(FILE *f, const struct ast *a, const void *node)
 	}
 
 	switch (a->type) {
-	case AST_STR:
-		fprintf(f, "\t\"%p\" [ label = \"'%s'\" ];\n", node, a->u.s);
-		return 0;
+	case AST_STR: return dump_str(f, "",  a->u.s, node);
+	case AST_VAR: return dump_str(f, "$", a->u.s, node);
 
 	case AST_EXEC:
 		return dump_list(f, "!", a->u.l, node);
 
 	case AST_LIST:  return dump_list(f, "( )", a->u.l, node);
 
-	case AST_DEREF: return dump_block(f, "$",   a, node);
 	case AST_BLOCK: return dump_block(f, "{ }", a, node);
 	case AST_CALL:  return dump_block(f, "()",  a, node);
 	case AST_SETBG: return dump_block(f, "bg",  a, node);

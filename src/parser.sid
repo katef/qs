@@ -17,7 +17,6 @@
 	equ;
 	!dot;
 	!back;
-	!var;
 	pipe;
 	obrace;
 	cbrace;
@@ -28,6 +27,7 @@
 	!exec;
 
 	str: () -> (:string);
+	var: () -> (:string);
 
 %productions%
 
@@ -40,6 +40,7 @@
     <frame-pop>;
 
 	<new-str>:  (:string) -> (:ast);
+	<new-var>:  (:string) -> (:ast);
 	<new-list>: (:list)   -> (:ast);
 
 	<block-frame>: (:ast)  -> (:ast);
@@ -59,16 +60,15 @@
 
 	exprs: () -> (:ast);
 
-	ast-list: () -> (l :list) [
-
-		term: () -> (q :ast) = {
-		/* TODO: || $deref || backtick */
+	ast-list: () -> (l :list) = {
+		/* TODO: || backtick */
+		{
 			s = str;
-			q = <new-str>(s);
+			a = <new-str>(s);
+		||
+			s = var;
+			a = <new-var>(s);
 		};
-
-	] = {
-		a = term;
 
 		{
 			t = ast-list;

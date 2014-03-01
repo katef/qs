@@ -21,9 +21,12 @@ hasspecial(const char *s)
 }
 
 static int
-dump_str(FILE *f, const char *s)
+dump_str(FILE *f, const char *op, const char *s)
 {
 	assert(f != NULL);
+	assert(op != NULL);
+
+	fputs(op, f);
 
 	/* TODO: quote whitespace as &#10; or something for graphviz */
 	if (hasspecial(s)) {
@@ -63,9 +66,14 @@ dump_list(FILE *f, const char *s, const char *e, const struct ast_list *l)
 	fprintf(f, "%s", s);
 
 	for (p = l; p != NULL; p = p->next) {
+		/* TODO: centralise with main switch() below */
 		switch (p->a->type) {
 		case AST_STR:
-			dump_str(f, p->a->u.s);
+			dump_str(f, "", p->a->u.s);
+			break;
+
+		case AST_VAR:
+			dump_str(f, "$", p->a->u.s);
 			break;
 
 		default:
@@ -122,11 +130,11 @@ dump_node(FILE *f, const struct ast *a)
 	}
 
 	switch (a->type) {
-	case AST_STR:   return dump_str(f, a->u.s);
+	case AST_STR:   return dump_str(f, "", a->u.s);
+	case AST_VAR:   return dump_str(f, "$", a->u.s);
 	case AST_EXEC:  return dump_list(f, "",  "",  a->u.l);
 	case AST_LIST:  return dump_list(f, "(", ")", a->u.l);
 
-	case AST_DEREF: return dump_block(f, "$",  "",   a);
 	case AST_BLOCK: return dump_block(f, "{ ", " }", a);
 	case AST_CALL:  return dump_block(f, "(",  ")",  a);
 	case AST_SETBG: return dump_block(f, "",   "&",  a);

@@ -124,13 +124,13 @@ dump_node(FILE *f, const struct ast *a)
 
 	switch (a->type) {
     case AST_STR:
+    case AST_VAR:
     case AST_EXEC:
     case AST_LIST:
         return 0;
 
     case AST_BLOCK:
 		dump_frame(f, a->f);
-    case AST_DEREF:
     case AST_CALL:
     case AST_SETBG:
 		dump_node(f, a->u.a);

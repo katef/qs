@@ -55,10 +55,18 @@ make_argv(const struct ast_list *l, int *argc)
 			argv[i] = a->u.s;
 			break;
 
+		case AST_VAR:
+			/* TODO: look p variable in a->f, and eval result */
+			argv[i] = a->u.s;
+			break;
+
 		case AST_LIST:
 			/* TODO: splice in AST_LIST by recursion */
 			errno = ENOSYS;
 			goto error;
+
+		/* TODO: evaulate a block here; this is the function call mechanism */
+		/* TODO: this means we deal with all types; merge it to the switch in eval_ast() below */
 
 		default:
 			errno = EINVAL;
@@ -144,7 +152,6 @@ eval_ast(struct ast *a, struct ast **out)
 	case AST_CALL:
 		/* TODO: !call hook here */
 	case AST_TICK:
-	case AST_DEREF:
 	case AST_SETBG:
 		/* TODO */
 		errno = ENOSYS;
