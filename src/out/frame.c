@@ -1,3 +1,7 @@
+#define _XOPEN_SOURCE 500
+
+#include <unistd.h>
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,6 +12,54 @@
 #include "../frame.h"
 
 #include "../out.h"
+
+#define TMPDIR "/tmp"
+
+/* TODO: centralise */
+static int
+filter(FILE *r, FILE *w,
+	int (*filter)(int, FILE *))
+{
+	int c;
+
+	assert(r != NULL && w != NULL);
+	assert(filter != NULL);
+
+	while (c = fgetc(r), c != EOF) {
+		if (-1 == filter(c, w)) {
+			return -1;
+		}
+	}
+
+	if (ferror(r)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+quote_dot(int c, FILE *f)
+{
+	const char *br = "<BR ALIGN='LEFT'/>";
+
+	switch (c) {
+	case '<':  return fputs("&lt;",  f);
+	case '>':  return fputs("&gt;",  f);
+	case '&':  return fputs("&amp;", f);
+	case '{':  return fputs("\\{",   f);
+	case '}':  return fputs("\\}",   f);
+
+	/* some formatting to fit things in a <TD> */
+	case '|':  return fprintf(f, "%s \\|", br);
+	case ';':  return fprintf(f, ";%s",    br);
+	case '\n': return fprintf(f, "%s",     br);
+
+	default:   return fputc(c, f);
+	}
+
+	return 0;
+}
 
 int
 dump_frame(FILE *f, const struct frame *fr)
@@ -20,17 +72,31 @@ dump_frame(FILE *f, const struct frame *fr)
 
 		fprintf(f, "\t\"%p\" [ shape = record, color = white, label = <",
 			(void *) fr);
-		fprintf(f, "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" COLOR=\"red\">");
+		fprintf(f, "<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' COLOR=\"red\">");
 
 		for (p = fr->var; p != NULL; p = p->next) {
 			fprintf(f, "<TR>");
 
-			fprintf(f, "<TD>$%s</TD>", p->name);
+			fprintf(f, "<TD VALIGN='TOP'>$%s</TD>", p->name);
 
-			/* TODO: escape " and | for dot */
-			/* TODO: trim if it's too long */
-			fprintf(f, "<TD ALIGN=\"LEFT\">");
-			out_qs(f, p->a);
+			fprintf(f, "<TD ALIGN='LEFT'>");
+
+			/* TODO: centralise */
+			{
+				FILE *fp;
+
+				fp = tmpfile();
+				if (fp == NULL) {
+					return -1;
+				}
+
+				out_qs(fp, p->a);
+				rewind(fp);
+				filter(fp, f, quote_dot);
+
+				fclose(fp);
+			}
+
 			fprintf(f, "</TD>");
 
 			fprintf(f, "</TR>");
