@@ -189,11 +189,9 @@
 		global-exprs = {
 			a = expr;
 
-			q = <block-frame>(a);
+			<dispatch>(a);
 
-			<dispatch>(q);
-
-			<block-free>(q);
+			<block-free>(a);
 
 			{
 				global-exprs;

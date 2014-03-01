@@ -61,7 +61,7 @@ quote_dot(int c, FILE *f)
 	return 0;
 }
 
-int
+static int
 dump_frame(FILE *f, const struct frame *fr)
 {
 	assert(f != NULL);
@@ -152,15 +152,30 @@ dump_node(FILE *f, const struct ast *a)
 }
 
 int
+frame_dump_node(FILE *f, const struct ast *a)
+{
+	assert(f != NULL);
+	assert(a != NULL);
+	assert(a->f != NULL);
+
+	if (a->f->parent == NULL) {
+		dump_frame(f, a->f);
+	}
+
+	return dump_node(f, a);
+}
+
+int
 out_frame(FILE *f, struct ast *a)
 {
 	assert(f != NULL);
 	assert(a != NULL);
+	assert(a->f != NULL);
 
 	fprintf(f, "graph G {\n");
 	fprintf(f, "\tsplines = line;\n");
 
-	dump_node(f, a);
+	frame_dump_node(f, a);
 
 	fprintf(f, "}\n");
 

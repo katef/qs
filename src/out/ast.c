@@ -7,7 +7,7 @@
 #include "../out.h"
 
 int
-dump_frame(FILE *f, const struct frame *fr);
+frame_dump_node(FILE *f, const struct ast *a);
 
 static int
 dump_node(FILE *f, const struct ast *a, const void *node);
@@ -21,6 +21,18 @@ dump_str(FILE *f, const char *op, const char *s, const void *node)
 
 	/* TODO: quote and escape (centralise that perhaps) */
 	fprintf(f, "\t\"%p\" [ label = \"%s%s\" ];\n", node, op, s);
+	return 0;
+}
+
+static int
+frame_link(FILE *f, const void *node, const struct frame *fr)
+{
+	fprintf(f, "\t{ \"%p\"; \"%p\"; rank = same; };\n",
+		node, (void *) fr);
+
+	fprintf(f, "\t\"%p\" -- \"%p\" [ style = dotted ];\n",
+		node, (void *) fr);
+
 	return 0;
 }
 
@@ -77,12 +89,7 @@ dump_block(FILE *f, const char *op, const struct ast *a, const void *node)
 		a->u.a == NULL ? "invis" : "solid");
 
 	if (debug & DEBUG_FRAME) {
-		fprintf(f, "\t{ \"%p\"; \"%p\"; rank = same; };\n", node, (void *) a->f);
-
-		fprintf(f, "\t\"%p\" -- \"%p\" [ style = dotted ];\n",
-			node, (void *) a->f);
-
-		dump_frame(f, a->f);
+		frame_link(f, node, a->f);
 	}
 
 	dump_node(f, a->u.a, &a->u.a);
@@ -155,12 +162,18 @@ out_ast(FILE *f, struct ast *a)
 {
 	assert(f != NULL);
 	assert(a != NULL);
+	assert(a->f != NULL);
 
 	fprintf(f, "graph G {\n");
 	fprintf(f, "\tnode [ shape = plaintext ];\n");
 	fprintf(f, "\tsplines = line;\n");
 
 	dump_node(f, a, &a);
+
+	if (debug & DEBUG_FRAME) {
+		frame_dump_node(f, a);
+		frame_link(f, &a, a->f);
+	}
 
 	fprintf(f, "}\n");
 
