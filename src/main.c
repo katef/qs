@@ -87,7 +87,7 @@ dispatch(struct frame *f, struct ast *a)
 	struct ast *out;
 
 	if (debug & DEBUG_AST || debug & DEBUG_FRAME) {
-		if (-1 == (debug & DEBUG_AST ? out_ast : out_frame)(a)) {
+		if (-1 == (debug & DEBUG_AST ? out_ast : out_frame)(stderr, a)) {
 			perror("out_ast");
 			return -1;
 		}

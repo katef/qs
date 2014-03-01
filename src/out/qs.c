@@ -9,100 +9,107 @@
 #include "../out.h"
 
 static int
-dump_node(const struct ast *a);
+dump_node(FILE *f, const struct ast *a);
 
 static int
-dump_list(const char *s, const char *e, const struct ast_list *l)
+dump_list(FILE *f, const char *s, const char *e, const struct ast_list *l)
 {
 	const struct ast_list *p;
 
+	assert(f != NULL);
 	assert(s != NULL);
 	assert(e != NULL);
 
-	fprintf(stderr, "%s", s);
+	fprintf(f, "%s", s);
 
 	for (p = l; p != NULL; p = p->next) {
 		switch (p->a->type) {
 		case AST_STR:
-			fprintf(stderr, "%s", p->a->u.s);
+			fprintf(f, "%s", p->a->u.s);
 			break;
 
 		default:
-			fprintf(stderr, "?");
+			fprintf(f, "?");
 			break;
 		}
 
 		if (p->next) {
-			fprintf(stderr, " ");
+			fprintf(f, " ");
 		}
 	}
 
-	fprintf(stderr, "%s", e);
+	fprintf(f, "%s", e);
 
 	return 0;
 }
 
 static int
-dump_block(const char *s, const char *e, const struct ast *a)
+dump_block(FILE *f, const char *s, const char *e, const struct ast *a)
 {
+	assert(f != NULL);
 	assert(s != NULL);
 	assert(e != NULL);
 	assert(a != NULL);
 
-	fprintf(stderr, "%s", s);
-	dump_node(a->u.a);
-	fprintf(stderr, "%s", e);
+	fprintf(f, "%s", s);
+	dump_node(f, a->u.a);
+	fprintf(f, "%s", e);
 
 	return 0;
 }
 
 static int
-dump_op(const char *op, const struct ast *a)
+dump_op(FILE *f, const char *op, const struct ast *a)
 {
+	assert(f != NULL);
 	assert(op != NULL);
 	assert(a != NULL);
 
-	dump_node(a->u.op.a);
-	fprintf(stderr, "%s", op);
-	dump_node(a->u.op.b);
+	dump_node(f, a->u.op.a);
+	fprintf(f, "%s", op);
+	dump_node(f, a->u.op.b);
 
 	return 0;
 }
 
 static int
-dump_node(const struct ast *a)
+dump_node(FILE *f, const struct ast *a)
 {
+	assert(f != NULL);
+
 	if (a == NULL) {
 		return 0;
 	}
 
 	switch (a->type) {
-	case AST_STR:   return !fprintf(stderr, "%s", a->u.s);
-	case AST_EXEC:  return dump_list("",  "",  a->u.l);
-	case AST_LIST:  return dump_list("(", ")", a->u.l);
+	case AST_STR:   return !fprintf(f, "%s", a->u.s);
+	case AST_EXEC:  return dump_list(f, "",  "",  a->u.l);
+	case AST_LIST:  return dump_list(f, "(", ")", a->u.l);
 
-	case AST_DEREF: return dump_block("$",  "",   a);
-	case AST_BLOCK: return dump_block("{ ", " }", a);
-	case AST_CALL:  return dump_block("(",  ")",  a);
-	case AST_SETBG: return dump_block("",   "&",  a);
+	case AST_DEREF: return dump_block(f, "$",  "",   a);
+	case AST_BLOCK: return dump_block(f, "{ ", " }", a);
+	case AST_CALL:  return dump_block(f, "(",  ")",  a);
+	case AST_SETBG: return dump_block(f, "",   "&",  a);
 
-	case AST_AND:    return dump_op(" && ", a);
-	case AST_OR:     return dump_op(" || ", a);
-	case AST_JOIN:   return dump_op("^",    a);
-	case AST_PIPE:   return dump_op(" | ",  a);
-	case AST_ASSIGN: return dump_op("=",    a);
-	case AST_SEP:    return dump_op("; ",   a);
+	case AST_AND:    return dump_op(f, " && ", a);
+	case AST_OR:     return dump_op(f, " || ", a);
+	case AST_JOIN:   return dump_op(f, "^",    a);
+	case AST_PIPE:   return dump_op(f, " | ",  a);
+	case AST_ASSIGN: return dump_op(f, "=",    a);
+	case AST_SEP:    return dump_op(f, "; ",   a);
 
 	default:
-		fprintf(stderr, "? %d ", a->type);
+		fprintf(f, "? %d ", a->type);
 		return 0;
 	}
 }
 
 int
-out_qs(const struct ast *a)
+out_qs(FILE *f, const struct ast *a)
 {
-	dump_node(a);
+	assert(f != NULL);
+
+	dump_node(f, a);
 
 	return 0;
 }

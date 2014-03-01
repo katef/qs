@@ -10,45 +10,48 @@
 #include "../out.h"
 
 int
-dump_frame(const struct frame *f)
+dump_frame(FILE *f, const struct frame *fr)
 {
 	assert(f != NULL);
+	assert(fr != NULL);
 
 	{
 		const struct var *p;
 
-		fprintf(stderr, "\t\"%p\" [ shape = record, color = white, label = <",
-			(void *) f);
-		fprintf(stderr, "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" COLOR=\"red\">");
+		fprintf(f, "\t\"%p\" [ shape = record, color = white, label = <",
+			(void *) fr);
+		fprintf(f, "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" COLOR=\"red\">");
 
-		for (p = f->var; p != NULL; p = p->next) {
-			fprintf(stderr, "<TR>");
+		for (p = fr->var; p != NULL; p = p->next) {
+			fprintf(f, "<TR>");
 
-			fprintf(stderr, "<TD>$%s</TD>", p->name);
+			fprintf(f, "<TD>$%s</TD>", p->name);
 
 			/* TODO: escape " and | for dot */
 			/* TODO: trim if it's too long */
-			fprintf(stderr, "<TD ALIGN=\"LEFT\">");
-			out_qs(p->a);
-			fprintf(stderr, "</TD>");
+			fprintf(f, "<TD ALIGN=\"LEFT\">");
+			out_qs(f, p->a);
+			fprintf(f, "</TD>");
 
-			fprintf(stderr, "</TR>");
+			fprintf(f, "</TR>");
 		}
 
-		fprintf(stderr, "</TABLE>> ];\n");
+		fprintf(f, "</TABLE>> ];\n");
 	}
 
-	if (f->parent != NULL) {
-		fprintf(stderr, "\t\"%p\" -- \"%p\" [ dir = back, color = red, constraint=false ];\n",
-			(void *) f->parent, (void *) f);
+	if (fr->parent != NULL) {
+		fprintf(f, "\t\"%p\" -- \"%p\" [ dir = back, color = red, constraint=false ];\n",
+			(void *) fr->parent, (void *) fr);
 	}
 
 	return 0;
 }
 
 static int
-dump_node(const struct ast *a)
+dump_node(FILE *f, const struct ast *a)
 {
+	assert(f != NULL);
+
 	if (a == NULL) {
 		return 0;
 	}
@@ -60,11 +63,11 @@ dump_node(const struct ast *a)
         return 0;
 
     case AST_BLOCK:
-		dump_frame(a->f);
+		dump_frame(f, a->f);
     case AST_DEREF:
     case AST_CALL:
     case AST_SETBG:
-		dump_node(a->u.a);
+		dump_node(f, a->u.a);
 		return 0;
 
     case AST_AND:
@@ -73,8 +76,8 @@ dump_node(const struct ast *a)
     case AST_PIPE:
     case AST_ASSIGN:
     case AST_SEP:
-		dump_node(a->u.op.a);
-		dump_node(a->u.op.b);
+		dump_node(f, a->u.op.a);
+		dump_node(f, a->u.op.b);
 		return 0;
 
 	default:
@@ -83,15 +86,16 @@ dump_node(const struct ast *a)
 }
 
 int
-out_frame(const struct ast *a)
+out_frame(FILE *f, const struct ast *a)
 {
-	fprintf(stderr, "graph G {\n");
-	fprintf(stderr, "\tnode [ shape = plaintext ];\n");
-	fprintf(stderr, "\tsplines = line;\n");
+	assert(f != NULL);
 
-	dump_node(a);
+	fprintf(f, "graph G {\n");
+	fprintf(f, "\tsplines = line;\n");
 
-	fprintf(stderr, "}\n");
+	dump_node(f, a);
+
+	fprintf(f, "}\n");
 
 	return 0;
 }
