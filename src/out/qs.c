@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -10,6 +11,45 @@
 
 static int
 dump_node(FILE *f, const struct ast *a);
+
+static int
+hasspecial(const char *s)
+{
+	assert(s != NULL);
+
+	return s[strcspn(s, "#\\'\"`.{}();^|&$ \t\v\f\r\n")] != '\0';
+}
+
+static int
+dump_str(FILE *f, const char *s)
+{
+	assert(f != NULL);
+
+	/* TODO: quote whitespace as &#10; or something for graphviz */
+	if (hasspecial(s)) {
+		const char *p;
+
+		fputc('"', f);
+
+		for (p = s; *p != '\0'; p++) {
+			switch (*p) {
+			case '$':  fputs("\\$",  f); break;
+			case '\\': fputs("\\\\", f); break;
+			case '\t': fputs("\\t",  f); break;
+			case '\v': fputs("\\v",  f); break;
+			case '\f': fputs("\\f",  f); break;
+			case '\r': fputs("\\r",  f); break;
+			case '\n': fputs("\\n",  f); break;
+			default:   fputc(*p,     f); break;
+			}
+		}
+
+		fputc('"', f);
+	} else {
+		fputs(s, f);
+	}
+	return 0;
+}
 
 static int
 dump_list(FILE *f, const char *s, const char *e, const struct ast_list *l)
@@ -25,7 +65,7 @@ dump_list(FILE *f, const char *s, const char *e, const struct ast_list *l)
 	for (p = l; p != NULL; p = p->next) {
 		switch (p->a->type) {
 		case AST_STR:
-			fprintf(f, "%s", p->a->u.s);
+			dump_str(f, p->a->u.s);
 			break;
 
 		default:
@@ -82,7 +122,7 @@ dump_node(FILE *f, const struct ast *a)
 	}
 
 	switch (a->type) {
-	case AST_STR:   return !fprintf(f, "%s", a->u.s);
+	case AST_STR:   return dump_str(f, a->u.s);
 	case AST_EXEC:  return dump_list(f, "",  "",  a->u.l);
 	case AST_LIST:  return dump_list(f, "(", ")", a->u.l);
 
