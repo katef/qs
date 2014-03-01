@@ -77,7 +77,7 @@ dump_frame(FILE *f, const struct frame *fr)
 		for (p = fr->var; p != NULL; p = p->next) {
 			fprintf(f, "<TR>");
 
-			fprintf(f, "<TD VALIGN='TOP'>$%s</TD>", p->name);
+			fprintf(f, "<TD VALIGN='MIDDLE'>$%s</TD>", p->name);
 
 			fprintf(f, "<TD ALIGN='LEFT'>");
 
