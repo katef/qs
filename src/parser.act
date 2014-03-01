@@ -242,7 +242,9 @@
 	@};
 
 	<binop-assign>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->f, AST_ASSIGN, @a, @b);
+		assert(@a != NULL);
+
+		@q = ast_new_op(act_state->f, AST_ASSIGN, @a, @b);
 		if (@q == NULL) {
 			ast_free(@a);
 			ast_free(@b);

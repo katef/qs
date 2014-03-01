@@ -102,17 +102,6 @@ eval_op_pipe(struct ast *a, struct ast *b)
 }
 
 int
-eval_op_assign(struct ast *a, struct ast *b)
-{
-	/* TODO */
-	(void) a;
-	(void) b;
-
-	errno = ENOSYS;
-	return -1;
-}
-
-int
 eval_op_sep(struct ast *a, struct ast *b)
 {
 	struct ast *q;

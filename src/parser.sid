@@ -58,7 +58,22 @@
 	<list-null>: () -> (:list);
 	<list-cat>:  (:list, :ast) -> (:list);
 
-	exprs: () -> (:ast);
+	exprs:    () -> (:ast);
+	ast-list: () -> (:list);
+
+	compound-expr: () -> (q :ast) = {
+		oparen;
+		l = ast-list;
+		q = <new-list>(l);
+		cparen;
+	||
+		obrace;
+		<frame-push>;
+		a = exprs;
+		q = <block-frame>(a);
+		<frame-pop>;
+		cbrace;
+	};
 
 	ast-list: () -> (l :list) = {
 		/* TODO: || backtick */
@@ -68,6 +83,8 @@
 		||
 			s = var;
 			a = <new-var>(s);
+		||
+			a = compound-expr;
 		};
 
 		{
@@ -79,35 +96,34 @@
 		l = <list-cat>(t, a);
 	};
 
-	cmd: () -> (q :ast) = {
-		oparen;
-		l = ast-list;
-		q = <new-list>(l);
-		cparen;
+	cmd: () -> (q :ast) [
+
+		value: () -> (q :ast) = {
+			q = compound-expr;
+		||
+			s = str;
+			q = <new-str>(s);
+		||
+			s = var;
+			q = <new-var>(s);
+		};
+
+	] = {
+		q = compound-expr;
 	||
 		l = ast-list;
 		q = <block-exec>(l);
 	||
-		obrace;
-		<frame-push>;
-		a = exprs;
-		q = <block-frame>(a);
-		<frame-pop>;
-		cbrace;
+		s = str;
+		a = <new-str>(s);
+		equ;
+		b = value;
+		q = <binop-assign>(a, b);
 	};
 
 /* XXX: needs different grammar */
 	assign-expr: () -> (q :ast) = {
-		a = cmd;
-
-		{
-			equ;
-			b = assign-expr;
-		||
-			b = <epsilon>;
-		};
-
-		q = <binop-assign>(a, b);
+		q = cmd;
 	};
 
 	pipe-expr: () -> (q :ast) = {

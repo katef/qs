@@ -158,12 +158,18 @@ eval_ast(struct ast *a, struct ast **out)
 		errno = ENOSYS;
 		return -1;
 
+	case AST_ASSIGN:
+		assert(a->u.a->type == AST_STR);
+		if (!frame_set(a->f, a->u.op.a->u.s, a->u.op.b)) {
+			return -1;
+		}
+		return 0;
+
 	/* binary operators */
 	case AST_AND:    return eval_op(a, eval_op_and);
 	case AST_OR:     return eval_op(a, eval_op_or);
 	case AST_JOIN:   return eval_op(a, eval_op_join);
 	case AST_PIPE:   return eval_op(a, eval_op_pipe);
-	case AST_ASSIGN: return eval_op(a, eval_op_assign);
 	case AST_SEP:    return eval_op(a, eval_op_sep);
 
 	default:
