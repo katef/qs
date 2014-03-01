@@ -151,6 +151,7 @@ out_qs(FILE *f, struct ast *a)
 	assert(a != NULL);
 
 	dump_node(f, a);
+	fputc('\n', f);
 
 	return 0;
 }
