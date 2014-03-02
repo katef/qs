@@ -7,7 +7,7 @@ struct data {
 };
 
 struct data *
-data_push(struct data *head, size_t n, const char *s);
+data_push(struct data **head, size_t n, const char *s);
 
 struct data *
 data_pop(struct data **head);

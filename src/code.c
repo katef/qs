@@ -4,10 +4,11 @@
 #include "code.h"
 
 struct code *
-code_push(struct code *tail, enum code_type type, void *p)
+code_push(struct code **head, enum code_type type, void *p)
 {
 	struct code *new;
 
+	assert(head != NULL);
 	assert(p != NULL);
 	assert(type && !(type & (type - 1)));
 
@@ -23,7 +24,8 @@ code_push(struct code *tail, enum code_type type, void *p)
 	}
 
 	new->type = type;
-	new->next = tail;
+	new->next = *head;
+	*head = new;
 
 	return new;
 }

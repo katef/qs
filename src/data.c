@@ -5,10 +5,11 @@
 #include "data.h"
 
 struct data *
-data_push(struct data *tail, size_t n, const char *s)
+data_push(struct data **head, size_t n, const char *s)
 {
 	struct data *new;
 
+	assert(head != NULL);
 	assert(s != NULL || n == 0);
 
 	new = malloc(sizeof *new + n + (n > 0));
@@ -23,7 +24,8 @@ data_push(struct data *tail, size_t n, const char *s)
 		new->s    = NULL;
 	}
 
-	new->next = tail;
+	new->next = *head;
+	*head = new;
 
 	return new;
 }

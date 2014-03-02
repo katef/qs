@@ -28,7 +28,7 @@ struct code {
 };
 
 struct code *
-code_push(struct code *tail, enum code_type type, void *p);
+code_push(struct code **head, enum code_type type, void *p);
 
 struct code *
 code_pop(struct code **head);
