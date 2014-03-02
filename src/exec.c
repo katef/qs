@@ -2,14 +2,58 @@
 #include <sys/wait.h>
 
 #include <assert.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
+#include <unistd.h>
+
 #include "debug.h"
 #include "ast.h"
+#include "data.h"
 #include "exec.h"
 #include "builtin.h"
+
+char **
+make_argv(const struct data *data, int *argc)
+{
+	const struct data *p;
+	char **argv;
+	int i;
+
+	assert(argc != NULL);
+	assert(data != NULL);
+
+	for (i = 0, p = data; p->s != NULL; p = p->next, i++) {
+		if (p == NULL) {
+			return NULL;
+		}
+	}
+
+	argv = malloc((i + 1) * sizeof *argv);
+	if (argv == NULL) {
+		return NULL;
+	}
+
+	for (i = 0, p = data; p->s != NULL; p = p->next, i++) {
+		if (p == NULL) {
+			goto error;
+		}
+
+		argv[i] = p->s;
+	}
+
+	*argc = i;
+	argv[i] = NULL;
+
+	return argv;
+
+error:
+
+	free(argv);
+
+	return NULL;
+}
 
 static void
 dump_argv(const char *name, char **argv)
