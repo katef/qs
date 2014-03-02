@@ -19,7 +19,6 @@ code_push(struct code *tail, enum code_type type, void *p)
 	switch (type) {
 	case CODE_NULL:
 	case CODE_WIND: new->u.data  = p; break;
-	case CODE_CALL: new->u.code  = p; break;
 	default:        new->u.frame = p; break;
 	}
 

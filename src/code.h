@@ -21,7 +21,6 @@ struct code {
 
 	union {
 		struct data  *data;
-		struct code  *code;
 		struct frame *frame;
 	} u;
 
