@@ -17,6 +17,7 @@ OBJS += main.o
 OBJS += var.o
 OBJS += frame.o
 OBJS += list.o
+OBJS += stack.o
 
 OBJS += out/qs.o
 OBJS += out/ast.o
