@@ -3,17 +3,18 @@
 
 enum code_type {
 	/* terminals */
-	CODE_NULL = 1 << 0,
-	CODE_WIND = 1 << 1,
+	CODE_NULL = 1 << 0, /* none   */
+	CODE_NOT  = 1 << 1, /* none   */
+	CODE_DATA = 1 << 2, /* u.data */
+	CODE_CODE = 1 << 3, /* u.code */
 
-	/* operators */
-	CODE_CALL = 1 << 2,
-	CODE_EXEC = 1 << 3,
-	CODE_AND  = 1 << 4,
-	CODE_OR   = 1 << 5,
-	CODE_JOIN = 1 << 6,
-	CODE_PIPE = 1 << 7,
-	CODE_BIND = 1 << 8
+	/* operators (u.frame) */
+	CODE_CALL = 1 << 4,
+	CODE_EXEC = 1 << 5,
+	CODE_IF   = 1 << 6,
+	CODE_JOIN = 1 << 7,
+	CODE_PIPE = 1 << 8,
+	CODE_BIND = 1 << 9
 };
 
 struct code {
@@ -21,6 +22,7 @@ struct code {
 
 	union {
 		struct data  *data;
+		struct code  *code;
 		struct frame *frame;
 	} u;
 
@@ -32,6 +34,12 @@ code_push(struct code **head, enum code_type type, void *p);
 
 struct code *
 code_pop(struct code **head);
+
+void
+code_free(struct code *code);
+
+struct code **
+code_clone(struct code **dst, const struct code *src);
 
 #endif
 

@@ -19,7 +19,9 @@ code_push(struct code **head, enum code_type type, void *p)
 
 	switch (type) {
 	case CODE_NULL:
-	case CODE_WIND: new->u.data  = p; break;
+	case CODE_NOT:                    break;
+	case CODE_DATA: new->u.data  = p; break;
+	case CODE_CODE: new->u.code  = p; break;
 	default:        new->u.frame = p; break;
 	}
 
@@ -42,5 +44,53 @@ code_pop(struct code **head)
 	node->next = NULL;
 
 	return node;
+}
+
+void
+code_free(struct code *code)
+{
+	struct code *p, *next;
+
+	for (p = code; p != NULL; p = next) {
+		next = p->next;
+
+		free(p);
+	}
+}
+
+struct code **
+code_clone(struct code **dst, const struct code *src)
+{
+	const struct code *p;
+	struct code **q, *end;
+
+	assert(dst != NULL);
+	assert(*dst == NULL);
+
+	end = *dst;
+
+	for (p = src, q = dst; p != NULL; p = p->next) {
+		*q = malloc(sizeof **q);
+		if (*q == NULL) {
+			goto error;
+		}
+
+		/* note u.p still points into src */
+		(*q)->type = p->type;
+		(*q)->u    = p->u;
+
+		q = &(*q)->next;
+	}
+
+	*q = end;
+
+	return q;
+
+error:
+
+	code_free(*dst);
+	*dst = end;
+
+	return NULL;
 }
 
