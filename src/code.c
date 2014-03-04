@@ -4,12 +4,12 @@
 #include "code.h"
 
 struct code *
-code_push(struct code **head, enum code_type type, void *p)
+code_push(struct code **head, enum code_type type, struct frame *frame)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(p != NULL);
+	assert(frame != NULL);
 	assert(type && !(type & (type - 1)));
 
 	new = malloc(sizeof *new);
@@ -17,15 +17,9 @@ code_push(struct code **head, enum code_type type, void *p)
 		return NULL;
 	}
 
-	switch (type) {
-	case CODE_NULL:
-	case CODE_NOT:                    break;
-	case CODE_DATA: new->u.data  = p; break;
-	case CODE_CODE: new->u.code  = p; break;
-	default:        new->u.frame = p; break;
-	}
+	new->type  = type;
+	new->frame = frame;
 
-	new->type = type;
 	new->next = *head;
 	*head = new;
 
@@ -75,9 +69,9 @@ code_clone(struct code **dst, const struct code *src)
 			goto error;
 		}
 
-		/* note u.p still points into src */
-		(*q)->type = p->type;
-		(*q)->u    = p->u;
+		/* note .frame still points into src */
+		(*q)->type  = p->type;
+		(*q)->frame = p->frame;
 
 		q = &(*q)->next;
 	}
