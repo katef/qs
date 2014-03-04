@@ -8,9 +8,10 @@
 #include <errno.h>
 #include <ctype.h>
 
-#include "ast.h"
+#include "data.h"
 #include "var.h"
 #include "frame.h"
+#include "eval.h"
 
 int status; /* this is $? */
 
@@ -49,19 +50,20 @@ frame_pop(struct frame **f)
 }
 
 struct var *
-frame_set(struct frame *f, const char *name, struct ast *val)
+frame_set(struct frame *f, const char *name,
+	struct code *code, struct data *data)
 {
 	assert(f != NULL);
 	assert(name != NULL);
 
-	return var_set(&f->var, name, val);
+	return var_set(&f->var, name, code, data);
 }
 
-struct ast *
+struct var *
 frame_get(const struct frame *f, const char *name)
 {
 	const struct frame *p;
-	struct ast *a;
+	struct var *v;
 
 	assert(f != NULL);
 	assert(name != NULL);
@@ -71,13 +73,8 @@ frame_get(const struct frame *f, const char *name)
 		static char s[32];
 		int n;
 
-		a = var_get(f->var, name);
-		if (a == NULL) {
-			errno = EINVAL;
-			return NULL;
-		}
-
-		if (a->type != AST_STR) {
+		v = var_get(f->var, name);
+		if (v == NULL || v->data == NULL) {
 			errno = EINVAL;
 			return NULL;
 		}
@@ -87,15 +84,15 @@ frame_get(const struct frame *f, const char *name)
 			return NULL;
 		}
 
-		a->u.s = s;
+		v->data->s = s;
 
-		return a;
+		return v;
 	}
 
 	for (p = f; p != NULL; p = p->parent) {
-		a = var_get(p->var, name);
-		if (a != NULL) {
-			return a;
+		v = var_get(p->var, name);
+		if (v != NULL) {
+			return v;
 		}
 	}
 
@@ -123,29 +120,38 @@ frame_export(const struct frame *f)
 	}
 
 	for (v = f->var; v != NULL; v = v->next) {
-		const struct ast *a;
+		struct data *out;
 		const char *s;
 
 		if (!isalpha((unsigned char) v->name[0])) {
 			continue;
 		}
 
-		a = v->a;
+		if (-1 == eval_clone(v->code, v->data, &out)) {
+			goto error;
+		}
 
-		if (a == NULL) {
+		if (out == NULL) {
 			s = "";
 		} else {
-			/* TODO: evaulate and join lists */
-			if (a->type != AST_STR) {
-				continue;
-			}
-
-			s = a->u.s;
+			/* TODO: ^ join lists to one string (no special case for empty list) */
+			/* TODO: can this merge with eval() somehow? */
+			s = out->s;
 		}
 
 		if (-1 == setenv(v->name, s, 1)) {
 			return -1;
 		}
+
+		data_free(out);
+
+		continue;
+
+error:
+
+		data_free(out);
+
+		return -1;
 	}
 
 	return 0;

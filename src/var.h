@@ -5,14 +5,16 @@ struct ast;
 
 struct var {
 	const char *name;
-	struct ast *a;
+	struct code *code;
+	struct data *data;
 	struct var *next;
 };
 
 struct var *
-var_set(struct var **v, const char *name, struct ast *a);
+var_set(struct var **v, const char *name,
+	struct code *code, struct data *data);
 
-struct ast *
+struct var *
 var_get(struct var *v, const char *name);
 
 void

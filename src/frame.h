@@ -1,8 +1,6 @@
 #ifndef FRAME_H
 #define FRAME_H
 
-struct ast;
-
 struct frame {
 	struct var *var;
 	struct frame *parent;
@@ -17,9 +15,10 @@ struct frame *
 frame_pop(struct frame **f);
 
 struct var *
-frame_set(struct frame *f, const char *name, struct ast *val);
+frame_set(struct frame *f, const char *name,
+	struct code *code, struct data *data);
 
-struct ast *
+struct var *
 frame_get(const struct frame *f, const char *name);
 
 int

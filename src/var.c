@@ -2,37 +2,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "code.h"
+#include "data.h"
 #include "var.h"
-#include "ast.h"
 
 static struct var *
-var_find(struct var *v, const char *name)
-{
-	struct var *p;
-
-	for (p = v; p != NULL; p = p->next) {
-		if (0 == strcmp(p->name, name)) {
-			return p;
-		}
-	}
-
-	return NULL;
-}
-
-static struct var *
-var_new(struct var **v, const char *name, struct ast *a)
+var_new(struct var **v, const char *name,
+	struct code *code, struct data *data)
 {
 	struct var *new;
 
 	assert(v != NULL);
+	assert(name != NULL);
 
-	new = malloc(sizeof *new);
+	new = malloc(sizeof *new + strlen(name) + 1);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->name = name; /* XXX: after struct */
-	new->a    = a;
+	new->name = strcpy((char *) new + sizeof *new, name);
+	new->code = code;
+	new->data = data;
 
 	new->next = *v;
 	*v = new;
@@ -41,31 +31,36 @@ var_new(struct var **v, const char *name, struct ast *a)
 }
 
 struct var *
-var_set(struct var **v, const char *name, struct ast *a)
+var_set(struct var **v, const char *name,
+	struct code *code, struct data *data)
 {
 	struct var *curr;
 
 	assert(v != NULL);
 
-	curr = var_find(*v, name);
-	if (curr != NULL) {
-		ast_free(curr->a);
-		curr->a = a;
+	curr = var_get(*v, name);
+	if (curr == NULL) {
+		code_free(curr->code);
+		data_free(curr->data);
+
+		curr->code = code;
+		curr->data = data;
 
 		return curr;
 	}
 
-	return var_new(v, name, a);
+	return var_new(v, name, code, data);
 }
 
-struct ast *
+struct var *
 var_get(struct var *v, const char *name)
 {
 	struct var *p;
 
-	p = var_find(v, name);
-	if (p != NULL) {
-		return p->a;
+	for (p = v; p != NULL; p = p->next) {
+		if (0 == strcmp(p->name, name)) {
+			return p;
+		}
 	}
 
 	return NULL;
@@ -79,7 +74,8 @@ var_free(struct var *v)
 	for (p = v; p != NULL; p = next) {
 		next = p->next;
 
-		ast_free(p->a);
+		code_free(p->code);
+		data_free(p->data);
 		free(p);
 	}
 }
