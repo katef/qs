@@ -19,6 +19,7 @@ OBJS += frame.o
 OBJS += list.o
 OBJS += code.o
 OBJS += data.o
+OBJS += eval.o
 
 OBJS += out/qs.o
 OBJS += out/ast.o
