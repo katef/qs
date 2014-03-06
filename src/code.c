@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
+#include "debug.h"
 #include "code.h"
 
 struct code *
@@ -23,6 +25,10 @@ code_push(struct code **head, enum code_type type, struct frame *frame)
 	new->next = *head;
 	*head = new;
 
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code -> %d\n", type);
+	}
+
 	return new;
 }
 
@@ -36,6 +42,10 @@ code_pop(struct code **head)
 	node = *head;
 	*head = node->next;
 	node->next = NULL;
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code <- %d\n", node->type);
+	}
 
 	return node;
 }
@@ -67,6 +77,10 @@ code_clone(struct code **dst, const struct code *src)
 		*q = malloc(sizeof **q);
 		if (*q == NULL) {
 			goto error;
+		}
+
+		if (debug & DEBUG_STACK) {
+			fprintf(stderr, "code -> %d\n", p->type);
 		}
 
 		/* note .frame still points into src */

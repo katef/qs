@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
+#include "debug.h"
 #include "data.h"
 
 struct data *
@@ -12,7 +14,7 @@ data_push(struct data **head, size_t n, const char *s)
 	assert(head != NULL);
 	assert(s != NULL || n == 0);
 
-	new = malloc(sizeof *new + n + (n > 0));
+	new = malloc(sizeof *new + n + !!s);
 	if (new == NULL) {
 		return NULL;
 	}
@@ -27,6 +29,10 @@ data_push(struct data **head, size_t n, const char *s)
 	new->next = *head;
 	*head = new;
 
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "data -> %s\n", new->s ? new->s : "NULL");
+	}
+
 	return new;
 }
 
@@ -40,6 +46,10 @@ data_pop(struct data **head)
 	node = *head;
 	*head = node->next;
 	node->next = NULL;
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "data <- %s\n", node->s ? node->s : "NULL");
+	}
 
 	return node;
 }
@@ -71,6 +81,10 @@ data_clone(struct data **dst, const struct data *src)
 		*q = malloc(sizeof **q);
 		if (*q == NULL) {
 			goto error;
+		}
+
+		if (debug & DEBUG_STACK) {
+			fprintf(stderr, "data -> %s\n", p->s ? p->s : "NULL");
 		}
 
 		/* note .s still points into src */

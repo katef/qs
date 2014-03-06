@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "debug.h"
 #include "var.h"
 #include "data.h"
 #include "code.h"
@@ -64,6 +65,9 @@ eval_call(struct code *node, struct data **data)
 	}
 
 	a = *data;
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
+	}
 
 	q = frame_get(node->frame, a->s);
 	if (q == NULL) {
@@ -107,6 +111,17 @@ eval_exec(struct code *node, struct data **data)
 	assert(data != NULL);
 	assert(node->type == CODE_EXEC);
 
+	if (*data == NULL) {
+		errno = 0;
+		return -1;
+	}
+
+	if (debug & DEBUG_STACK) {
+		for (p = *data; p->s != NULL; p = p->next) {
+			fprintf(stderr, "data <- %sn", p->s ? p->s : "NULL");
+		}
+	}
+
 	argv = make_argv(*data, &argc);
 	if (argv == NULL) {
 		return -1;
@@ -149,6 +164,9 @@ eval_if(struct code *node, struct data **data)
 	/* TODO: could also check *data is $"" */
 
 	a = node->next;
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code <- %d\n", a->type);
+	}
 
 	if (status != EXIT_SUCCESS) {
 		return 0;
@@ -229,6 +247,10 @@ eval_binop(struct code *node, struct data **data,
 
 	a =  *data;
 	b = (*data)->next;
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "data <- %s\n", a->s);
+		fprintf(stderr, "data <- %s\n", b->s);
+	}
 
 	if (-1 == op(&b->next, node->frame, a, b)) {
 		return -1;

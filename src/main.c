@@ -28,6 +28,7 @@ debug_flags(const char *s)
 		case 'l': debug |= DEBUG_LEX;   break;
 		case 'p': debug |= DEBUG_PARSE; break;
 		case 'f': debug |= DEBUG_FRAME; break;
+		case 's': debug |= DEBUG_STACK; break;
 		case 'x': debug |= DEBUG_EXEC;  break;
 
 		default:
@@ -170,7 +171,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablpfx] [-e eval|qs|ast|frame]\n");
+	fprintf(stderr, "usage: kcsh [-d ablpfsx] [-e eval|qs|ast|frame]\n");
 
 	return 1;
 }
