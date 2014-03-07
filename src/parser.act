@@ -12,8 +12,9 @@
 
 	string -> string;
 	frame  -> frame;
-	ast    -> ast;
-	list   -> list;
+	type   -> type;
+	code   -> code;
+	data   -> data;
 
 %header% @{
 
@@ -22,7 +23,8 @@
 
 	#include "lex.h"
 	#include "ast.h"
-	#include "list.h"
+	#include "code.h"
+	#include "data.h"
 	#include "frame.h"
 	#include "parser.h"
 
@@ -34,14 +36,16 @@
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type type, save;
-		struct frame *f;
-		int (*dispatch)(FILE *f, struct ast *);
-		int (*populate)(struct frame *f);
-		struct ast *args;
+		struct frame *frame;
+		int (*dispatch)(FILE *, struct frame *, struct code **, struct data **);
+		int (*populate)(struct frame *);
+		struct data *args;
 	};
 
 	typedef struct act_string string;
-	typedef struct ast_list * list;
+	typedef enum code_type type;
+	typedef struct code *code;
+	typedef struct data *data;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -50,35 +54,18 @@
 	#define SAVE_LEXER(tok)  act_state->save = tok;
 	#define RESTORE_LEXER    act_state->type = act_state->save;
 
-	static struct ast *
-	binop(struct frame *f, enum ast_type type, struct ast *a, struct ast *b)
-	{
-		assert(f != NULL);
-
-		if (a == NULL) {
-			return b;
-		}
-
-		if (b == NULL) {
-			return a;
-		}
-
-		return ast_new_op(f, type, a, b);
-	}
-
 @}, @{
 
 	#include <stdio.h>
 
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
-	typedef struct ast *       ast;
 
 	int
 	parse(struct lex_state *l,
-		int (*populate)(struct frame *f),
-		int (*dispatch)(FILE *f, struct ast *),
-		struct ast_list *args);
+		int (*populate)(struct frame *),
+		int (*dispatch)(FILE *, struct frame *, struct code **, struct data **),
+		struct data *args);
 
 @};
 
@@ -102,173 +89,115 @@
 
 %actions%
 
-	<dispatch>: (q :ast) -> () = @{
-		if (-1 == act_state->dispatch(stdout, @q)) {
+	<dispatch>: (c :code &, d :data &) -> () = @{
+		assert(act_state->frame != NULL);
+
+		if (-1 == act_state->dispatch(stdout, act_state->frame, @&c, @&d)) {
 			@!;
 		}
+
+		/* TODO: if <dispatch> modifies @c, @d then @c should be empty if successful */
+
+		code_free(@c);
+		data_free(@d);
 	@};
 
 	<populate>: () -> () = @{
-		if (-1 == act_state->populate(act_state->f)) {
+		assert(act_state->frame != NULL);
+
+		if (-1 == act_state->populate(act_state->frame)) {
 			@!;
 		}
 
-		if (!frame_set(act_state->f, "*", act_state->args)) {
+		if (!frame_set(act_state->frame, "*", NULL, act_state->args)) {
 			@!;
 		}
 	@};
 
-	<epsilon>: () -> (q :ast) = @{
-		@q = NULL;
+	/*
+	 * An anonymous block is not actually anonymous; it's a locally-scoped
+	 * variable named "", which has its own code and data stacks.
+	 */
+	<var-anon>: () -> (s :string) = @{
+		@s.s = "";
+		@s.e = @s.s;
+	@};
+
+	<var-self>: () -> (s :string) = @{
+		@s.s = ".";
+		@s.e = @s.s + 1;
+	@};
+
+	<var-top>:  () -> (s :string) = @{
+		@s.s = "_";
+		@s.e = @s.s + 1;
+	@};
+
+	<empty>: () -> (c :code, d :data) = @{
+		@c = NULL;
+		@d = NULL;
+	@};
+
+	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
+	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
+	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
+	<type-exec>: () -> (t :type) = @{ @t = CODE_EXEC; @};
+	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
+	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
+	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
+	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
+
+	<push-data>: (d :data &, s :string) -> () = @{
+		assert(@d != NULL);
+		assert(@s.s != NULL && @s.e != NULL);
+		assert(@s.e > @s.s);
+
+		if (!data_push(@&d, @s.e - @s.s, @s.s)) {
+			@!;
+		}
+	@};
+
+	<push-null>: (d :data &) -> () = @{
+		assert(@d != NULL);
+
+		if (!data_push(@&d, 0, NULL)) {
+			@!;
+		}
+	@};
+
+	<push-code>: (c :code &, t :type) -> () = @{
+		assert(@c != NULL);
+		assert(act_state->frame != NULL);
+
+		if (!code_push(@&c, @t, act_state->frame)) {
+			@!;
+		}
 	@};
 
 	<frame-push>: () -> () = @{
-		if (!frame_push(&act_state->f)) {
+		assert(act_state->frame != NULL);
+
+		if (!frame_push(&act_state->frame)) {
 			@!;
 		}
 	@};
 
 	<frame-pop>: () -> () = @{
-		(void) frame_pop(&act_state->f);
+		assert(act_state->frame != NULL);
+
+		(void) frame_pop(&act_state->frame);
 	@};
 
-	<new-str>: (s :string) -> (q :ast) = @{
-		@q = ast_new_leaf(AST_STR, @s.e - @s.s, @s.s);
-		if (@q == NULL) {
-			@!;
-		}
-	@};
+	<frame-set>: (s :string, c :code, d :data) -> () = @{
+		assert(@s.s != NULL && @s.e != NULL);
+		assert(act_state->frame != NULL);
 
-	<new-var>: (s :string) -> (q :ast) = @{
-		@q = ast_new_leaf(AST_VAR, @s.e - @s.s, @s.s);
-		if (@q == NULL) {
+		if (@s.e > @s.s) {
 			@!;
 		}
 
-		@q->f = act_state->f;
-	@};
-
-	<new-list>: (l :list) -> (q :ast) = @{
-		@q = ast_new_list(@l);
-		if (@q == NULL) {
-			@!;
-		}
-	@};
-
-	<block-frame>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(act_state->f, AST_BLOCK, @a);
-		if (@q == NULL) {
-			ast_free(@a);
-			@!;
-		}
-
-		if (!frame_set(@q->f, ".", @q)) {
-			ast_free(@q);
-			ast_free(@a);
-			@!;
-		}
-	@};
-
-	<block-free>: (q :ast) -> () = @{
-		assert(@q != NULL);
-
-		if (!frame_set(@q->f, ".", NULL)) {
-			ast_free(@q);
-			@!;
-		}
-
-/* XXX:
-		ast_free(@q);
-*/
-	@};
-
-	<block-setbg>: (a :ast) -> (q :ast) = @{
-		@q = ast_new_block(act_state->f, AST_SETBG, @a);
-		if (@q == NULL) {
-			ast_free(@a);
-			@!;
-		}
-
-		/* TODO: $% as jobid */
-		if (!frame_set(act_state->f, "%", NULL)) {
-			@!;
-		}
-	@};
-
-	<block-exec>: (l :list) -> (q :ast) = @{
-		assert(@l != NULL);
-
-		@q = ast_new_exec(act_state->f, AST_EXEC, @l);
-		if (@q == NULL) {
-			/* TODO: free something? */
-			@!;
-		}
-	@};
-
-	<binop-and>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->f, AST_AND, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-or>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->f, AST_OR, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-join>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->f, AST_JOIN, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-pipe>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->f, AST_PIPE, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-assign>: (a :ast, b :ast) -> (q :ast) = @{
-		assert(@a != NULL);
-
-		@q = ast_new_op(act_state->f, AST_ASSIGN, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<binop-sep>: (a :ast, b :ast) -> (q :ast) = @{
-		@q = binop(act_state->f, AST_SEP, @a, @b);
-		if (@q == NULL) {
-			ast_free(@a);
-			ast_free(@b);
-			@!;
-		}
-	@};
-
-	<list-null>: () -> (l :list) = @{
-		@l = NULL;
-	@};
-
-	<list-cat>: (t :list, a :ast) -> (l :list) = @{
-		@l = list_cat(@t, @a);
-		if (@l == NULL) {
-			/* TODO: free a? */
+/* XXX: @s.s is not '\0'-terminated; have frame_set() take s, n */
+		if (!frame_set(act_state->frame, @s.s, @c, @d)) {
 			@!;
 		}
 	@};
@@ -277,9 +206,9 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*populate)(struct frame *f),
-		int (*dispatch)(FILE *f, struct ast *),
-		struct ast_list *args)
+		int (*populate)(struct frame *),
+		int (*dispatch)(FILE *, struct frame *, struct code **, struct data **),
+		struct data *args)
 	{
 		struct act_state a, *act_state = &a;
 
@@ -290,12 +219,9 @@
 		act_state->dispatch = dispatch;
 		act_state->populate = populate;
 
-		act_state->args = ast_new_list(args);
-		if (act_state->args == NULL) {
-			return -1;
-		}
+		act_state->args  = args;
+		act_state->frame = NULL;
 
-		act_state->f = NULL;
 		lex_state->p = lex_state->buf;
 
 		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */

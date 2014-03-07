@@ -2,8 +2,9 @@
 
 	string;
 	!frame;
-	ast;
-	list;
+	type;
+	code;
+	data;
 
 %terminals%
 
@@ -31,183 +32,216 @@
 
 %productions%
 
-	<dispatch>: (:ast) -> ();
+	<dispatch>: (:code &, :data &) -> ();
 	<populate>;
 
-	<epsilon>: () -> (:ast);
+	<var-anon>: () -> (:string);
+	<var-self>: () -> (:string);
+	<var-top>:  () -> (:string);
 
-    <frame-push>;
-    <frame-pop>;
+	<empty>: () -> (:code, :data);
 
-	<new-str>:  (:string) -> (:ast);
-	<new-var>:  (:string) -> (:ast);
-	<new-list>: (:list)   -> (:ast);
+	!<type-null>:() -> (:type);
+	<type-not>:  () -> (:type);
+	<type-call>: () -> (:type);
+	<type-exec>: () -> (:type);
+	<type-if>:   () -> (:type);
+	!<type-join>:() -> (:type);
+	<type-pipe>: () -> (:type);
+	<type-set>:  () -> (:type);
 
-	<block-frame>: (:ast)  -> (:ast);
-	<block-free>:  (:ast)  -> ();
-	<block-setbg>: (:ast)  -> (:ast);
-	<block-exec>:  (:list) -> (:ast);
+	<push-data>: (:data &, :string) -> ();
+	<push-null>: (:data &)          -> ();
+	<push-code>: (:code &, :type)   -> ();
 
-	<binop-and>:    (:ast, :ast) -> (:ast);
-	<binop-or>:     (:ast, :ast) -> (:ast);
-	!<binop-join>:  (:ast, :ast) -> (:ast);
-	<binop-pipe>:   (:ast, :ast) -> (:ast);
-	<binop-assign>: (:ast, :ast) -> (:ast);
-	<binop-sep>:    (:ast, :ast) -> (:ast);
+	<frame-push>;
+	<frame-pop>;
+	<frame-set>: (:string, :code, :data) -> ();
 
-	<list-null>: () -> (:list);
-	<list-cat>:  (:list, :ast) -> (:list);
+	exprs:     (:code &, :data &) -> ();
+	exec-list: (:code &, :data &) -> ();
 
-	exprs:    () -> (:ast);
-	ast-list: () -> (:list);
-
-	compound-expr: () -> (q :ast) = {
+	compound-expr: (c :code &, d :data &) -> () = {
 		oparen;
-		l = ast-list;
-		q = <new-list>(l);
+		exec-list(&c, &d);
 		cparen;
 	||
 		obrace;
 		<frame-push>;
-		a = exprs;
-		q = <block-frame>(a);
+		(ci, di) = <empty>;
+		exprs(&ci, &di);
+		s = <var-self>;
+		<frame-set>(s, ci, di);
 		<frame-pop>;
 		cbrace;
 	};
 
-	ast-list: () -> (l :list) = {
+	value: (c :code &, d :data &) -> () = {
+		compound-expr(&c, &d);
+	||
+		s = str;
+		<push-data>(&d, s);
+	||
+		s = var;
+		<push-data>(&d, s);
+		t = <type-call>;
+		<push-code>(&c, t);
+	};
+
+	exec-list: (c :code &, d :data &) -> () = {
 		/* TODO: || backtick */
 		{
 			s = str;
-			a = <new-str>(s);
+			<push-data>(&d, s);
 		||
 			s = var;
-			a = <new-var>(s);
+			<push-data>(&d, s);
+			t = <type-call>;
+			<push-code>(&c, t);
 		||
-			a = compound-expr;
+			compound-expr(&c, &d);
 		};
 
 		{
-			t = ast-list;
+			exec-list(&c, &d);
 		||
-			t = <list-null>;
+			<push-null>(&d);
 		};
-
-		l = <list-cat>(t, a);
 	};
 
-	cmd: () -> (q :ast) [
-
-		value: () -> (q :ast) = {
-			q = compound-expr;
-		||
+	arg-list: (c :code &, d :data &) -> () = {
+		/* TODO: || backtick */
+		{
 			s = str;
-			q = <new-str>(s);
+			<push-data>(&d, s);
 		||
 			s = var;
-			q = <new-var>(s);
+			<push-data>(&d, s);
+			t = <type-call>;
+			<push-code>(&c, t);
 		};
 
-	] = {
-		q = compound-expr;
-	||
-		l = ast-list;
-		q = <block-exec>(l);
+		{
+			arg-list(&c, &d);
+		||
+			<push-null>(&d);
+		};
+	};
+
+	assign-expr: (c :code &, d :data &) -> () = {
+		arg-list(&c, &d);
+		t = <type-exec>;
+		<push-code>(&c, t);
 	||
 		s = str;
-		a = <new-str>(s);
 		equ;
-		b = value;
-		q = <binop-assign>(a, b);
+		value(&c, &d);
+		<push-data>(&d, s);
+		t = <type-set>;
+		<push-code>(&c, t);
 	};
 
-/* XXX: needs different grammar */
-	assign-expr: () -> (q :ast) = {
-		q = cmd;
-	};
-
-	pipe-expr: () -> (q :ast) = {
-		a = assign-expr;
+	pipe-expr: (c :code &, d :data &) -> () = {
+		assign-expr(&c, &d);
 
 		{
 			pipe;
-			b = pipe-expr;
+			pipe-expr(&c, &d);
+			t = <type-pipe>;
+			<push-code>(&c, t);
 		||
-			b = <epsilon>;
+			$;
 		};
-
-		q = <binop-pipe>(a, b);
 	};
 
-	and-expr: () -> (q :ast) = {
-		a = pipe-expr;
+	and-expr: (c :code &, d :data &) -> () = {
+		pipe-expr(&c, &d);
 
 		{
+			<frame-push>;
+
 			and;
-			b = and-expr;
-		||
-			b = <epsilon>;
-		};
+			(ci, di) = <empty>;
+			and-expr(&ci, &di);
+			s = <var-anon>;
+			<frame-set>(s, ci, di);
 
-		q = <binop-and>(a, b);
+			t = <type-if>;
+			<push-code>(&c, t);
+
+			<frame-pop>;
+		||
+			$;
+		};
 	};
 
-	or-expr: () -> (q :ast) = {
-		a = and-expr;
+	or-expr: (c :code &, d :data &) -> () = {
+		and-expr(&c, &d);
 
 		{
-			or;
-			b = or-expr;
-		||
-			b = <epsilon>;
-		};
+			<frame-push>;
 
-		q = <binop-or>(a, b);
+			or;
+			(ci, di) = <empty>;
+			or-expr(&ci, &di);
+			s = <var-anon>;
+			<frame-set>(s, ci, di);
+
+			t1 = <type-call>;
+			<push-code>(&c, t1);
+
+			t2 = <type-not>;
+			<push-code>(&c, t2);
+
+			t3 = <type-if>;
+			<push-code>(&c, t3);
+
+			<frame-pop>;
+		||
+			$;
+		};
 	};
 
-	exprs: () -> (q :ast) [
+	exprs: (c :code &, d :data &) -> () [
 
-		::expr: () -> (q :ast) = {
-			a = or-expr;
+		::expr: (c :code &, d :data &) -> () = {
+			or-expr(&c, &d);
 
 			{
 				nl;
-				q = a;
 			||
 				semi;
-				q = a;
 			||
 				bg;
-				q = <block-setbg>(a);
+				/* TODO: <code-bg>(&c); and set $% as jobid */
 			};
 		||
-			q = <epsilon>;
 			nl;
 		||
-			q = <epsilon>;
 			semi;
 		};
 
 	] = {
-		a = expr;
+		expr(&c, &d);
 
 		{
-			b = exprs;
+			exprs(&c, &d);
 		||
-			b = <epsilon>;
+			$;
 		};
-
-		q = <binop-sep>(a, b);
 	};
 
 	script [
 
 		global-exprs = {
-			a = expr;
+			(c, d) = <empty>;
 
-			<dispatch>(a);
+			expr(&c, &d);
 
-			<block-free>(a);
+			<dispatch>(&c, &d);
+
+			s = <var-top>;
+			<frame-set>(s, c, d);
 
 			{
 				global-exprs;

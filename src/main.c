@@ -8,11 +8,11 @@
 
 #include "debug.h"
 #include "lex.h"
-#include "ast.h"
+#include "code.h"
+#include "data.h"
 #include "frame.h"
 #include "parser.h"
-#include "list.h"
-#include "out.h"
+#include "eval.h"
 
 unsigned debug;
 
@@ -41,34 +41,7 @@ debug_flags(const char *s)
 }
 
 static int
-(*out_format(const char *s))
-	(FILE *, struct ast *)
-{
-	size_t i;
-
-	struct {
-		const char *name;
-		int (*f)(FILE *, struct ast *);
-	} a[] = {
-		{ "eval",  out_eval  },
-		{ "qs",    out_qs    },
-		{ "ast",   out_ast   },
-		{ "frame", out_frame }
-	};
-
-	assert(s != NULL);
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(s, a[i].name)) {
-			return a[i].f;
-		}
-	}
-
-	return NULL;
-}
-
-static int
-populate(struct frame *f)
+populate(struct frame *frame)
 {
 	size_t i;
 	static char pid[32];
@@ -83,25 +56,45 @@ populate(struct frame *f)
 		{ "^", "\t" }
 	};
 
-	assert(f != NULL);
+	assert(frame != NULL);
 
 	sprintf(pid,  "%ld", (long) getpid()); /* XXX */
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		struct ast *q;
+		struct data *data;
+
+		data = NULL;
 
 		if (a[i].s != NULL) {
-			q = ast_new_leaf(AST_STR, strlen(a[i].s), a[i].s);
-			if (q == NULL) {
+			if (!data_push(&data, 1, "_")) {
 				return -1;
 			}
-		} else {
-			q = NULL;
 		}
 
-		if (!frame_set(f, a[i].name, q)) {
+		if (!frame_set(frame, a[i].name, NULL, data)) {
 			return -1;
 		}
+	}
+
+	return 0;
+}
+
+static int
+dispatch(FILE *f, struct frame *frame, struct code **code, struct data **data)
+{
+	struct data *out;
+
+	assert(f != NULL);
+	assert(code != NULL);
+	assert(data != NULL);
+
+	/* TODO: okay to have eval() modify *code, *data */
+	if (-1 == eval_clone(*code, *data, &out)) {
+		return -1;
+	}
+
+	if (!frame_set(frame, "_", NULL, out)) {
+		return -1;
 	}
 
 	return 0;
@@ -110,31 +103,21 @@ populate(struct frame *f)
 int
 main(int argc, char *argv[])
 {
-	int (*dispatch)(FILE *f, struct ast *a);
-	struct ast_list *args;
+	struct data *args;
 	struct lex_state l;
 
 	/* TODO: feed from -c string or from stdin, or from filename */
 	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
-
-	dispatch = out_eval;
 
 	l.f = stdin;
 
 	{
 		int c;
 
-		while (c = getopt(argc, argv, "d:e:"), c != -1) {
+		while (c = getopt(argc, argv, "d:"), c != -1) {
 			switch (c) {
 			case 'd':
 				if (-1 == debug_flags(optarg)) {
-					goto usage;
-				}
-				break;
-
-			case 'e':
-				dispatch = out_format(optarg);
-				if (dispatch == NULL) {
 					goto usage;
 				}
 				break;
@@ -148,10 +131,17 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	args = list_args(argc, argv);
-	if (argc > 0 && args == NULL) {
-		perror("list_args");
-		goto error;
+	{
+		int i;
+
+		args = NULL;
+
+		for (i = 0; i < argc; i++) {
+			if (!data_push(&args, strlen(argv[i]), argv[i])) {
+				perror("data_push");
+				goto error;
+			}
+		}
 	}
 
 	if (-1 == parse(&l, populate, dispatch, args)) {
@@ -171,7 +161,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablpfsx] [-e eval|qs|ast|frame]\n");
+	fprintf(stderr, "usage: kcsh [-d ablpfsx]\n");
 
 	return 1;
 }
