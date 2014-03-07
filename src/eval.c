@@ -122,7 +122,9 @@ eval_exec(struct code *node, struct data **data)
 		}
 	}
 
-	argv = make_argv(*data, &argc);
+	argc = count_args(*data);
+
+	argv = make_args(*data, argc + 1);
 	if (argv == NULL) {
 		return -1;
 	}
@@ -131,7 +133,7 @@ eval_exec(struct code *node, struct data **data)
 
 	free(argv);
 
-	/* TODO: maybe have make_argv output p, cut off the arg list, and data_free() it */
+	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
 	for (p = *data; p->s != NULL; p = next) {
 		assert(p != NULL);
 
@@ -300,6 +302,7 @@ eval(struct code **code, struct data **data)
 	return 0;
 }
 
+/* XXX: get rid of this; <dispatch> can modify @c, @d */
 int
 eval_clone(const struct code *code, const struct data *data,
 	struct data **out)

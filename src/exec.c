@@ -14,45 +14,43 @@
 #include "exec.h"
 #include "builtin.h"
 
-char **
-make_argv(const struct data *data, int *argc)
+int
+count_args(const struct data *data)
 {
 	const struct data *p;
-	char **argv;
 	int i;
-
-	assert(argc != NULL);
-	assert(data != NULL);
 
 	for (i = 0, p = data; p->s != NULL; p = p->next, i++) {
 		if (p == NULL) {
-			return NULL;
+			return -1;
 		}
 	}
 
-	argv = malloc((i + 1) * sizeof *argv);
-	if (argv == NULL) {
+	return i;
+}
+
+char **
+make_args(const struct data *data, int n)
+{
+	const struct data *p;
+	char **args;
+	int i;
+
+	assert(n >= 0);
+
+	args = malloc(n * sizeof *args);
+	if (args == NULL) {
 		return NULL;
 	}
 
-	for (i = 0, p = data; p->s != NULL; p = p->next, i++) {
-		if (p == NULL) {
-			goto error;
-		}
+	for (i = 0, p = data; i < n; p = p->next, i++) {
+		assert(p != NULL);
 
-		argv[i] = p->s;
+/* TODO: note should include .s=NULL for arity_list */
+		args[i] = p->s;
 	}
 
-	*argc = i;
-	argv[i] = NULL;
-
-	return argv;
-
-error:
-
-	free(argv);
-
-	return NULL;
+	return args;
 }
 
 static void

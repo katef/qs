@@ -1,8 +1,11 @@
 #ifndef EXEC_H
 #define EXEC_H
 
+int
+count_args(const struct data *data);
+
 char **
-make_argv(const struct data *data, int *argc);
+make_args(const struct data *data, int n);
 
 int
 exec_cmd(struct frame *f, int argc, char **argv);
