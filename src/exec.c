@@ -9,7 +9,6 @@
 #include <unistd.h>
 
 #include "debug.h"
-#include "ast.h"
 #include "data.h"
 #include "exec.h"
 #include "builtin.h"

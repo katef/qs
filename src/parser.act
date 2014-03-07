@@ -22,7 +22,6 @@
 	#include <stdio.h>
 
 	#include "lex.h"
-	#include "ast.h"
 	#include "code.h"
 	#include "data.h"
 	#include "frame.h"
