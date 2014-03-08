@@ -40,7 +40,7 @@ var_set(struct var **v, size_t n, const char *name,
 	assert(v != NULL);
 
 	curr = var_get(*v, n, name);
-	if (curr == NULL) {
+	if (curr != NULL) {
 		code_free(curr->code);
 		data_free(curr->data);
 
