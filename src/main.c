@@ -71,7 +71,7 @@ populate(struct frame *frame)
 			}
 		}
 
-		if (!frame_set(frame, a[i].name, NULL, data)) {
+		if (!frame_set(frame, strlen(a[i].name), a[i].name, NULL, data)) {
 			return -1;
 		}
 	}
@@ -93,7 +93,7 @@ dispatch(FILE *f, struct frame *frame, struct code **code, struct data **data)
 		return -1;
 	}
 
-	if (!frame_set(frame, "_", NULL, out)) {
+	if (!frame_set(frame, 1, "_", NULL, out)) {
 		return -1;
 	}
 

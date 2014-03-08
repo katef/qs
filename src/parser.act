@@ -108,7 +108,7 @@
 			@!;
 		}
 
-		if (!frame_set(act_state->frame, "*", NULL, act_state->args)) {
+		if (!frame_set(act_state->frame, 1, "*", NULL, act_state->args)) {
 			@!;
 		}
 	@};
@@ -188,15 +188,11 @@
 	@};
 
 	<frame-set>: (s :string, c :code, d :data) -> () = @{
-		assert(@s.s != NULL && @s.e != NULL);
 		assert(act_state->frame != NULL);
+		assert(@s.s != NULL && @s.e != NULL);
+		assert(@s.e > @s.s);
 
-		if (@s.e > @s.s) {
-			@!;
-		}
-
-/* XXX: @s.s is not '\0'-terminated; have frame_set() take s, n */
-		if (!frame_set(act_state->frame, @s.s, @c, @d)) {
+		if (!frame_set(act_state->frame, @s.e - @s.s, @s.s, @c, @d)) {
 			@!;
 		}
 	@};

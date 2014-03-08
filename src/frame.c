@@ -50,13 +50,13 @@ frame_pop(struct frame **f)
 }
 
 struct var *
-frame_set(struct frame *f, const char *name,
+frame_set(struct frame *f, size_t n, const char *name,
 	struct code *code, struct data *data)
 {
 	assert(f != NULL);
 	assert(name != NULL);
 
-	return var_set(&f->var, name, code, data);
+	return var_set(&f->var, n, name, code, data);
 }
 
 struct var *
@@ -73,7 +73,7 @@ frame_get(const struct frame *f, const char *name)
 		static char s[32];
 		int n;
 
-		v = var_get(f->var, name);
+		v = var_get(f->var, strlen(name), name);
 		if (v == NULL || v->data == NULL) {
 			errno = EINVAL;
 			return NULL;
@@ -90,7 +90,7 @@ frame_get(const struct frame *f, const char *name)
 	}
 
 	for (p = f; p != NULL; p = p->parent) {
-		v = var_get(p->var, name);
+		v = var_get(p->var, strlen(name), name);
 		if (v != NULL) {
 			return v;
 		}

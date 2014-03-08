@@ -7,7 +7,7 @@
 #include "var.h"
 
 static struct var *
-var_new(struct var **v, const char *name,
+var_new(struct var **v, size_t n, const char *name,
 	struct code *code, struct data *data)
 {
 	struct var *new;
@@ -15,14 +15,15 @@ var_new(struct var **v, const char *name,
 	assert(v != NULL);
 	assert(name != NULL);
 
-	new = malloc(sizeof *new + strlen(name) + 1);
+	new = malloc(sizeof *new + n + 1);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->name = strcpy((char *) new + sizeof *new, name);
-	new->code = code;
-	new->data = data;
+	new->name    = memcpy((char *) new + sizeof *new, name, n);
+	new->name[n] = '\0';
+	new->code    = code;
+	new->data    = data;
 
 	new->next = *v;
 	*v = new;
@@ -31,14 +32,14 @@ var_new(struct var **v, const char *name,
 }
 
 struct var *
-var_set(struct var **v, const char *name,
+var_set(struct var **v, size_t n, const char *name,
 	struct code *code, struct data *data)
 {
 	struct var *curr;
 
 	assert(v != NULL);
 
-	curr = var_get(*v, name);
+	curr = var_get(*v, n, name);
 	if (curr == NULL) {
 		code_free(curr->code);
 		data_free(curr->data);
@@ -49,16 +50,20 @@ var_set(struct var **v, const char *name,
 		return curr;
 	}
 
-	return var_new(v, name, code, data);
+	return var_new(v, n, name, code, data);
 }
 
 struct var *
-var_get(struct var *v, const char *name)
+var_get(struct var *v, size_t n, const char *name)
 {
 	struct var *p;
 
 	for (p = v; p != NULL; p = p->next) {
-		if (0 == strcmp(p->name, name)) {
+		if (n != strlen(p->name)) {
+			continue;
+		}
+
+		if (0 == memcmp(p->name, name, n)) {
 			return p;
 		}
 	}
