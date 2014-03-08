@@ -147,7 +147,7 @@
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
 
 	<push-data>: (d :data &, s :string) -> () = @{
-		assert(@d != NULL);
+		assert(@&d != NULL);
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e > @s.s);
 
@@ -157,7 +157,7 @@
 	@};
 
 	<push-null>: (d :data &) -> () = @{
-		assert(@d != NULL);
+		assert(@&d != NULL);
 
 		if (!data_push(@&d, 0, NULL)) {
 			@!;
@@ -165,7 +165,7 @@
 	@};
 
 	<push-code>: (c :code &, t :type) -> () = @{
-		assert(@c != NULL);
+		assert(@&c != NULL);
 		assert(act_state->frame != NULL);
 
 		if (!code_push(@&c, @t, act_state->frame)) {
@@ -174,8 +174,6 @@
 	@};
 
 	<frame-push>: () -> () = @{
-		assert(act_state->frame != NULL);
-
 		if (!frame_push(&act_state->frame)) {
 			@!;
 		}
