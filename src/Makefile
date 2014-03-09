@@ -26,7 +26,7 @@ qs: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) qs
 
 parser.h: parser.sid parser.act
 parser.c: parser.sid parser.act
