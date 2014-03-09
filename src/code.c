@@ -153,3 +153,23 @@ error:
 	return NULL;
 }
 
+int
+code_dump(FILE *f, const struct code *code)
+{
+	const struct code *p;
+
+	assert(f != NULL);
+
+	for (p = code; p != NULL; p = p->next) {
+		if (p->type == CODE_DATA) {
+			fprintf(f, "'%s' ", p->u.s);
+		} else {
+			fprintf(f, "#%s ", code_name(p->type));
+		}
+	}
+
+	fprintf(f, "\n");
+
+	return 0;
+}
+
