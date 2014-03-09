@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "data.h"
+#include "code.h"
 #include "exec.h"
 #include "builtin.h"
 
@@ -45,7 +46,6 @@ make_args(const struct data *data, int n)
 	for (i = 0, p = data; i < n; p = p->next, i++) {
 		assert(p != NULL);
 
-/* TODO: note should include .s=NULL for arity_list */
 		args[i] = p->s;
 	}
 
@@ -72,8 +72,6 @@ dump_argv(const char *name, char **argv)
 int
 exec_cmd(struct frame *f, int argc, char **argv)
 {
-	int r;
-
 	assert(f != NULL);
 
 	if (debug & DEBUG_EXEC) {
@@ -84,8 +82,6 @@ exec_cmd(struct frame *f, int argc, char **argv)
 
 	/* TODO: run pre/post-command hook here */
 
-	r = builtin(f, argc, argv);
-
-	return r;
+	return builtin(f, argc, argv);
 }
 

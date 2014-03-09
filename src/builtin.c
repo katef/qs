@@ -9,8 +9,19 @@
 #include <errno.h>
 
 #include "debug.h"
+#include "code.h"
+#include "data.h"
 #include "frame.h"
 #include "builtin.h"
+
+/*
+ * Only eval.c is responsible for setting the status.
+ * Return values here are an analogue of main(), and specifically:
+ *
+ *  -1 - means the caller should perror() if errno is non-zero
+ *   0 - per EXIT_SUCCESS
+ *   * - per EXIT_FAILURE or other value (errno is 0)
+ */
 
 static int
 builtin_cd(struct frame *f, int argc, char *const *argv)
@@ -29,7 +40,8 @@ builtin_cd(struct frame *f, int argc, char *const *argv)
 	/* TODO: support argc=0 to chdir to $home */
 
 	if (-1 == chdir(argv[1])) {
-		return -1;
+		perror(argv[1]);
+		return 1;
 	}
 
 	return 0;
@@ -84,7 +96,7 @@ builtin_wait(struct frame *f, int argc, char *const *argv)
 	if (!WIFEXITED(status)) {
 		/* TODO: call a hook */
 		/* XXX: how to set $? here? */
-		return -1;
+		return 1;
 	}
 
 	r = WEXITSTATUS(status);
@@ -107,7 +119,7 @@ builtin_fork(struct frame *f, int argc, char *const *argv)
 
 	if (argc > 1) {
 		fprintf(stderr, "usage: fork\n");
-		return -1;
+		return 1;
 	}
 
 	(void) f;
@@ -157,11 +169,7 @@ builtin_spawn(struct frame *f, int argc, char *const *argv)
 
 		wait_argv[1] = s;
 
-		if (-1 == builtin_wait(f, 2, wait_argv)) {
-			return -1;
-		}
-
-		return 0;
+		return builtin_wait(f, 2, wait_argv);
 	}
 }
 
@@ -189,6 +197,8 @@ builtin(struct frame *f, int argc, char *const *argv)
 	assert(f != NULL);
 	assert(argv != NULL);
 	assert(argv[0] != NULL);
+
+	/* TODO: look up variable name */
 
 	/* TODO: bsearch */
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
