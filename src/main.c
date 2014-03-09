@@ -61,17 +61,17 @@ populate(struct frame *frame)
 	sprintf(pid,  "%ld", (long) getpid()); /* XXX */
 
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		struct data *data;
+		struct code *code;
 
-		data = NULL;
+		code = NULL;
 
 		if (a[i].s != NULL) {
-			if (!data_push(&data, 1, "_")) {
+			if (!code_data(&code, 1, "_")) {
 				return -1;
 			}
 		}
 
-		if (!frame_set(frame, strlen(a[i].name), a[i].name, NULL, data)) {
+		if (!frame_set(frame, strlen(a[i].name), a[i].name, NULL)) {
 			return -1;
 		}
 	}
@@ -80,30 +80,45 @@ populate(struct frame *frame)
 }
 
 static int
-dispatch(FILE *f, struct frame *frame, struct code **code, struct data **data)
+dispatch(FILE *f, struct frame *frame, struct code **code)
 {
+	const struct data *p;
 	struct data *out;
+	struct code *us;
 
 	assert(f != NULL);
 	assert(code != NULL);
-	assert(data != NULL);
 
 	/* TODO: okay to have eval() modify *code, *data */
-	if (-1 == eval_clone(*code, *data, &out)) {
+	if (-1 == eval_clone(*code, &out)) {
 		return -1;
 	}
 
-	if (!frame_set(frame, 1, "_", NULL, out)) {
+	us = NULL;
+
+	for (p = out; p != NULL; p = p->next) {
+		if (!code_data(&us, strlen(p->s), p->s)) {
+			goto error;
+		}
+	}
+
+	if (!frame_set(frame, 1, "_", us)) {
 		return -1;
 	}
 
 	return 0;
+
+error:
+
+	code_free(us);
+
+	return -1;
 }
 
 int
 main(int argc, char *argv[])
 {
-	struct data *args;
+	struct code *args;
 	struct lex_state l;
 
 	/* TODO: feed from -c string or from stdin, or from filename */
@@ -137,7 +152,7 @@ main(int argc, char *argv[])
 		args = NULL;
 
 		for (i = 0; i < argc; i++) {
-			if (!data_push(&args, strlen(argv[i]), argv[i])) {
+			if (!code_data(&args, strlen(argv[i]), argv[i])) {
 				perror("data_push");
 				goto error;
 			}

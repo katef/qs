@@ -16,7 +16,7 @@ frame_pop(struct frame **f);
 
 struct var *
 frame_set(struct frame *f, size_t n, const char *name,
-	struct code *code, struct data *data);
+	struct code *code);
 
 struct var *
 frame_get(const struct frame *f, const char *name);

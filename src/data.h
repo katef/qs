@@ -18,5 +18,8 @@ data_free(struct data *data);
 struct data **
 data_clone(struct data **dst, const struct data *src);
 
+int
+data_dump(FILE *f, const struct data *data);
+
 #endif
 

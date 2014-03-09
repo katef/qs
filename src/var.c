@@ -1,14 +1,14 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "code.h"
-#include "data.h"
 #include "var.h"
 
 static struct var *
 var_new(struct var **v, size_t n, const char *name,
-	struct code *code, struct data *data)
+	struct code *code)
 {
 	struct var *new;
 
@@ -23,7 +23,6 @@ var_new(struct var **v, size_t n, const char *name,
 	new->name    = memcpy((char *) new + sizeof *new, name, n);
 	new->name[n] = '\0';
 	new->code    = code;
-	new->data    = data;
 
 	new->next = *v;
 	*v = new;
@@ -33,7 +32,7 @@ var_new(struct var **v, size_t n, const char *name,
 
 struct var *
 var_set(struct var **v, size_t n, const char *name,
-	struct code *code, struct data *data)
+	struct code *code)
 {
 	struct var *curr;
 
@@ -42,15 +41,13 @@ var_set(struct var **v, size_t n, const char *name,
 	curr = var_get(*v, n, name);
 	if (curr != NULL) {
 		code_free(curr->code);
-		data_free(curr->data);
 
 		curr->code = code;
-		curr->data = data;
 
 		return curr;
 	}
 
-	return var_new(v, n, name, code, data);
+	return var_new(v, n, name, code);
 }
 
 struct var *
@@ -80,7 +77,6 @@ var_free(struct var *v)
 		next = p->next;
 
 		code_free(p->code);
-		data_free(p->data);
 		free(p);
 	}
 }

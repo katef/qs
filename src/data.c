@@ -77,6 +77,8 @@ data_clone(struct data **dst, const struct data *src)
 
 	end = *dst;
 
+fprintf(stderr, "clone src: ");
+data_dump(stderr, src);
 	for (p = src, q = dst; p != NULL; p = p->next) {
 		*q = malloc(sizeof **q);
 		if (*q == NULL) {
@@ -92,6 +94,8 @@ data_clone(struct data **dst, const struct data *src)
 
 		q = &(*q)->next;
 	}
+fprintf(stderr, "clone dst: ");
+data_dump(stderr, *dst);
 
 	*q = end;
 
@@ -103,5 +107,19 @@ error:
 	*dst = end;
 
 	return NULL;
+}
+
+int
+data_dump(FILE *f, const struct data *data)
+{
+	const struct data *p;
+
+	assert(f != NULL);
+
+	for (p = data; p != NULL; p = p->next) {
+		fprintf(stderr, "data:%s\n", p->s ? p->s : "NULL");
+	}
+
+	return 0;
 }
 

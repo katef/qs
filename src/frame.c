@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <ctype.h>
 
+#include "code.h"
 #include "data.h"
 #include "var.h"
 #include "frame.h"
@@ -51,12 +52,12 @@ frame_pop(struct frame **f)
 
 struct var *
 frame_set(struct frame *f, size_t n, const char *name,
-	struct code *code, struct data *data)
+	struct code *code)
 {
 	assert(f != NULL);
 	assert(name != NULL);
 
-	return var_set(&f->var, n, name, code, data);
+	return var_set(&f->var, n, name, code);
 }
 
 struct var *
@@ -74,7 +75,7 @@ frame_get(const struct frame *f, const char *name)
 		int n;
 
 		v = var_get(f->var, strlen(name), name);
-		if (v == NULL || v->data == NULL) {
+		if (v == NULL || v->code == NULL || v->code->type != CODE_DATA) {
 			errno = EINVAL;
 			return NULL;
 		}
@@ -84,7 +85,7 @@ frame_get(const struct frame *f, const char *name)
 			return NULL;
 		}
 
-		v->data->s = s;
+		v->code->u.s = s;
 
 		return v;
 	}
@@ -127,7 +128,7 @@ frame_export(const struct frame *f)
 			continue;
 		}
 
-		if (-1 == eval_clone(v->code, v->data, &out)) {
+		if (-1 == eval_clone(v->code, &out)) {
 			goto error;
 		}
 

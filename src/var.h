@@ -6,13 +6,12 @@ struct ast;
 struct var {
 	char *name;
 	struct code *code;
-	struct data *data;
 	struct var *next;
 };
 
 struct var *
 var_set(struct var **v, size_t n, const char *name,
-	struct code *code, struct data *data);
+	struct code *code);
 
 struct var *
 var_get(struct var *v, size_t n, const char *name);

@@ -4,7 +4,6 @@
 	!frame;
 	type;
 	code;
-	data;
 
 %terminals%
 
@@ -32,16 +31,16 @@
 
 %productions%
 
-	<dispatch>: (:code &, :data &) -> ();
+	<dispatch>: (:code &) -> ();
 	<populate>;
 
 	<var-anon>: () -> (:string);
 	<var-self>: () -> (:string);
 	<var-top>:  () -> (:string);
 
-	<empty>: () -> (:code, :data);
+	<empty>: () -> (:code);
 
-	!<type-null>:() -> (:type);
+	<type-null>: () -> (:type);
 	<type-not>:  () -> (:type);
 	<type-call>: () -> (:type);
 	<type-exec>: () -> (:type);
@@ -50,103 +49,104 @@
 	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
 
-	<push-data>: (:data &, :string) -> ();
-	<push-null>: (:data &)          -> ();
+	<push-data>: (:code &, :string) -> ();
 	<push-code>: (:code &, :type)   -> ();
 
 	<frame-push>;
 	<frame-pop>;
-	<frame-set>: (:string, :code, :data) -> ();
+	<frame-set>: (:string, :code) -> ();
 
-	exprs:     (:code &, :data &) -> ();
-	exec-list: (:code &, :data &) -> ();
+	exprs:     (:code &) -> ();
+	exec-list: (:code &) -> ();
 
-	compound-expr: (c :code &, d :data &) -> () = {
+	compound-expr: (c :code &) -> () = {
 		oparen;
-		exec-list(&c, &d);
+		exec-list(&c);
 		cparen;
 	||
 		obrace;
 		<frame-push>;
-		(ci, di) = <empty>;
-		exprs(&ci, &di);
+		(ci) = <empty>;
+		exprs(&ci);
 		s = <var-self>;
-		<frame-set>(s, ci, di);
+		<frame-set>(s, ci);
 		<frame-pop>;
 		cbrace;
 	};
 
-	value: (c :code &, d :data &) -> () = {
-		compound-expr(&c, &d);
+	value: (c :code &) -> () = {
+		compound-expr(&c);
 	||
 		s = str;
-		<push-data>(&d, s);
+		<push-data>(&c, s);
 	||
 		s = var;
-		<push-data>(&d, s);
+		<push-data>(&c, s);
 		t = <type-call>;
 		<push-code>(&c, t);
 	};
 
-	exec-list: (c :code &, d :data &) -> () = {
+	exec-list: (c :code &) -> () = {
 		/* TODO: || backtick */
 		{
 			s = str;
-			<push-data>(&d, s);
+			<push-data>(&c, s);
 		||
 			s = var;
-			<push-data>(&d, s);
+			<push-data>(&c, s);
 			t = <type-call>;
 			<push-code>(&c, t);
 		||
-			compound-expr(&c, &d);
+			compound-expr(&c);
 		};
 
 		{
-			exec-list(&c, &d);
+			exec-list(&c);
 		||
-			<push-null>(&d);
+			t = <type-null>;
+			<push-code>(&c, t);
 		};
 	};
 
-	arg-list: (c :code &, d :data &) -> () = {
+	arg-list: (c :code &) -> () = {
 		/* TODO: || backtick */
 		{
 			s = str;
-			<push-data>(&d, s);
+			<push-data>(&c, s);
 		||
 			s = var;
-			<push-data>(&d, s);
+			<push-data>(&c, s);
 			t = <type-call>;
 			<push-code>(&c, t);
 		};
 
 		{
-			arg-list(&c, &d);
+			arg-list(&c);
 		||
-			<push-null>(&d);
+			t = <type-null>;
+			<push-code>(&c, t);
 		};
 	};
 
-	assign-expr: (c :code &, d :data &) -> () = {
-		arg-list(&c, &d);
+	assign-expr: (c :code &) -> () = {
+		arg-list(&c);
 		t = <type-exec>;
 		<push-code>(&c, t);
 	||
 		s = str;
 		equ;
-		value(&c, &d);
-		<push-data>(&d, s);
+		value(&c);
+		<push-data>(&c, s);
 		t = <type-set>;
 		<push-code>(&c, t);
 	};
 
-	pipe-expr: (c :code &, d :data &) -> () = {
-		assign-expr(&c, &d);
+	pipe-expr: (c :code &) -> () = {
+		assign-expr(&c);
 
 		{
 			pipe;
-			pipe-expr(&c, &d);
+			pipe-expr(&c);
 			t = <type-pipe>;
 			<push-code>(&c, t);
 		||
@@ -154,38 +154,36 @@
 		};
 	};
 
-	and-expr: (c :code &, d :data &) -> () = {
-		pipe-expr(&c, &d);
+	and-expr: (c :code &) -> () = {
+		pipe-expr(&c);
 
 		{
 			<frame-push>;
-
 			and;
-			(ci, di) = <empty>;
-			and-expr(&ci, &di);
+			(ci) = <empty>;
+			and-expr(&ci);
 			s = <var-anon>;
-			<frame-set>(s, ci, di);
+			<frame-set>(s, ci);
+			<frame-pop>;
 
 			t = <type-if>;
 			<push-code>(&c, t);
-
-			<frame-pop>;
 		||
 			$;
 		};
 	};
 
-	or-expr: (c :code &, d :data &) -> () = {
-		and-expr(&c, &d);
+	or-expr: (c :code &) -> () = {
+		and-expr(&c);
 
 		{
 			<frame-push>;
-
 			or;
-			(ci, di) = <empty>;
-			or-expr(&ci, &di);
+			(ci) = <empty>;
+			or-expr(&ci);
 			s = <var-anon>;
-			<frame-set>(s, ci, di);
+			<frame-set>(s, ci);
+			<frame-pop>;
 
 			t1 = <type-call>;
 			<push-code>(&c, t1);
@@ -195,17 +193,15 @@
 
 			t3 = <type-if>;
 			<push-code>(&c, t3);
-
-			<frame-pop>;
 		||
 			$;
 		};
 	};
 
-	exprs: (c :code &, d :data &) -> () [
+	exprs: (c :code &) -> () [
 
-		::expr: (c :code &, d :data &) -> () = {
-			or-expr(&c, &d);
+		::expr: (c :code &) -> () = {
+			or-expr(&c);
 
 			{
 				nl;
@@ -213,7 +209,7 @@
 				semi;
 			||
 				bg;
-				/* TODO: <code-bg>(&c); and set $% as jobid */
+				/* TODO: <code-bg>(c); and set $% as jobid */
 			};
 		||
 			nl;
@@ -222,10 +218,10 @@
 		};
 
 	] = {
-		expr(&c, &d);
+		expr(&c);
 
 		{
-			exprs(&c, &d);
+			exprs(&c);
 		||
 			$;
 		};
@@ -234,14 +230,14 @@
 	script [
 
 		global-exprs = {
-			(c, d) = <empty>;
+			(c) = <empty>;
 
-			expr(&c, &d);
+			expr(&c);
 
-			<dispatch>(&c, &d);
+			<dispatch>(&c);
 
 			s = <var-top>;
-			<frame-set>(s, c, d);
+			<frame-set>(s, c);
 
 			{
 				global-exprs;

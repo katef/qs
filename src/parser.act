@@ -14,7 +14,6 @@
 	frame  -> frame;
 	type   -> type;
 	code   -> code;
-	data   -> data;
 
 %header% @{
 
@@ -23,7 +22,6 @@
 
 	#include "lex.h"
 	#include "code.h"
-	#include "data.h"
 	#include "frame.h"
 	#include "parser.h"
 
@@ -36,15 +34,14 @@
 		struct lex_tok t;
 		enum lex_type type, save;
 		struct frame *frame;
-		int (*dispatch)(FILE *, struct frame *, struct code **, struct data **);
+		int (*dispatch)(FILE *, struct frame *, struct code **);
 		int (*populate)(struct frame *);
-		struct data *args;
+		struct code *args;
 	};
 
 	typedef struct act_string string;
 	typedef enum code_type type;
 	typedef struct code *code;
-	typedef struct data *data;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -63,8 +60,8 @@
 	int
 	parse(struct lex_state *l,
 		int (*populate)(struct frame *),
-		int (*dispatch)(FILE *, struct frame *, struct code **, struct data **),
-		struct data *args);
+		int (*dispatch)(FILE *, struct frame *, struct code **),
+		struct code *args);
 
 @};
 
@@ -88,17 +85,16 @@
 
 %actions%
 
-	<dispatch>: (c :code &, d :data &) -> () = @{
+	<dispatch>: (c :code &) -> () = @{
 		assert(act_state->frame != NULL);
 
-		if (-1 == act_state->dispatch(stdout, act_state->frame, @&c, @&d)) {
+		if (-1 == act_state->dispatch(stdout, act_state->frame, @&c)) {
 			@!;
 		}
 
-		/* TODO: if <dispatch> modifies @c, @d then @c should be empty if successful */
+		/* TODO: if <dispatch> modifies @c then @c should be empty if successful */
 
 		code_free(@c);
-		data_free(@d);
 	@};
 
 	<populate>: () -> () = @{
@@ -108,14 +104,14 @@
 			@!;
 		}
 
-		if (!frame_set(act_state->frame, 1, "*", NULL, act_state->args)) {
+		if (!frame_set(act_state->frame, 1, "*", act_state->args)) {
 			@!;
 		}
 	@};
 
 	/*
 	 * An anonymous block is not actually anonymous; it's a locally-scoped
-	 * variable named "", which has its own code and data stacks.
+	 * variable named "", which has its own code stack.
 	 */
 	<var-anon>: () -> (s :string) = @{
 		@s.s = "";
@@ -132,9 +128,8 @@
 		@s.e = @s.s + 1;
 	@};
 
-	<empty>: () -> (c :code, d :data) = @{
+	<empty>: () -> (c :code) = @{
 		@c = NULL;
-		@d = NULL;
 	@};
 
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
@@ -146,20 +141,18 @@
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
 
-	<push-data>: (d :data &, s :string) -> () = @{
-		assert(@&d != NULL);
+	/* XXX: ugly
+	struct code **tail;
+	for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
+		;
+	*/
+
+	<push-data>: (c :code &, s :string) -> () = @{
+		assert(@&c != NULL);
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e > @s.s);
 
-		if (!data_push(@&d, @s.e - @s.s, @s.s)) {
-			@!;
-		}
-	@};
-
-	<push-null>: (d :data &) -> () = @{
-		assert(@&d != NULL);
-
-		if (!data_push(@&d, 0, NULL)) {
+		if (!code_data(@&c, @s.e - @s.s, @s.s)) {
 			@!;
 		}
 	@};
@@ -185,12 +178,12 @@
 		(void) frame_pop(&act_state->frame);
 	@};
 
-	<frame-set>: (s :string, c :code, d :data) -> () = @{
+	<frame-set>: (s :string, c :code) -> () = @{
 		assert(act_state->frame != NULL);
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e > @s.s);
 
-		if (!frame_set(act_state->frame, @s.e - @s.s, @s.s, @c, @d)) {
+		if (!frame_set(act_state->frame, @s.e - @s.s, @s.s, @c)) {
 			@!;
 		}
 	@};
@@ -200,8 +193,8 @@
 	int
 	parse(struct lex_state *lex_state,
 		int (*populate)(struct frame *),
-		int (*dispatch)(FILE *, struct frame *, struct code **, struct data **),
-		struct data *args)
+		int (*dispatch)(FILE *, struct frame *, struct code **),
+		struct code *args)
 	{
 		struct act_state a, *act_state = &a;
 
