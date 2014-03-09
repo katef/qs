@@ -174,14 +174,9 @@
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
 
-	/* XXX: ugly
-	struct code **tail;
-	for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
-		;
-	*/
-
 	<push-data>: (c :code &, s :string) -> () = @{
-		assert(@&c != NULL);
+		struct code **tail;
+
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e > @s.s);
 
@@ -189,21 +184,40 @@
 			fprintf(stderr, "<push-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
 		}
 
-		if (!code_data(@&c, @s.e - @s.s, @s.s)) {
+		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		if (!code_data(tail, @s.e - @s.s, @s.s)) {
 			@!;
 		}
 	@};
 
 	<push-code>: (c :code &, t :type) -> () = @{
-		assert(@&c != NULL);
+		struct code **tail;
+
 		assert(act_state->frame != NULL);
 
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<push-code>: %s\n", code_name(@t));
 		}
 
-		if (!code_push(@&c, @t, act_state->frame)) {
+		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		if (!code_push(tail, @t, act_state->frame)) {
 			@!;
+		}
+	@};
+
+	/* Note this winds instructions in reverse order */
+	<push-stack>: (c :code &, new :code) -> () = @{
+		struct code *p, *next;
+
+		for (p = @new; p != NULL; p = next) {
+			next = p->next;
+
+			p->next = @=c;
+			@=c = p;
 		}
 	@};
 
