@@ -27,6 +27,7 @@ debug_flags(const char *s)
 		case 'b': debug |= DEBUG_BUF;   break;
 		case 'l': debug |= DEBUG_LEX;   break;
 		case 'p': debug |= DEBUG_PARSE; break;
+		case 'c': debug |= DEBUG_ACT;   break;
 		case 'f': debug |= DEBUG_FRAME; break;
 		case 's': debug |= DEBUG_STACK; break;
 		case 'x': debug |= DEBUG_EXEC;  break;
@@ -176,7 +177,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablpfsx]\n");
+	fprintf(stderr, "usage: kcsh [-d ablpcfsx]\n");
 
 	return 1;
 }

@@ -20,6 +20,7 @@
 	#include <assert.h>
 	#include <stdio.h>
 
+	#include "debug.h"
 	#include "lex.h"
 	#include "code.h"
 	#include "frame.h"
@@ -73,6 +74,10 @@
 
 		@s.s = act_state->t.s;
 		@s.e = act_state->t.e;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "str: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
 	@};
 
 	var: () -> (s :string) = @{
@@ -81,12 +86,20 @@
 
 		@s.s = act_state->t.s;
 		@s.e = act_state->t.e;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "var: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
 	@};
 
 %actions%
 
 	<dispatch>: (c :code &) -> () = @{
 		assert(act_state->frame != NULL);
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<dispatch>\n");
+		}
 
 		if (-1 == act_state->dispatch(stdout, act_state->frame, @&c)) {
 			@!;
@@ -99,6 +112,10 @@
 
 	<populate>: () -> () = @{
 		assert(act_state->frame != NULL);
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<populate>\n");
+		}
 
 		if (-1 == act_state->populate(act_state->frame)) {
 			@!;
@@ -116,20 +133,36 @@
 	<var-anon>: () -> (s :string) = @{
 		@s.s = "";
 		@s.e = @s.s;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<var-anon>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
 	@};
 
 	<var-self>: () -> (s :string) = @{
 		@s.s = ".";
 		@s.e = @s.s + 1;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<var-self>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
 	@};
 
 	<var-top>:  () -> (s :string) = @{
 		@s.s = "_";
 		@s.e = @s.s + 1;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<var-top>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
 	@};
 
 	<empty>: () -> (c :code) = @{
 		@c = NULL;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<empty>\n");
+		}
 	@};
 
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
@@ -152,6 +185,10 @@
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e > @s.s);
 
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<push-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
+
 		if (!code_data(@&c, @s.e - @s.s, @s.s)) {
 			@!;
 		}
@@ -161,12 +198,20 @@
 		assert(@&c != NULL);
 		assert(act_state->frame != NULL);
 
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<push-code>: %s\n", code_name(@t));
+		}
+
 		if (!code_push(@&c, @t, act_state->frame)) {
 			@!;
 		}
 	@};
 
 	<frame-push>: () -> () = @{
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<frame-push>\n");
+		}
+
 		if (!frame_push(&act_state->frame)) {
 			@!;
 		}
@@ -175,6 +220,10 @@
 	<frame-pop>: () -> () = @{
 		assert(act_state->frame != NULL);
 
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<frame-pop>\n");
+		}
+
 		(void) frame_pop(&act_state->frame);
 	@};
 
@@ -182,6 +231,10 @@
 		assert(act_state->frame != NULL);
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e > @s.s);
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<frame-set>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
 
 		if (!frame_set(act_state->frame, @s.e - @s.s, @s.s, @c)) {
 			@!;
