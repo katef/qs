@@ -117,8 +117,14 @@ data_dump(FILE *f, const struct data *data)
 	assert(f != NULL);
 
 	for (p = data; p != NULL; p = p->next) {
-		fprintf(stderr, "data:%s\n", p->s ? p->s : "NULL");
+		if (p->s == NULL) {
+			fprintf(stderr, "NULL ");
+		} else {
+			fprintf(stderr, "'%s' ", p->s);
+		}
 	}
+
+	fprintf(stderr, "\n");
 
 	return 0;
 }
