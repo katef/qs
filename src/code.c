@@ -10,15 +10,15 @@ const char *
 code_name(enum code_type type)
 {
 	switch (type) {
-	case CODE_NULL: return "NULL";
-	case CODE_DATA: return "DATA";
-	case CODE_NOT:  return "NOT";
-	case CODE_CALL: return "CALL";
-	case CODE_EXEC: return "EXEC";
-	case CODE_IF:   return "IF";
-	case CODE_JOIN: return "JOIN";
-	case CODE_PIPE: return "PIPE";
-	case CODE_SET:  return "SET";
+	case CODE_NULL: return "null";
+	case CODE_DATA: return "data";
+	case CODE_NOT:  return "not";
+	case CODE_CALL: return "call";
+	case CODE_EXEC: return "exec";
+	case CODE_IF:   return "if";
+	case CODE_JOIN: return "join";
+	case CODE_PIPE: return "pipe";
+	case CODE_SET:  return "set";
 	}
 
 	return "?";
