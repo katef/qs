@@ -29,6 +29,31 @@ eval_null(struct code *node, struct data **data)
 	return 0;
 }
 
+/* push .s=NULL to data */
+static int
+eval_data(struct code *node, struct data **data)
+{
+	struct code *a;
+
+	assert(data != NULL);
+	assert(node != NULL);
+	assert(node->type == CODE_DATA);
+
+	a = node->next;
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code <- %d\n", a->type);
+	}
+
+	if (!data_push(data, strlen(a->u.s), a->u.s)) {
+		return -1;
+	}
+
+	node->next = a->next;
+	free(a);
+
+	return 0;
+}
+
 /* pop $?, push !$? to *data */
 static int
 eval_not(struct code *node, struct data **data)
@@ -51,13 +76,12 @@ eval_call(struct code *node, struct data **data)
 {
 	const struct var *q;
 	struct code *code_new, **code_tail;
-	struct data *data_new, **data_tail;
 	struct data *a;
 
 	assert(data != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_CALL);
-	assert(node->frame != NULL);
+	assert(node->u.frame != NULL);
 
 	if (*data == NULL) {
 		errno = 0;
@@ -69,7 +93,7 @@ eval_call(struct code *node, struct data **data)
 		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
 	}
 
-	q = frame_get(node->frame, a->s);
+	q = frame_get(node->u.frame, a->s);
 	if (q == NULL) {
 		fprintf(stderr, "no such variable: $%s\n", a->s);
 		errno = 0;
@@ -77,13 +101,10 @@ eval_call(struct code *node, struct data **data)
 	}
 
 	code_new  = NULL;
-	data_new  = NULL;
 
 	code_tail = code_clone(&code_new, q->code);
-	data_tail = data_clone(&data_new, q->data);
-	if (code_tail == NULL || data_tail == NULL) {
+	if (code_tail == NULL) {
 		code_free(code_new);
-		data_free(data_new);
 		return -1;
 	}
 
@@ -92,9 +113,6 @@ eval_call(struct code *node, struct data **data)
 
 	*code_tail = node->next;
 	node->next = code_new;
-
-	*data_tail = *data;
-	*data      = data_new;
 
 	return 0;
 }
@@ -111,27 +129,30 @@ eval_exec(struct code *node, struct data **data)
 	assert(data != NULL);
 	assert(node->type == CODE_EXEC);
 
-	if (*data == NULL) {
-		errno = 0;
-		return -1;
-	}
-
 	if (debug & DEBUG_STACK) {
 		for (p = *data; p->s != NULL; p = p->next) {
-			fprintf(stderr, "data <- %sn", p->s ? p->s : "NULL");
+			fprintf(stderr, "data <- %s\n", p->s ? p->s : "NULL");
 		}
 	}
 
 	argc = count_args(*data);
+fprintf(stderr, "exec argc=%d\n", argc);
+
+	if (argc == 0) {
+fprintf(stderr, "exec NULL list\n");
+		goto done;
+	}
 
 	argv = make_args(*data, argc + 1);
 	if (argv == NULL) {
 		return -1;
 	}
 
-	status = exec_cmd(node->frame, argc, argv);
+	status = exec_cmd(node->u.frame, argc, argv);
 
 	free(argv);
+
+done:
 
 	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
 	for (p = *data; p->s != NULL; p = next) {
@@ -254,7 +275,7 @@ eval_binop(struct code *node, struct data **data,
 		fprintf(stderr, "data <- %s\n", b->s);
 	}
 
-	if (-1 == op(&b->next, node->frame, a, b)) {
+	if (-1 == op(&b->next, node->u.frame, a, b)) {
 		return -1;
 	}
 
@@ -274,9 +295,13 @@ eval(struct code **code, struct data **data)
 	assert(code != NULL);
 	assert(data != NULL);
 
+fprintf(stderr, "eval_clone:\n");
+data_dump(stderr, *data);
+
 	while (node = *code, node != NULL) {
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(node, data); break;
+		case CODE_DATA: r = eval_data(node, data); break;
 		case CODE_NOT:  r = eval_not (node, data); break;
 		case CODE_IF:   r = eval_if  (node, data); break;
 		case CODE_CALL: r = eval_call(node, data); break;
@@ -304,37 +329,32 @@ eval(struct code **code, struct data **data)
 
 /* XXX: get rid of this; <dispatch> can modify @c, @d */
 int
-eval_clone(const struct code *code, const struct data *data,
-	struct data **out)
+eval_clone(const struct code *code, struct data **out)
 {
 	struct code *code_new, **code_tail;
-	struct data *data_new, **data_tail;
 
 	assert(out != NULL);
 
 	code_new  = NULL;
-	data_new  = NULL;
+	*out      = NULL;
 
 	code_tail = code_clone(&code_new, code);
-	data_tail = data_clone(&data_new, data);
-	if (code_tail == NULL || data_tail == NULL) {
+	if (code_tail == NULL) {
 		goto error;
 	}
 
-	if (-1 == eval(&code_new, &data_new)) {
+	if (-1 == eval(&code_new, out)) {
 		goto error;
 	}
 
 	assert(code_new == NULL);
-
-	*out = data_new;
 
 	return 0;
 
 error:
 
 	code_free(code_new);
-	data_free(data_new);
+	data_free(*out);
 
 	return -1;
 }
