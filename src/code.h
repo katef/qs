@@ -27,6 +27,9 @@ struct code {
 	struct code *next;
 };
 
+const char *
+code_name(enum code_type type);
+
 struct code *
 code_data(struct code **head, size_t n, const char *s);
 

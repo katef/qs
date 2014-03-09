@@ -6,6 +6,24 @@
 #include "debug.h"
 #include "code.h"
 
+const char *
+code_name(enum code_type type)
+{
+	switch (type) {
+	case CODE_NULL: return "NULL";
+	case CODE_DATA: return "DATA";
+	case CODE_NOT:  return "NOT";
+	case CODE_CALL: return "CALL";
+	case CODE_EXEC: return "EXEC";
+	case CODE_IF:   return "IF";
+	case CODE_JOIN: return "JOIN";
+	case CODE_PIPE: return "PIPE";
+	case CODE_SET:  return "SET";
+	}
+
+	return "?";
+}
+
 struct code *
 code_data(struct code **head, size_t n, const char *s)
 {
@@ -27,7 +45,7 @@ code_data(struct code **head, size_t n, const char *s)
 	*head = new;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %d %.*s\n", new->type, (int) n, s);
+		fprintf(stderr, "code -> %s \"%.*s\"\n", code_name(new->type), (int) n, s);
 	}
 
 	return new;
@@ -55,7 +73,7 @@ code_push(struct code **head, enum code_type type, struct frame *frame)
 	*head = new;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %d\n", new->type);
+		fprintf(stderr, "code -> %s\n", code_name(new->type));
 	}
 
 	return new;
@@ -73,7 +91,7 @@ code_pop(struct code **head)
 	node->next = NULL;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %d\n", node->type);
+		fprintf(stderr, "code <- %s\n", code_name(node->type));
 	}
 
 	return node;
@@ -109,7 +127,7 @@ code_clone(struct code **dst, const struct code *src)
 		}
 
 		if (debug & DEBUG_STACK) {
-			fprintf(stderr, "code -> %d\n", p->type);
+			fprintf(stderr, "code -> %s\n", code_name(p->type));
 		}
 
 		/* note .u still points into src */
