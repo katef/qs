@@ -22,6 +22,10 @@ eval_null(struct code *node, struct data **data)
 
 	(void) node;
 
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_null\n");
+	}
+
 	if (!data_push(data, 0, NULL)) {
 		return -1;
 	}
@@ -39,17 +43,18 @@ eval_data(struct code *node, struct data **data)
 	assert(node != NULL);
 	assert(node->type == CODE_DATA);
 
-	a = node->next;
+	a = node;
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %d\n", a->type);
+		fprintf(stderr, "code <- %s \"%s\"\n", code_name(a->type), a->u.s);
+	}
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_data: \"%s\"\n", a->u.s);
 	}
 
 	if (!data_push(data, strlen(a->u.s), a->u.s)) {
 		return -1;
 	}
-
-	node->next = a->next;
-	free(a);
 
 	return 0;
 }
@@ -64,6 +69,10 @@ eval_not(struct code *node, struct data **data)
 
 	(void) node;
 	(void) data;
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_not\n");
+	}
 
 	status = !status;
 
@@ -93,6 +102,10 @@ eval_call(struct code *node, struct data **data)
 		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
 	}
 
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_call: \"%s\"\n", a->s);
+	}
+
 	q = frame_get(node->u.frame, a->s);
 	if (q == NULL) {
 		fprintf(stderr, "no such variable: $%s\n", a->s);
@@ -101,6 +114,11 @@ eval_call(struct code *node, struct data **data)
 	}
 
 	code_new  = NULL;
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "clone: ");
+		code_dump(stderr, q->code);
+	}
 
 	code_tail = code_clone(&code_new, q->code);
 	if (code_tail == NULL) {
@@ -129,6 +147,10 @@ eval_exec(struct code *node, struct data **data)
 	assert(data != NULL);
 	assert(node->type == CODE_EXEC);
 
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_exec\n");
+	}
+
 	if (debug & DEBUG_STACK) {
 		for (p = *data; p->s != NULL; p = p->next) {
 			fprintf(stderr, "data <- %s\n", p->s ? p->s : "NULL");
@@ -136,10 +158,8 @@ eval_exec(struct code *node, struct data **data)
 	}
 
 	argc = count_args(*data);
-fprintf(stderr, "exec argc=%d\n", argc);
 
 	if (argc == 0) {
-fprintf(stderr, "exec NULL list\n");
 		goto done;
 	}
 
@@ -148,9 +168,13 @@ fprintf(stderr, "exec NULL list\n");
 		return -1;
 	}
 
+	errno = 0;
+
 	status = exec_cmd(node->u.frame, argc, argv);
 
-	free(argv);
+	if (status == -1 && errno != 0) {
+		goto error;
+	}
 
 done:
 
@@ -163,9 +187,17 @@ done:
 		next = p->next;
 	}
 
-	*data = p;
+	*data = p->next;
 
 	return 0;
+
+error:
+
+	perror(argv[0]);
+
+	free(argv);
+
+	return -1;
 }
 
 /* TODO: explain what happens here: status is the predicate, a is a variable to call */
@@ -188,7 +220,12 @@ eval_if(struct code *node, struct data **data)
 
 	a = node->next;
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %d\n", a->type);
+		fprintf(stderr, "code <- %s %s\n", code_name(a->type),
+			a->type == CODE_DATA ? a->u.s : "");
+	}
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_if: \"%s\"\n", (*data)->s);
 	}
 
 	if (status != EXIT_SUCCESS) {
@@ -217,6 +254,10 @@ op_join(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	(void) a;
 	(void) b;
 
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_join\n");
+	}
+
 	/* TODO */
 	errno = ENOSYS;
 	return -1;
@@ -231,6 +272,10 @@ op_pipe(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	(void) a;
 	(void) b;
 
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_pipe\n");
+	}
+
 	/* TODO */
 	errno = ENOSYS;
 	return -1;
@@ -244,6 +289,10 @@ op_set(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	(void) frame;
 	(void) a;
 	(void) b;
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_set\n");
+	}
 
 	/* TODO: could check *data is $"" */
 
@@ -262,6 +311,10 @@ eval_binop(struct code *node, struct data **data,
 	assert(node != NULL);
 	assert(data != NULL);
 	assert(op != NULL);
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_binop\n");
+	}
 
 	if (*data == NULL || (*data)->next == NULL) {
 		errno = 0;
@@ -295,8 +348,10 @@ eval(struct code **code, struct data **data)
 	assert(code != NULL);
 	assert(data != NULL);
 
-fprintf(stderr, "eval_clone:\n");
-data_dump(stderr, *data);
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval code: ");
+		code_dump(stderr, *code);
+	}
 
 	while (node = *code, node != NULL) {
 		switch (node->type) {
@@ -322,6 +377,11 @@ data_dump(stderr, *data);
 
 		*code = node->next;
 		free(node);
+	}
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval out: ");
+		data_dump(stderr, *data);
 	}
 
 	return 0;

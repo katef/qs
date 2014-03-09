@@ -8,7 +8,8 @@ enum {
 	DEBUG_ACT   = 1 << 3,
 	DEBUG_FRAME = 1 << 4,
 	DEBUG_STACK = 1 << 5,
-	DEBUG_EXEC  = 1 << 6
+	DEBUG_EVAL  = 1 << 6,
+	DEBUG_EXEC  = 1 << 7
 };
 
 extern unsigned debug;

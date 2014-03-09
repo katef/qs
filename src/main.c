@@ -30,6 +30,7 @@ debug_flags(const char *s)
 		case 'c': debug |= DEBUG_ACT;   break;
 		case 'f': debug |= DEBUG_FRAME; break;
 		case 's': debug |= DEBUG_STACK; break;
+		case 'e': debug |= DEBUG_EVAL;  break;
 		case 'x': debug |= DEBUG_EXEC;  break;
 
 		default:
@@ -67,12 +68,12 @@ populate(struct frame *frame)
 		code = NULL;
 
 		if (a[i].s != NULL) {
-			if (!code_data(&code, 1, "_")) {
+			if (!code_data(&code, strlen(a[i].s), a[i].s)) {
 				return -1;
 			}
 		}
 
-		if (!frame_set(frame, strlen(a[i].name), a[i].name, NULL)) {
+		if (!frame_set(frame, strlen(a[i].name), a[i].name, code)) {
 			return -1;
 		}
 	}
@@ -98,6 +99,8 @@ dispatch(FILE *f, struct frame *frame, struct code **code)
 	us = NULL;
 
 	for (p = out; p != NULL; p = p->next) {
+		assert(p->s != NULL);
+
 		if (!code_data(&us, strlen(p->s), p->s)) {
 			goto error;
 		}
@@ -177,7 +180,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablpcfsx]\n");
+	fprintf(stderr, "usage: kcsh [-d ablpcfsex]\n");
 
 	return 1;
 }
