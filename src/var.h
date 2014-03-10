@@ -9,6 +9,9 @@ struct var {
 	struct var *next;
 };
 
+void
+var_replace(struct var *v, struct code *code);
+
 struct var *
 var_set(struct var **v, size_t n, const char *name,
 	struct code *code);

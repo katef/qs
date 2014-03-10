@@ -30,6 +30,19 @@ var_new(struct var **v, size_t n, const char *name,
 	return new;
 }
 
+void
+var_replace(struct var *v, struct code *code)
+{
+	assert(v != NULL);
+/* XXX:
+	assert(v->code == NULL || v->code != code);
+
+	code_free(curr->code);
+*/
+
+	v->code = code;
+}
+
 struct var *
 var_set(struct var **v, size_t n, const char *name,
 	struct code *code)
@@ -40,9 +53,7 @@ var_set(struct var **v, size_t n, const char *name,
 
 	curr = var_get(*v, n, name);
 	if (curr != NULL) {
-		code_free(curr->code);
-
-		curr->code = code;
+		var_replace(curr, code);
 
 		return curr;
 	}
