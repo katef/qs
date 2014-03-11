@@ -143,7 +143,6 @@ code_clone(struct code **dst, const struct code *src)
 	struct code **q, *end;
 
 	assert(dst != NULL);
-	assert(*dst == NULL);
 
 	end = *dst;
 
