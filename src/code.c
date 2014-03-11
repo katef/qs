@@ -11,6 +11,7 @@ code_name(enum code_type type)
 {
 	switch (type) {
 	case CODE_NULL: return "null";
+	case CODE_ANON: return "anon";
 	case CODE_DATA: return "data";
 	case CODE_NOT:  return "not";
 	case CODE_CALL: return "call";
@@ -22,6 +23,31 @@ code_name(enum code_type type)
 	}
 
 	return "?";
+}
+
+struct code *
+code_anon(struct code **head, struct code *code)
+{
+	struct code *new;
+
+	assert(head != NULL);
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->type   = CODE_ANON;
+	new->u.code = code;
+
+	new->next = *head;
+	*head = new;
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code -> %s\n", code_name(new->type));
+	}
+
+	return new;
 }
 
 struct code *
@@ -58,6 +84,7 @@ code_push(struct code **head, enum code_type type, struct frame *frame)
 
 	assert(head != NULL);
 	assert(frame != NULL);
+	assert(type != CODE_ANON);
 	assert(type != CODE_DATA);
 	assert(type && !(type & (type - 1)));
 
@@ -153,20 +180,39 @@ error:
 	return NULL;
 }
 
-int
-code_dump(FILE *f, const struct code *code)
+static int
+code_dumpinline(FILE *f, const struct code *code)
 {
 	const struct code *p;
 
 	assert(f != NULL);
 
 	for (p = code; p != NULL; p = p->next) {
-		if (p->type == CODE_DATA) {
+		switch (p->type) {
+		case CODE_DATA:
 			fprintf(f, "'%s' ", p->u.s);
-		} else {
+			break;
+
+		case CODE_ANON:
+			fprintf(f, "{ ");
+			code_dumpinline(f, p->u.code);
+			fprintf(f, "} ");
+			break;
+
+		default:
 			fprintf(f, "#%s ", code_name(p->type));
 		}
 	}
+
+	return 0;
+}
+
+int
+code_dump(FILE *f, const struct code *code)
+{
+	assert(f != NULL);
+
+	code_dumpinline(f, code);
 
 	fprintf(f, "\n");
 
