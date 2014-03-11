@@ -126,19 +126,6 @@
 		}
 	@};
 
-	/*
-	 * An anonymous block is not actually anonymous; it's a locally-scoped
-	 * variable named "", which has its own code stack.
-	 */
-	<var-anon>: () -> (s :string) = @{
-		@s.s = "";
-		@s.e = @s.s;
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<var-anon>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
-		}
-	@};
-
 	<var-self>: () -> (s :string) = @{
 		@s.s = ".";
 		@s.e = @s.s + 1;
@@ -173,6 +160,21 @@
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
+
+	<push-anon>: (c :code &, ci :code) -> () = @{
+		struct code **tail;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<push-anon>\n");
+		}
+
+		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		if (!code_anon(tail, @ci)) {
+			@!;
+		}
+	@};
 
 	<push-data>: (c :code &, s :string) -> () = @{
 		struct code **tail;

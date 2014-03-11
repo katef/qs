@@ -33,6 +33,34 @@ eval_null(struct code *node, struct data **data)
 	return 0;
 }
 
+static int
+eval_anon(struct code *node, struct data **data)
+{
+	struct code *a;
+
+	assert(data != NULL);
+	assert(node != NULL);
+	assert(node->type == CODE_ANON);
+
+	(void) data;
+
+	a = node;
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code <- %s\n", code_name(a->type));
+	}
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "clone: ");
+		code_dump(stderr, node->u.code);
+	}
+
+	if (!code_clone(&node->next, node->u.code)) {
+		return -1;
+	}
+
+	return 0;
+}
+
 /* push .s=NULL to data */
 static int
 eval_data(struct code *node, struct data **data)
@@ -65,7 +93,7 @@ eval_not(struct code *node, struct data **data)
 {
 	assert(data != NULL);
 	assert(node != NULL);
-	assert(node->type == CODE_NULL);
+	assert(node->type == CODE_NOT);
 
 	(void) node;
 	(void) data;
@@ -84,7 +112,6 @@ static int
 eval_call(struct code *node, struct data **data)
 {
 	const struct var *q;
-	struct code *code_new, **code_tail;
 	struct data *a;
 
 	assert(data != NULL);
@@ -113,24 +140,12 @@ eval_call(struct code *node, struct data **data)
 		return -1;
 	}
 
-	code_new  = NULL;
-
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "clone: ");
-		code_dump(stderr, q->code);
-	}
-
-	code_tail = code_clone(&code_new, q->code);
-	if (code_tail == NULL) {
-		code_free(code_new);
+	if (!code_anon(&node->next, q->code)) {
 		return -1;
 	}
 
 	*data = a->next;
 	free(a);
-
-	*code_tail = node->next;
-	node->next = code_new;
 
 	return 0;
 }
@@ -200,49 +215,48 @@ error:
 	return -1;
 }
 
-/* TODO: explain what happens here: status is the predicate, a is a variable to call */
+/* TODO: explain what happens here: status is the predicate, CODE_ANON is a block to call */
 static int
 eval_if(struct code *node, struct data **data)
 {
 	struct code *a;
-	int r;
 
 	assert(node != NULL);
 	assert(data != NULL);
 	assert(node->type == CODE_IF);
 
-	if (node->next == NULL || *data == NULL) {
+	if (node->next == NULL) {
 		errno = 0;
 		return -1;
 	}
 
-	/* TODO: could also check *data is $"" */
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_if\n");
+	}
 
 	a = node->next;
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %s %s\n", code_name(a->type),
-			a->type == CODE_DATA ? a->u.s : "");
-	}
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_if: \"%s\"\n", (*data)->s);
-	}
-
-	if (status != EXIT_SUCCESS) {
-		return 0;
-	}
-
-	if (a->type != CODE_CALL) {
+	if (a->type != CODE_ANON) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	r = eval_call(a, data);
+	/*
+	 * When the status condition is true, we simply leave the forthcoming node
+	 * on the code stack to evaulate next. Otherwise, it is consumed and
+	 * discarded here.
+	 */
 
-	node->next = a->next;
-	free(a);
+	if (status != EXIT_SUCCESS) {
+		if (debug & DEBUG_STACK) {
+			fprintf(stderr, "code <- %s %s\n", code_name(a->type),
+				a->type == CODE_DATA ? a->u.s : "");
+		}
 
-	return r;
+		node->next = a->next;
+		free(a);
+	}
+
+	return 0;
 }
 
 /* TODO: explain what happens here */
@@ -293,8 +307,6 @@ op_set(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	if (debug & DEBUG_EVAL) {
 		fprintf(stderr, "eval_set\n");
 	}
-
-	/* TODO: could check *data is $"" */
 
 	/* TODO */
 	errno = ENOSYS;
@@ -356,6 +368,7 @@ eval(struct code **code, struct data **data)
 	while (node = *code, node != NULL) {
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(node, data); break;
+		case CODE_ANON: r = eval_anon(node, data); break;
 		case CODE_DATA: r = eval_data(node, data); break;
 		case CODE_NOT:  r = eval_not (node, data); break;
 		case CODE_IF:   r = eval_if  (node, data); break;
@@ -398,6 +411,7 @@ eval_clone(const struct code *code, struct data **out)
 	code_new  = NULL;
 	*out      = NULL;
 
+/* TODO: could DRY by pushing CODE_ANON here instead */
 	code_tail = code_clone(&code_new, code);
 	if (code_tail == NULL) {
 		goto error;

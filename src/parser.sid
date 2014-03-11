@@ -34,7 +34,6 @@
 	<dispatch>: (:code &) -> ();
 	<populate>;
 
-	<var-anon>: () -> (:string);
 	<var-self>: () -> (:string);
 	<var-top>:  () -> (:string);
 
@@ -49,6 +48,7 @@
 	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
 
+	<push-anon>: (:code &, :code)   -> ();
 	<push-data>: (:code &, :string) -> ();
 	<push-code>: (:code &, :type)   -> ();
 	<push-stack>:(:code &, :code)   -> ();
@@ -67,7 +67,7 @@
 	||
 		obrace;
 		<frame-push>;
-		(ci) = <empty>;
+		ci = <empty>;
 		exprs(&ci);
 		s = <var-self>;
 		<frame-set>(s, ci);
@@ -174,16 +174,14 @@
 		pipe-expr(&c);
 
 		{
-			<frame-push>;
 			and;
-			(ci) = <empty>;
-			and-expr(&ci);
-			s = <var-anon>;
-			<frame-set>(s, ci);
-			<frame-pop>;
 
 			t = <type-if>;
 			<push-code>(&c, t);
+
+			ci = <empty>;
+			and-expr(&ci);
+			<push-anon>(&c, ci);
 		||
 			$;
 		};
@@ -193,22 +191,17 @@
 		and-expr(&c);
 
 		{
-			<frame-push>;
 			or;
-			(ci) = <empty>;
-			or-expr(&ci);
-			s = <var-anon>;
-			<frame-set>(s, ci);
-			<frame-pop>;
 
-			t1 = <type-call>;
+			t1 = <type-not>;
 			<push-code>(&c, t1);
 
-			t2 = <type-not>;
+			t2 = <type-if>;
 			<push-code>(&c, t2);
 
-			t3 = <type-if>;
-			<push-code>(&c, t3);
+			ci = <empty>;
+			or-expr(&ci);
+			<push-anon>(&c, ci);
 		||
 			$;
 		};
@@ -246,7 +239,7 @@
 	script [
 
 		global-exprs = {
-			(c) = <empty>;
+			c = <empty>;
 
 			expr(&c);
 
