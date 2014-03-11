@@ -257,6 +257,17 @@
 		}
 	@};
 
+	<err-expected-sep>: () -> () = @{
+		fprintf(stderr, "syntax error: expected { '\\n' | ';' | '&' }\n");
+		@!;
+	@};
+
+	<err-syntax>: (c :code) -> () = @{
+		fprintf(stderr, "syntax error at: ");
+		code_dump(stderr, @c);
+		@!;
+	@};
+
 %trailer% @{
 
 	int

@@ -57,6 +57,9 @@
 	<frame-pop>;
 	<frame-set>: (:string, :code) -> ();
 
+	<err-expected-sep>;
+	<err-syntax>: (:code) -> ();
+
 	exprs:     (:code &) -> ();
 	exec-list: (:code &) -> ();
 
@@ -223,11 +226,15 @@
 			||
 				bg;
 				/* TODO: <code-bg>(c); and set $% as jobid */
+			##
+				<err-expected-sep>;
 			};
 		||
 			nl;
 		||
 			semi;
+		##
+			<err-syntax>(c);
 		};
 
 	] = {
