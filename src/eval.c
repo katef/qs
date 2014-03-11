@@ -133,7 +133,7 @@ eval_call(struct code *node, struct data **data)
 		fprintf(stderr, "eval_call: \"%s\"\n", a->s);
 	}
 
-	q = frame_get(node->u.frame, a->s);
+	q = frame_get(node->u.frame, strlen(a->s), a->s);
 	if (q == NULL) {
 		fprintf(stderr, "no such variable: $%s\n", a->s);
 		errno = 0;
@@ -261,6 +261,49 @@ eval_if(struct code *node, struct data **data)
 
 /* TODO: explain what happens here */
 static int
+eval_set(struct code *node, struct data **data)
+{
+	struct data *a;
+	struct code *b;
+
+	assert(node != NULL);
+	assert(data != NULL);
+	assert(node->type == CODE_SET);
+
+	(void) node;
+	(void) a;
+	(void) b;
+
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "eval_set\n");
+	}
+
+	if (node->next == NULL || *data == NULL) {
+		errno = 0;
+		return -1;
+	}
+
+	a = *data;
+	b = node->next;
+
+	if (b->type != CODE_ANON) {
+		errno = 0;
+		return -1;
+	}
+
+	if (!frame_set(node->u.frame, strlen(a->s), a->s, b->u.code)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	*data = a->next;
+	free(a);
+
+	return 0;
+}
+
+/* TODO: explain what happens here */
+static int
 op_join(struct data **node, struct frame *frame, struct data *a, struct data *b)
 {
 	(void) node;
@@ -288,24 +331,6 @@ op_pipe(struct data **node, struct frame *frame, struct data *a, struct data *b)
 
 	if (debug & DEBUG_EVAL) {
 		fprintf(stderr, "eval_pipe\n");
-	}
-
-	/* TODO */
-	errno = ENOSYS;
-	return -1;
-}
-
-/* TODO: explain what happens here */
-static int
-op_set(struct data **node, struct frame *frame, struct data *a, struct data *b)
-{
-	(void) node;
-	(void) frame;
-	(void) a;
-	(void) b;
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_set\n");
 	}
 
 	/* TODO */
@@ -374,10 +399,10 @@ eval(struct code **code, struct data **data)
 		case CODE_IF:   r = eval_if  (node, data); break;
 		case CODE_CALL: r = eval_call(node, data); break;
 		case CODE_EXEC: r = eval_exec(node, data); break;
+		case CODE_SET:  r = eval_set (node, data); break;
 
 		case CODE_JOIN: r = eval_binop(node, data, op_join); break;
 		case CODE_PIPE: r = eval_binop(node, data, op_pipe); break;
-		case CODE_SET:  r = eval_binop(node, data, op_set ); break;
 
 		default:
 			errno = EINVAL;

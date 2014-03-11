@@ -150,10 +150,14 @@
 		||
 			s = str;
 			equ;
-			value(&c);
+			value(&ci);
+
 			<push-data>(&c, s);
+
 			t = <type-set>;
 			<push-code>(&c, t);
+
+			<push-anon>(&c, ci);
 		};
 	};
 
