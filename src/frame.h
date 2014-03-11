@@ -19,7 +19,7 @@ frame_set(struct frame *f, size_t n, const char *name,
 	struct code *code);
 
 struct var *
-frame_get(const struct frame *f, const char *name);
+frame_get(const struct frame *f, size_t n, const char *name);
 
 int
 frame_export(const struct frame *f);

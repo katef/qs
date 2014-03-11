@@ -57,7 +57,6 @@ lex_push(const char **p, const char **s, const char **e)
 	case '^':
 	case ';':
 	case '=':
-	case '.':
 	case '`':
 	case '{':
 	case '}':
@@ -80,14 +79,19 @@ lex_push(const char **p, const char **s, const char **e)
 		(*p)++;
 		*s = *p;
 		*p += !!strcspn(*p, WHITE);
-		*p += strcspn(*p, WHITE "&^|;=.`$'#{}");
+		*p += strcspn(*p, WHITE "&^|;=`$'#{}");
 		*e = *p;
 		return tok_var;
 
 	default:
 		*s = *p;
-		*p += strcspn(*p, WHITE "&^|;=.`$'#{}");
+		*p += strcspn(*p, WHITE "&^|;=`$'#{}");
 		*e = *p;
+		break;
+	}
+
+	if (**s == '.' && *e == *s + 1) {
+		return tok_dot;
 	}
 
 #if 0

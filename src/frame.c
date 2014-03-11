@@ -54,14 +54,33 @@ struct var *
 frame_set(struct frame *f, size_t n, const char *name,
 	struct code *code)
 {
+	const struct frame *p;
+	struct var *v;
+
 	assert(f != NULL);
 	assert(name != NULL);
+
+	/* $.x is explicitly local */
+	if (n > 0 && name[0] == '.') {
+		return var_set(&f->var, n - 1, name + 1, code);
+	}
+
+	for (p = f; p != NULL; p = p->parent) {
+		v = var_get(p->var, n, name);
+		if (v == NULL) {
+			continue;
+		}
+
+		var_replace(v, code);
+
+		return v;
+	}
 
 	return var_set(&f->var, n, name, code);
 }
 
 struct var *
-frame_get(const struct frame *f, const char *name)
+frame_get(const struct frame *f, size_t n, const char *name)
 {
 	const struct frame *p;
 	struct var *v;
@@ -69,19 +88,22 @@ frame_get(const struct frame *f, const char *name)
 	assert(f != NULL);
 	assert(name != NULL);
 
-	/* special case for $? */
-	if (f->parent == NULL && 0 == strcmp(name, "?")) {
-		static char s[32];
-		int n;
+	/* $.x is explicitly local */
+	if (n > 0 && name[0] == '.') {
+		return var_get(f->var, n - 1, name + 1);
+	}
 
-		v = var_get(f->var, strlen(name), name);
+	/* special case for $? */
+	if (f->parent == NULL && (n == 1 && 0 == memcmp(name, "?", n))) {
+		static char s[32];
+
+		v = var_get(f->var, n, name);
 		if (v == NULL || v->code == NULL || v->code->type != CODE_DATA) {
 			errno = EINVAL;
 			return NULL;
 		}
 
-		n = sprintf(s, "%d", status);
-		if (n == -1) {
+		if (-1 == sprintf(s, "%d", status)) {
 			return NULL;
 		}
 
@@ -91,11 +113,13 @@ frame_get(const struct frame *f, const char *name)
 	}
 
 	for (p = f; p != NULL; p = p->parent) {
-		v = var_get(p->var, strlen(name), name);
+		v = var_get(p->var, n, name);
 		if (v != NULL) {
 			return v;
 		}
 	}
+
+	/* TODO: call "no such variable" hook */
 
 	return NULL;
 }
