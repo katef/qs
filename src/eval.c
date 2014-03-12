@@ -299,6 +299,9 @@ eval_set(struct code *node, struct data **data)
 	*data = a->next;
 	free(a);
 
+	node->next = b->next;
+	free(b);
+
 	return 0;
 }
 
