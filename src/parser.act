@@ -126,15 +126,6 @@
 		}
 	@};
 
-	<var-self>: () -> (s :string) = @{
-		@s.s = ".";
-		@s.e = @s.s + 1;
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<var-self>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
-		}
-	@};
-
 	<var-top>:  () -> (s :string) = @{
 		@s.s = "_";
 		@s.e = @s.s + 1;
@@ -235,6 +226,10 @@
 
 	<frame-pop>: () -> () = @{
 		assert(act_state->frame != NULL);
+
+		/* TODO: could set $. inside here (yes, in <frame-pop>), iff &c is non-NULL.
+		 * if &c is NULL, either we're at the top scope, or there's no locally-scoped
+		 * code to dereference it anyway */
 
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<frame-pop>\n");

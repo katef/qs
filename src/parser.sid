@@ -34,7 +34,6 @@
 	<dispatch>: (:code &) -> ();
 	<populate>;
 
-	<var-self>: () -> (:string);
 	<var-top>:  () -> (:string);
 
 	<empty>: () -> (:code);
@@ -60,80 +59,55 @@
 	<err-expected-sep>;
 	<err-syntax>: (:code) -> ();
 
-	exprs:     (:code &) -> ();
-	exec-list: (:code &) -> ();
+	exprs: (:code &) -> ();
 
-	compound-expr: (c :code &) -> () = {
-		oparen;
-		exec-list(&c);
-		cparen;
-	||
-		obrace;
-		<frame-push>;
-		ci = <empty>;
-		exprs(&ci);
-		s = <var-self>;
-		<frame-set>(s, ci);
-		<frame-pop>;
-		cbrace;
-	};
-
-	value: (c :code &) -> () = {
-		compound-expr(&c);
-	||
+	arg: (c :code &) -> () = {
+	/* TODO: || backtick */
 		s = str;
 		<push-data>(&c, s);
 	||
+		s = var;
 		t = <type-call>;
 		<push-code>(&c, t);
-		s = var;
 		<push-data>(&c, s);
 	};
 
-	exec-list: (c :code &) -> () = {
-		/* TODO: || backtick */
-		{
-			s = str;
-			<push-data>(&c, s);
-		||
-			t = <type-call>;
-			<push-code>(&c, t);
-			s = var;
-			<push-data>(&c, s);
-		||
-			compound-expr(&c);
-		};
+	list: (c :code &) -> () = {
+		arg(&c);
 
 		{
-			exec-list(&c);
+			list(&c);
 		||
 			t = <type-null>;
 			<push-code>(&c, t);
 		};
 	};
 
-	arg-list: (c :code &) -> () = {
-		/* TODO: || backtick */
-		/* TODO: consolidate with exec-list and value */
-		{
-			s = str;
-			<push-data>(&c, s);
-		||
-			t = <type-call>;
-			<push-code>(&c, t);
-			s = var;
-			<push-data>(&c, s);
+	assign-expr: (c :code &) -> () [
+
+		block: (c :code &) -> () = {
+			obrace;
+			<frame-push>;
+			{
+				exprs(&c);
+			||
+				$;
+			};
+			<frame-pop>;
+			cbrace;
 		};
 
-		{
-			arg-list(&c);
+		value: (c :code &) -> () = {
+			oparen;
+			list(&c);
+			cparen;
 		||
-			t = <type-null>;
-			<push-code>(&c, t);
+			block(&c);
+		||
+			arg(&c);
 		};
-	};
 
-	assign-expr: (c :code &) -> () = {
+	] = {
 		ci = <empty>;
 
 		/*
@@ -146,10 +120,12 @@
 		 */
 
 		{
-			arg-list(&ci);
+			list(&ci);
 			<push-stack>(&c, ci);
 			t = <type-exec>;
 			<push-code>(&c, t);
+		||
+			block(&c);
 		||
 			s = str;
 			equ;
@@ -216,23 +192,19 @@
 
 	exprs: (c :code &) -> () [
 
-		::expr: (c :code &) -> () = {
-			or-expr(&c);
-
-			{
-				nl;
-			||
-				semi;
-			||
-				bg;
-				/* TODO: <code-bg>(c); and set $% as jobid */
-			##
-				<err-expected-sep>;
-			};
-		||
+		::sep = {
 			nl;
 		||
 			semi;
+		||
+			bg;
+			/* TODO: <code-bg>(c); and set $% as jobid */
+		##
+			<err-expected-sep>;
+		};
+
+		::expr: (c :code &) -> () = {
+			or-expr(&c);
 		##
 			<err-syntax>(c);
 		};
@@ -241,7 +213,10 @@
 		expr(&c);
 
 		{
+			sep;
 			exprs(&c);
+		||
+			sep;
 		||
 			$;
 		};
@@ -253,6 +228,7 @@
 			c = <empty>;
 
 			expr(&c);
+			sep;
 
 			<dispatch>(&c);
 
@@ -269,7 +245,11 @@
 	] = {
 		<frame-push>;
 		<populate>;
-		global-exprs;
+		{
+			global-exprs;
+		||
+			$;
+		};
 		<frame-pop>;
 
 		eof;
