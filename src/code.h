@@ -19,11 +19,11 @@ enum code_type {
 
 struct code {
 	enum code_type type;
+	struct frame *frame;
 
 	union {
 		char *s;
 		struct code *code;
-		struct frame *frame;
 	} u;
 
 	struct code *next;
@@ -33,13 +33,16 @@ const char *
 code_name(enum code_type type);
 
 struct code *
-code_anon(struct code **head, struct code *code);
+code_anon(struct code **head, struct frame *frame,
+	struct code *code);
 
 struct code *
-code_data(struct code **head, size_t n, const char *s);
+code_data(struct code **head, struct frame *frame,
+	size_t n, const char *s);
 
 struct code *
-code_push(struct code **head, enum code_type type, struct frame *frame);
+code_push(struct code **head, struct frame *frame,
+	enum code_type type);
 
 struct code *
 code_pop(struct code **head);

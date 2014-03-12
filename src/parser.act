@@ -132,7 +132,9 @@
 			args = NULL;
 
 			for (i = 0; i < act_state->argc; i++) {
-				if (!code_data(&args, strlen(act_state->argv[i]), act_state->argv[i])) {
+				const char *s = act_state->argv[i];
+
+				if (!code_data(&args, act_state->frame, strlen(s), s)) {
 					code_free(args);
 					@!;
 				}
@@ -181,7 +183,7 @@
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
 			;
 
-		if (!code_anon(tail, @ci)) {
+		if (!code_anon(tail, act_state->frame, @ci)) {
 			@!;
 		}
 	@};
@@ -199,7 +201,7 @@
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
 			;
 
-		if (!code_data(tail, @s.e - @s.s, @s.s)) {
+		if (!code_data(tail, act_state->frame, @s.e - @s.s, @s.s)) {
 			@!;
 		}
 	@};
@@ -216,7 +218,7 @@
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
 			;
 
-		if (!code_push(tail, @t, act_state->frame)) {
+		if (!code_push(tail, act_state->frame, @t)) {
 			@!;
 		}
 	@};

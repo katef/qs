@@ -105,7 +105,7 @@ eval_call(struct code *node, struct data **data)
 	assert(data != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_CALL);
-	assert(node->u.frame != NULL);
+	assert(node->frame != NULL);
 
 	if (*data == NULL) {
 		errno = 0;
@@ -117,14 +117,14 @@ eval_call(struct code *node, struct data **data)
 		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
 	}
 
-	q = frame_get(node->u.frame, strlen(a->s), a->s);
+	q = frame_get(node->frame, strlen(a->s), a->s);
 	if (q == NULL) {
 		fprintf(stderr, "no such variable: $%s\n", a->s);
 		errno = 0;
 		return -1;
 	}
 
-	if (!code_anon(&node->next, q->code)) {
+	if (!code_anon(&node->next, node->frame, q->code)) {
 		return -1;
 	}
 
@@ -165,7 +165,7 @@ eval_exec(struct code *node, struct data **data)
 
 	errno = 0;
 
-	status = exec_cmd(node->u.frame, argc, argv);
+	status = exec_cmd(node->frame, argc, argv);
 
 	if (status == -1 && errno != 0) {
 		goto error;
@@ -267,7 +267,7 @@ eval_set(struct code *node, struct data **data)
 		return -1;
 	}
 
-	if (!frame_set(node->u.frame, strlen(a->s), a->s, b->u.code)) {
+	if (!frame_set(node->frame, strlen(a->s), a->s, b->u.code)) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -332,7 +332,7 @@ eval_binop(struct code *node, struct data **data,
 		fprintf(stderr, "data <- %s\n", b->s);
 	}
 
-	if (-1 == op(&b->next, node->u.frame, a, b)) {
+	if (-1 == op(&b->next, node->frame, a, b)) {
 		return -1;
 	}
 

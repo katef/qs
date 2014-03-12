@@ -68,7 +68,7 @@ populate(struct frame *frame)
 		code = NULL;
 
 		if (a[i].s != NULL) {
-			if (!code_data(&code, strlen(a[i].s), a[i].s)) {
+			if (!code_data(&code, frame, strlen(a[i].s), a[i].s)) {
 				return -1;
 			}
 		}
@@ -102,7 +102,7 @@ dispatch(FILE *f, struct frame *frame, struct code **code)
 	for (p = out; p != NULL; p = p->next) {
 		assert(p->s != NULL);
 
-		if (!code_data(&us, strlen(p->s), p->s)) {
+		if (!code_data(&us, frame, strlen(p->s), p->s)) {
 			goto error;
 		}
 	}

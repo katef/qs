@@ -26,11 +26,13 @@ code_name(enum code_type type)
 }
 
 struct code *
-code_anon(struct code **head, struct code *code)
+code_anon(struct code **head, struct frame *frame,
+	struct code *code)
 {
 	struct code *new;
 
 	assert(head != NULL);
+	assert(frame != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -38,6 +40,7 @@ code_anon(struct code **head, struct code *code)
 	}
 
 	new->type   = CODE_ANON;
+	new->frame  = frame;
 	new->u.code = code;
 
 	new->next = *head;
@@ -51,11 +54,13 @@ code_anon(struct code **head, struct code *code)
 }
 
 struct code *
-code_data(struct code **head, size_t n, const char *s)
+code_data(struct code **head, struct frame *frame,
+	size_t n, const char *s)
 {
 	struct code *new;
 
 	assert(head != NULL);
+	assert(frame != NULL);
 	assert(s != NULL);
 
 	new = malloc(sizeof *new + n + 1);
@@ -64,6 +69,7 @@ code_data(struct code **head, size_t n, const char *s)
 	}
 
 	new->type   = CODE_DATA;
+	new->frame  = frame;
 	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
 	new->u.s[n] = '\0';
 
@@ -78,7 +84,8 @@ code_data(struct code **head, size_t n, const char *s)
 }
 
 struct code *
-code_push(struct code **head, enum code_type type, struct frame *frame)
+code_push(struct code **head, struct frame *frame,
+	enum code_type type)
 {
 	struct code *new;
 
@@ -93,8 +100,8 @@ code_push(struct code **head, enum code_type type, struct frame *frame)
 		return NULL;
 	}
 
-	new->type    = type;
-	new->u.frame = frame;
+	new->type  = type;
+	new->frame = frame;
 
 	new->next = *head;
 	*head = new;
@@ -156,12 +163,14 @@ code_clone(struct code **dst, const struct code *src)
 			fprintf(stderr, "code -> %s\n", code_name(p->type));
 		}
 
+		(*q)->type  = p->type;
+		(*q)->frame = p->frame;
+
 		/* note .u still points into src */
-		(*q)->type    = p->type;
 		switch (p->type) {
-		case CODE_DATA: (*q)->u.s     = p->u.s;     break;
-		case CODE_ANON: (*q)->u.code  = p->u.code;  break;
-		default:        (*q)->u.frame = p->u.frame; break;
+		case CODE_DATA: (*q)->u.s    = p->u.s;    break;
+		case CODE_ANON: (*q)->u.code = p->u.code; break;
+		default: ;
 		}
 
 		q = &(*q)->next;
