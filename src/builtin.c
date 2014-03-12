@@ -198,8 +198,6 @@ builtin(struct frame *f, int argc, char *const *argv)
 	assert(argv != NULL);
 	assert(argv[0] != NULL);
 
-	/* TODO: look up variable name */
-
 	/* TODO: bsearch */
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
 		if (0 == strcmp(argv[0], a[i].name)) {

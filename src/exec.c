@@ -80,8 +80,8 @@ exec_cmd(struct frame *f, int argc, char **argv)
 	}
 
 	assert(argc >= 1);
-
-	/* TODO: run pre/post-command hook here */
+	assert(argv != NULL);
+	assert(argv[0] != NULL);
 
 	return builtin(f, argc, argv);
 }

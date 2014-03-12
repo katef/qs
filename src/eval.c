@@ -158,6 +158,50 @@ eval_exec(struct code *node, struct data **data)
 		goto done;
 	}
 
+	/* TODO: run pre/post-command hook here */
+
+	{
+		struct var *v;
+
+		p = *data;
+
+		assert(p != NULL);
+
+		v = frame_get(node->frame, strlen(p->s), p->s);
+		if (v != NULL) {
+			struct code *args;
+			struct code *a;
+
+			a = code_anon(&node->next, node->frame, v->code);
+			if (a == NULL) {
+				return -1;
+			}
+
+			args = NULL;
+
+			/* TODO: make a data-to-code conversion thing? doesn't feel good */
+			/* XXX: merge with code to build args in <populate>. so we do want to make argv[] */
+			for (p = p->next; p->s != NULL; p = p->next) {
+				if (p == NULL) {
+					errno = 0;
+					return -1;
+				}
+
+				if (!code_data(&args, node->frame, strlen(p->s), p->s)) {
+					return -1;
+				}
+			}
+
+			assert(a->type == CODE_ANON);
+
+			if (!frame_set(a->frame, 1, "*", args)) {
+				return -1;
+			}
+
+			goto done;
+		}
+	}
+
 	argv = make_args(*data, argc + 1);
 	if (argv == NULL) {
 		return -1;
