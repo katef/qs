@@ -158,10 +158,10 @@ code_clone(struct code **dst, const struct code *src)
 
 		/* note .u still points into src */
 		(*q)->type    = p->type;
-		if (p->type == CODE_DATA) {
-			(*q)->u.s     = p->u.s;
-		} else {
-			(*q)->u.frame = p->u.frame;
+		switch (p->type) {
+		case CODE_DATA: (*q)->u.s     = p->u.s;     break;
+		case CODE_ANON: (*q)->u.code  = p->u.code;  break;
+		default:        (*q)->u.frame = p->u.frame; break;
 		}
 
 		q = &(*q)->next;
