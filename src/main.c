@@ -126,7 +126,6 @@ error:
 int
 main(int argc, char *argv[])
 {
-	struct code *args;
 	struct lex_state l;
 
 	/* TODO: feed from -c string or from stdin, or from filename */
@@ -154,25 +153,10 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	{
-		int i;
-
-		args = NULL;
-
-		for (i = 0; i < argc; i++) {
-			if (!code_data(&args, strlen(argv[i]), argv[i])) {
-				perror("data_push");
-				goto error;
-			}
-		}
-	}
-
-	if (-1 == parse(&l, populate, dispatch, args)) {
+	if (-1 == parse(&l, populate, dispatch, argc, argv)) {
 		perror("parse");
 		goto error;
 	}
-
-	/* TODO: free args */
 
 	/* TODO: retrieve $? */
 

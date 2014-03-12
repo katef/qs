@@ -18,6 +18,7 @@
 %header% @{
 
 	#include <assert.h>
+	#include <string.h>
 	#include <stdio.h>
 
 	#include "debug.h"
@@ -37,7 +38,8 @@
 		struct frame *frame;
 		int (*dispatch)(FILE *, struct frame *, struct code **);
 		int (*populate)(struct frame *);
-		struct code *args;
+		int argc;
+		char **argv;
 	};
 
 	typedef struct act_string string;
@@ -62,7 +64,7 @@
 	parse(struct lex_state *l,
 		int (*populate)(struct frame *),
 		int (*dispatch)(FILE *, struct frame *, struct code **),
-		struct code *args);
+		int argc, char *argv[]);
 
 @};
 
@@ -121,8 +123,25 @@
 			@!;
 		}
 
-		if (!frame_set(act_state->frame, 1, "*", act_state->args)) {
-			@!;
+		/* TODO: centralise with setting $* for calls in general;
+		 * possibly treat the entire script as one call */
+		{
+			struct code *args;
+			int i;
+
+			args = NULL;
+
+			for (i = 0; i < act_state->argc; i++) {
+				if (!code_data(&args, strlen(act_state->argv[i]), act_state->argv[i])) {
+					code_free(args);
+					@!;
+				}
+			}
+
+			if (!frame_set(act_state->frame, 1, "*", args)) {
+				code_free(args);
+				@!;
+			}
 		}
 	@};
 
@@ -269,18 +288,20 @@
 	parse(struct lex_state *lex_state,
 		int (*populate)(struct frame *),
 		int (*dispatch)(FILE *, struct frame *, struct code **),
-		struct code *args)
+		int argc, char *argv[])
 	{
 		struct act_state a, *act_state = &a;
 
 		assert(lex_state != NULL);
 		assert(dispatch != NULL);
 		assert(populate != NULL);
+		assert(argc >= 0 && argv != NULL);
 
 		act_state->dispatch = dispatch;
 		act_state->populate = populate;
 
-		act_state->args  = args;
+		act_state->argc  = argc;
+		act_state->argv  = argv;
 		act_state->frame = NULL;
 
 		lex_state->p = lex_state->buf;
