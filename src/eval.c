@@ -197,12 +197,12 @@ done:
 	for (p = *data; p->s != NULL; p = next) {
 		assert(p != NULL);
 
-		free(p);
-
 		next = p->next;
+		free(p);
 	}
 
 	*data = p->next;
+	free(p);
 
 	return 0;
 
