@@ -54,9 +54,7 @@ builtin_exec(struct frame *f, int argc, char *const *argv)
 	assert(argc >= 1);
 	assert(argv != NULL);
 
-	if (-1 == frame_export(f)) {
-		return -1;
-	}
+	/* TODO: hook on export for setenv here */
 
 	(void) execv(argv[0], argv);
 
