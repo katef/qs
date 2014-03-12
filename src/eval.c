@@ -22,10 +22,6 @@ eval_null(struct code *node, struct data **data)
 
 	(void) node;
 
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_null\n");
-	}
-
 	if (!data_push(data, 0, NULL)) {
 		return -1;
 	}
@@ -76,10 +72,6 @@ eval_data(struct code *node, struct data **data)
 		fprintf(stderr, "code <- %s \"%s\"\n", code_name(a->type), a->u.s);
 	}
 
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_data: \"%s\"\n", a->u.s);
-	}
-
 	if (!data_push(data, strlen(a->u.s), a->u.s)) {
 		return -1;
 	}
@@ -97,10 +89,6 @@ eval_not(struct code *node, struct data **data)
 
 	(void) node;
 	(void) data;
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_not\n");
-	}
 
 	status = !status;
 
@@ -127,10 +115,6 @@ eval_call(struct code *node, struct data **data)
 	a = *data;
 	if (debug & DEBUG_STACK) {
 		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
-	}
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_call: \"%s\"\n", a->s);
 	}
 
 	q = frame_get(node->u.frame, strlen(a->s), a->s);
@@ -161,10 +145,6 @@ eval_exec(struct code *node, struct data **data)
 	assert(node != NULL);
 	assert(data != NULL);
 	assert(node->type == CODE_EXEC);
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_exec\n");
-	}
 
 	if (debug & DEBUG_STACK) {
 		for (p = *data; p->s != NULL; p = p->next) {
@@ -230,10 +210,6 @@ eval_if(struct code *node, struct data **data)
 		return -1;
 	}
 
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_if\n");
-	}
-
 	a = node->next;
 	if (a->type != CODE_ANON) {
 		errno = EINVAL;
@@ -247,6 +223,10 @@ eval_if(struct code *node, struct data **data)
 	 */
 
 	if (status != EXIT_SUCCESS) {
+		if (debug & DEBUG_EVAL) {
+			fprintf(stderr, "discarding anon\n");
+		}
+
 		if (debug & DEBUG_STACK) {
 			fprintf(stderr, "code <- %s %s\n", code_name(a->type),
 				a->type == CODE_DATA ? a->u.s : "");
@@ -273,10 +253,6 @@ eval_set(struct code *node, struct data **data)
 	(void) node;
 	(void) a;
 	(void) b;
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_set\n");
-	}
 
 	if (node->next == NULL || *data == NULL) {
 		errno = 0;
@@ -314,10 +290,6 @@ op_join(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	(void) a;
 	(void) b;
 
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_join\n");
-	}
-
 	/* TODO */
 	errno = ENOSYS;
 	return -1;
@@ -331,10 +303,6 @@ op_pipe(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	(void) frame;
 	(void) a;
 	(void) b;
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_pipe\n");
-	}
 
 	/* TODO */
 	errno = ENOSYS;
@@ -351,10 +319,6 @@ eval_binop(struct code *node, struct data **data,
 	assert(node != NULL);
 	assert(data != NULL);
 	assert(op != NULL);
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval_binop\n");
-	}
 
 	if (*data == NULL || (*data)->next == NULL) {
 		errno = 0;
@@ -388,12 +352,12 @@ eval(struct code **code, struct data **data)
 	assert(code != NULL);
 	assert(data != NULL);
 
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval code: ");
-		code_dump(stderr, *code);
-	}
-
 	while (node = *code, node != NULL) {
+		if (debug & DEBUG_EVAL) {
+			fprintf(stderr, "code: "); code_dump(stderr, *code);
+			fprintf(stderr, "data: "); data_dump(stderr, *data);
+		}
+
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(node, data); break;
 		case CODE_ANON: r = eval_anon(node, data); break;

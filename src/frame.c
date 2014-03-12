@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <ctype.h>
 
+#include "debug.h"
 #include "code.h"
 #include "data.h"
 #include "var.h"
@@ -150,6 +151,10 @@ frame_export(const struct frame *f)
 
 		if (!isalpha((unsigned char) v->name[0])) {
 			continue;
+		}
+
+		if (debug & DEBUG_EVAL) {
+			fprintf(stderr, "eval $%s for export:\n", v->name);
 		}
 
 		if (-1 == eval_clone(v->code, &out)) {
