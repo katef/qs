@@ -343,7 +343,7 @@ eval_binop(struct code *node, struct data **data,
 	return 0;
 }
 
-static int
+int
 eval(struct code **code, struct data **data)
 {
 	struct code *node;
@@ -390,37 +390,5 @@ eval(struct code **code, struct data **data)
 	}
 
 	return 0;
-}
-
-/* XXX: get rid of this; <dispatch> can modify @c, @d */
-int
-eval_clone(const struct code *code, struct data **out)
-{
-	struct code *code_new;
-
-	assert(out != NULL);
-
-	code_new  = NULL;
-	*out      = NULL;
-
-/* TODO: could DRY by pushing CODE_ANON here instead */
-	if (!code_clone(&code_new, code)) {
-		goto error;
-	}
-
-	if (-1 == eval(&code_new, out)) {
-		goto error;
-	}
-
-	assert(code_new == NULL);
-
-	return 0;
-
-error:
-
-	code_free(code_new);
-	data_free(*out);
-
-	return -1;
 }
 

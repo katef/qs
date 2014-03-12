@@ -146,6 +146,7 @@ frame_export(const struct frame *f)
 	}
 
 	for (v = f->var; v != NULL; v = v->next) {
+		struct code *code;
 		struct data *out;
 		const char *s;
 
@@ -157,7 +158,13 @@ frame_export(const struct frame *f)
 			fprintf(stderr, "eval $%s for export:\n", v->name);
 		}
 
-		if (-1 == eval_clone(v->code, &out)) {
+		if (!code_clone(&code, v->code)) {
+			goto error;
+		}
+
+		out = NULL;
+
+		if (-1 == eval(&code, &out)) {
 			goto error;
 		}
 
@@ -179,6 +186,7 @@ frame_export(const struct frame *f)
 
 error:
 
+		code_free(code);
 		data_free(out);
 
 		return -1;

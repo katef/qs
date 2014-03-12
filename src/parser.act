@@ -102,12 +102,12 @@
 		}
 
 		if (-1 == act_state->dispatch(stdout, act_state->frame, @&c)) {
+			code_free(@c);
 			@!;
 		}
 
-		/* TODO: if <dispatch> modifies @c then @c should be empty if successful */
-
-		code_free(@c);
+		/* if .dispatch() modifies @c then @c should be empty if successful */
+		assert(@c == NULL);
 	@};
 
 	<populate>: () -> () = @{

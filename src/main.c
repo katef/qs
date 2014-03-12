@@ -91,8 +91,9 @@ dispatch(FILE *f, struct frame *frame, struct code **code)
 	assert(f != NULL);
 	assert(code != NULL);
 
-	/* TODO: okay to have eval() modify *code, *data */
-	if (-1 == eval_clone(*code, &out)) {
+	out = NULL;
+
+	if (-1 == eval(code, &out)) {
 		return -1;
 	}
 
@@ -110,11 +111,14 @@ dispatch(FILE *f, struct frame *frame, struct code **code)
 		return -1;
 	}
 
+	data_free(out);
+
 	return 0;
 
 error:
 
 	code_free(us);
+	data_free(out);
 
 	return -1;
 }

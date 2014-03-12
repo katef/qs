@@ -2,7 +2,7 @@
 #define EVAL_H
 
 int
-eval_clone(const struct code *code, struct data **out);
+eval(struct code **code, struct data **data);
 
 #endif
 
