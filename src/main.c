@@ -158,9 +158,7 @@ main(int argc, char *argv[])
 		goto error;
 	}
 
-	/* TODO: retrieve $? */
-
-	return 0;
+	return status;
 
 error:
 
