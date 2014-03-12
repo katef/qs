@@ -1,18 +1,14 @@
-#include <sys/types.h>
-#include <sys/wait.h>
-
 #include <assert.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
-#include <unistd.h>
-
 #include "debug.h"
 #include "data.h"
 #include "code.h"
-#include "exec.h"
-#include "builtin.h"
+#include "args.h"
+#include "frame.h"
 
 int
 count_args(const struct data *data)
@@ -53,36 +49,52 @@ make_args(const struct data *data, int n)
 	return args;
 }
 
-static void
-dump_argv(const char *name, char **argv)
+int
+set_args(struct frame *frame, char *args[])
+{
+	struct code *ci;
+	int i;
+
+	assert(frame != NULL);
+	assert(args != NULL);
+
+	ci = NULL;
+
+	for (i = 0; args[i] != NULL; i++) {
+		if (!code_data(&ci, frame, strlen(args[i]), args[i])) {
+			goto error;
+		}
+	}
+
+	if (!frame_set(frame, 1, "*", ci)) {
+		goto error;
+	}
+
+	return 0;
+
+error:
+
+	code_free(ci);
+
+	return -1;
+}
+
+int
+dump_args(const char *name, char *args[])
 {
 	int i;
 
 	assert(name != NULL);
-	assert(argv != NULL);
+	assert(args != NULL);
 
 	fprintf(stderr, "# %s [", name);
 
-	for (i = 0; argv[i] != NULL; i++) {
-		fprintf(stderr, " \"%s\"", argv[i]);
+	for (i = 0; args[i] != NULL; i++) {
+		fprintf(stderr, " \"%s\"", args[i]);
 	}
 
 	fprintf(stderr, " ]\n");
-}
 
-int
-exec_cmd(struct frame *f, int argc, char **argv)
-{
-	assert(f != NULL);
-
-	if (debug & DEBUG_EXEC) {
-		dump_argv("execv", argv);
-	}
-
-	assert(argc >= 1);
-	assert(argv != NULL);
-	assert(argv[0] != NULL);
-
-	return builtin(f, argc, argv);
+	return 0;
 }
 

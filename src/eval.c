@@ -8,9 +8,10 @@
 #include "var.h"
 #include "data.h"
 #include "code.h"
-#include "exec.h"
+#include "args.h"
 #include "eval.h"
 #include "frame.h"
+#include "builtin.h"
 
 /* push .s=NULL to data */
 static int
@@ -139,7 +140,8 @@ static int
 eval_exec(struct code *node, struct data **data)
 {
 	struct data *p, *next;
-	char **argv;
+	struct var *v;
+	char **args;
 	int argc;
 
 	assert(node != NULL);
@@ -152,64 +154,40 @@ eval_exec(struct code *node, struct data **data)
 		}
 	}
 
-	argc = count_args(*data);
+	/* TODO: run pre/post-command hook here (on *data) */
 
+	argc = count_args(*data);
 	if (argc == 0) {
 		goto done;
 	}
 
-	/* TODO: run pre/post-command hook here */
-
-	{
-		struct var *v;
-
-		p = *data;
-
-		assert(p != NULL);
-
-		v = frame_get(node->frame, strlen(p->s), p->s);
-		if (v != NULL) {
-			struct code *args;
-			struct code *a;
-
-			a = code_anon(&node->next, node->frame, v->code);
-			if (a == NULL) {
-				return -1;
-			}
-
-			args = NULL;
-
-			/* TODO: make a data-to-code conversion thing? doesn't feel good */
-			/* XXX: merge with code to build args in <populate>. so we do want to make argv[] */
-			for (p = p->next; p->s != NULL; p = p->next) {
-				if (p == NULL) {
-					errno = 0;
-					return -1;
-				}
-
-				if (!code_data(&args, node->frame, strlen(p->s), p->s)) {
-					return -1;
-				}
-			}
-
-			assert(a->type == CODE_ANON);
-
-			if (!frame_set(a->frame, 1, "*", args)) {
-				return -1;
-			}
-
-			goto done;
-		}
+	args = make_args(*data, argc + 1);
+	if (args == NULL) {
+		return -1;
 	}
 
-	argv = make_args(*data, argc + 1);
-	if (argv == NULL) {
-		return -1;
+	v = frame_get(node->frame, strlen(args[0]), args[0]);
+	if (v != NULL) {
+		if (!code_anon(&node->next, node->frame, v->code)) {
+			free(args);
+			return -1;
+		}
+
+		if (-1 == set_args(node->frame, args + 1)) {
+			free(args);
+			return -1;
+		}
+
+		goto done;
 	}
 
 	errno = 0;
 
-	status = exec_cmd(node->frame, argc, argv);
+	if (debug & DEBUG_EXEC) {
+		dump_args("execv", args);
+	}
+
+	status = builtin(node->frame, argc, args);
 
 	if (status == -1 && errno != 0) {
 		goto error;
@@ -232,9 +210,9 @@ done:
 
 error:
 
-	perror(argv[0]);
+	perror(args[0]);
 
-	free(argv);
+	free(args);
 
 	return -1;
 }

@@ -13,6 +13,7 @@
 #include "frame.h"
 #include "parser.h"
 #include "eval.h"
+#include "args.h"
 
 unsigned debug;
 
@@ -82,14 +83,21 @@ populate(struct frame *frame)
 }
 
 static int
-dispatch(FILE *f, struct frame *frame, struct code **code)
+dispatch(FILE *f, struct frame *frame, char *args[], struct code **code)
 {
 	const struct data *p;
 	struct data *out;
-	struct code *us;
+	struct code *ci;
 
 	assert(f != NULL);
+	assert(args != NULL);
 	assert(code != NULL);
+
+	ci = NULL;
+
+	if (-1 == set_args(frame, args)) {
+		return -1;
+	}
 
 	out = NULL;
 
@@ -97,17 +105,19 @@ dispatch(FILE *f, struct frame *frame, struct code **code)
 		return -1;
 	}
 
-	us = NULL;
+	assert(*code == NULL);
+
+	ci = NULL;
 
 	for (p = out; p != NULL; p = p->next) {
 		assert(p->s != NULL);
 
-		if (!code_data(&us, frame, strlen(p->s), p->s)) {
+		if (!code_data(&ci, frame, strlen(p->s), p->s)) {
 			goto error;
 		}
 	}
 
-	if (!frame_set(frame, 1, "_", us)) {
+	if (!frame_set(frame, 1, "_", ci)) {
 		return -1;
 	}
 
@@ -117,7 +127,7 @@ dispatch(FILE *f, struct frame *frame, struct code **code)
 
 error:
 
-	code_free(us);
+	code_free(ci);
 	data_free(out);
 
 	return -1;
@@ -153,7 +163,7 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (-1 == parse(&l, populate, dispatch, argc, argv)) {
+	if (-1 == parse(&l, populate, dispatch, argv)) {
 		perror("parse");
 		goto error;
 	}
