@@ -432,7 +432,7 @@ eval(struct code **code, struct data **data)
 int
 eval_clone(const struct code *code, struct data **out)
 {
-	struct code *code_new, **code_tail;
+	struct code *code_new;
 
 	assert(out != NULL);
 
@@ -440,8 +440,7 @@ eval_clone(const struct code *code, struct data **out)
 	*out      = NULL;
 
 /* TODO: could DRY by pushing CODE_ANON here instead */
-	code_tail = code_clone(&code_new, code);
-	if (code_tail == NULL) {
+	if (!code_clone(&code_new, code)) {
 		goto error;
 	}
 
