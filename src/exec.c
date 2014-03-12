@@ -22,6 +22,7 @@ count_args(const struct data *data)
 
 	for (i = 0, p = data; p->s != NULL; p = p->next, i++) {
 		if (p == NULL) {
+			errno = 0;
 			return -1;
 		}
 	}
