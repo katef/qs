@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200112L
+
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -171,6 +173,54 @@ builtin_spawn(struct frame *f, int argc, char *const *argv)
 	}
 }
 
+static int
+builtin_getenv(struct frame *f, int argc, char *const *argv)
+{
+	const char *s;
+
+	assert(f != NULL);
+	assert(argc >= 1);
+	assert(argv != NULL);
+
+	if (argc != 2) {
+		fprintf(stderr, "usage: getenv <var>\n");
+		return 1;
+	}
+
+	(void) f;
+
+	s = getenv(argv[1]);
+	if (s == NULL) {
+		return 1;
+	}
+
+	fprintf(stdout, "%s\n", s);
+
+	return 0;
+}
+
+static int
+builtin_setenv(struct frame *f, int argc, char *const *argv)
+{
+	assert(f != NULL);
+	assert(argc >= 1);
+	assert(argv != NULL);
+
+	if (argc != 3) {
+		fprintf(stderr, "usage: setenv <var> <value>\n");
+		return 1;
+	}
+
+	(void) f;
+
+	if (-1 == setenv(argv[1], argv[2], 1)) {
+		perror("setenv");
+		return 1;
+	}
+
+	return 0;
+}
+
 int
 builtin(struct frame *f, int argc, char *const *argv)
 {
@@ -180,11 +230,13 @@ builtin(struct frame *f, int argc, char *const *argv)
 		const char *name;
 		int (*f)(struct frame *f, int, char *const *);
 	} a[] = {
-		{ "cd",    builtin_cd    },
-		{ "exec",  builtin_exec  },
-		{ "wait",  builtin_wait  },
-		{ "fork",  builtin_fork  },
-		{ "spawn", builtin_spawn }
+		{ "cd",     builtin_cd     },
+		{ "exec",   builtin_exec   },
+		{ "wait",   builtin_wait   },
+		{ "fork",   builtin_fork   },
+		{ "spawn",  builtin_spawn  },
+		{ "getenv", builtin_getenv },
+		{ "setenv", builtin_setenv }
 	};
 
 	if (argc < 1) {
