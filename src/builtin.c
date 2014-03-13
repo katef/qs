@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -58,6 +59,50 @@ builtin_exec(struct frame *f, int argc, char *const *argv)
 	/* TODO: hook on export for setenv here */
 
 	(void) execv(argv[0], argv);
+
+	perror(argv[0]);
+
+	return -1;
+}
+
+static int
+builtin_exit(struct frame *f, int argc, char *const *argv)
+{
+	char *e;
+	long r;
+
+	assert(f != NULL);
+	assert(argc >= 1);
+	assert(argv != NULL);
+
+	if (argc != 2) {
+		fprintf(stderr, "usage: exit <status>\n");
+		return 1;
+	}
+
+	errno = 0;
+
+	r = strtol(argv[1], &e, 10);
+
+	if (r < INT_MIN || r > INT_MAX) {
+		errno = ERANGE;
+		r = LONG_MIN;
+	}
+
+	if ((r == LONG_MIN || r == LONG_MAX) && errno != 0) {
+		perror("exit");
+		return 1;
+	}
+
+	if (*e != '\0') {
+		errno = EINVAL;
+		perror("exit");
+		return 1;
+	}
+
+done:
+
+	exit(r);
 
 	perror(argv[0]);
 
@@ -199,6 +244,7 @@ builtin(struct frame *f, int argc, char *const *argv)
 	} a[] = {
 		{ "cd",     builtin_cd     },
 		{ "exec",   builtin_exec   },
+		{ "exit",   builtin_exit   },
 		{ "wait",   builtin_wait   },
 		{ "fork",   builtin_fork   },
 		{ "spawn",  builtin_spawn  },
