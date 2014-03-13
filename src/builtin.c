@@ -100,8 +100,6 @@ builtin_exit(struct frame *f, int argc, char *const *argv)
 		return 1;
 	}
 
-done:
-
 	exit(r);
 
 	perror(argv[0]);
