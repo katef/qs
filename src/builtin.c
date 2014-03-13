@@ -12,6 +12,7 @@
 #include "code.h"
 #include "data.h"
 #include "frame.h"
+#include "status.h"
 #include "builtin.h"
 
 /*
@@ -68,7 +69,6 @@ builtin_wait(struct frame *f, int argc, char *const *argv)
 {
 	int status;
 	pid_t pid;
-	int r;
 
 	assert(f != NULL);
 	assert(argc >= 1);
@@ -91,19 +91,19 @@ builtin_wait(struct frame *f, int argc, char *const *argv)
 		return -1;
 	}
 
-	if (!WIFEXITED(status)) {
+	if (WIFEXITED(status)) {
+		status_exit(WEXITSTATUS(status));
+		return 0;
+	}
+
+	if (WIFSIGNALED(status)) {
+		status_sig(WTERMSIG(status));
 		/* TODO: call a hook */
-		/* XXX: how to set $? here? */
-		return 1;
+		return 0;
 	}
 
-	r = WEXITSTATUS(status);
-
-	if (debug & DEBUG_EXEC) {
-		fprintf(stderr, "# $?=%d\n", r);
-	}
-
-	return r;
+	errno = EINVAL;
+	return -1;
 }
 
 static int
@@ -171,6 +171,23 @@ builtin_spawn(struct frame *f, int argc, char *const *argv)
 	}
 }
 
+static int
+builtin_status(struct frame *f, int argc, char *const *argv)
+{
+	assert(f != NULL);
+	assert(argc >= 1);
+	assert(argv != NULL);
+
+	if (argc != 1) {
+		fprintf(stderr, "usage: status\n");
+		return 1;
+	}
+
+	(void) f;
+
+	return status_print(stdout);
+}
+
 int
 builtin(struct frame *f, int argc, char *const *argv)
 {
@@ -184,7 +201,8 @@ builtin(struct frame *f, int argc, char *const *argv)
 		{ "exec",   builtin_exec   },
 		{ "wait",   builtin_wait   },
 		{ "fork",   builtin_fork   },
-		{ "spawn",  builtin_spawn  }
+		{ "spawn",  builtin_spawn  },
+		{ "status", builtin_status }
 	};
 
 	if (argc < 1) {

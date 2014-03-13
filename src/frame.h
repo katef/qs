@@ -6,8 +6,6 @@ struct frame {
 	struct frame *parent;
 };
 
-extern int status;
-
 struct var **
 frame_push(struct frame **f);
 

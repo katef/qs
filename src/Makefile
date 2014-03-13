@@ -17,6 +17,7 @@ OBJS += code.o
 OBJS += data.o
 OBJS += eval.o
 OBJS += args.o
+OBJS += status.o
 OBJS += builtin.o
 
 qs: $(OBJS)

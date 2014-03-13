@@ -12,6 +12,7 @@
 #include "data.h"
 #include "frame.h"
 #include "parser.h"
+#include "status.h"
 #include "eval.h"
 #include "args.h"
 
@@ -168,7 +169,7 @@ main(int argc, char *argv[])
 		goto error;
 	}
 
-	return status;
+	return status.r;
 
 error:
 

@@ -11,6 +11,7 @@
 #include "args.h"
 #include "eval.h"
 #include "frame.h"
+#include "status.h"
 #include "builtin.h"
 
 /* push .s=NULL to data */
@@ -91,7 +92,7 @@ eval_not(struct code *node, struct data **data)
 	(void) node;
 	(void) data;
 
-	status = !status;
+	status_exit(!status.r);
 
 	return 0;
 }
@@ -187,9 +188,9 @@ eval_exec(struct code *node, struct data **data)
 		dump_args("execv", args);
 	}
 
-	status = builtin(node->frame, argc, args);
+	status_exit(builtin(node->frame, argc, args));
 
-	if (status == -1 && errno != 0) {
+	if (status.r == -1 && errno != 0) {
 		goto error;
 	}
 
@@ -217,7 +218,7 @@ error:
 	return -1;
 }
 
-/* TODO: explain what happens here: status is the predicate, CODE_ANON is a block to call */
+/* TODO: explain what happens here: status.r is the predicate, CODE_ANON is a block to call */
 static int
 eval_if(struct code *node, struct data **data)
 {
@@ -244,7 +245,7 @@ eval_if(struct code *node, struct data **data)
 	 * discarded here.
 	 */
 
-	if (status != EXIT_SUCCESS) {
+	if (status.r != EXIT_SUCCESS) {
 		if (debug & DEBUG_EVAL) {
 			fprintf(stderr, "discarding anon\n");
 		}

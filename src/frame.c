@@ -15,8 +15,6 @@
 #include "frame.h"
 #include "eval.h"
 
-int status; /* this is $? */
-
 struct var **
 frame_push(struct frame **f)
 {
@@ -92,25 +90,6 @@ frame_get(const struct frame *f, size_t n, const char *name)
 	/* $.x is explicitly local */
 	if (n > 0 && name[0] == '.') {
 		return var_get(f->var, n - 1, name + 1);
-	}
-
-	/* special case for $? */
-	if (f->parent == NULL && (n == 1 && 0 == memcmp(name, "?", n))) {
-		static char s[32];
-
-		v = var_get(f->var, n, name);
-		if (v == NULL || v->code == NULL || v->code->type != CODE_DATA) {
-			errno = EINVAL;
-			return NULL;
-		}
-
-		if (-1 == sprintf(s, "%d", status)) {
-			return NULL;
-		}
-
-		v->code->u.s = s;
-
-		return v;
 	}
 
 	for (p = f; p != NULL; p = p->parent) {
