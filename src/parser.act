@@ -154,7 +154,7 @@
 		struct code **tail;
 
 		assert(@s.s != NULL && @s.e != NULL);
-		assert(@s.e > @s.s);
+		assert(@s.e >= @s.s);
 
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<push-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
