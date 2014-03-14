@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "debug.h"
 #include "code.h"
 #include "var.h"
 
@@ -40,6 +41,11 @@ var_replace(struct var *v, struct code *code)
 	code_free(curr->code);
 */
 
+	if (debug & DEBUG_VAR) {
+		fprintf(stderr, "$%s replace: ", v->name);
+		code_dump(stderr, code);
+	}
+
 	v->code = code;
 }
 
@@ -58,6 +64,11 @@ var_set(struct var **v, size_t n, const char *name,
 		return curr;
 	}
 
+	if (debug & DEBUG_VAR) {
+		fprintf(stderr, "$%.*s set: ", (int) n, name);
+		code_dump(stderr, code);
+	}
+
 	return var_new(v, n, name, code);
 }
 
@@ -71,9 +82,16 @@ var_get(struct var *v, size_t n, const char *name)
 			continue;
 		}
 
-		if (0 == memcmp(p->name, name, n)) {
-			return p;
+		if (0 != memcmp(p->name, name, n)) {
+			continue;
 		}
+
+		if (debug & DEBUG_VAR) {
+			fprintf(stderr, "$%.*s set: ", (int) n, name);
+			code_dump(stderr, p->code);
+		}
+
+		return p;
 	}
 
 	return NULL;
