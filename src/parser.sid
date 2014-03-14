@@ -32,7 +32,6 @@
 %productions%
 
 	<dispatch>: (:code &) -> ();
-	<populate>;
 
 	<var-top>:  () -> (:string);
 
@@ -244,7 +243,6 @@
 
 	] = {
 		<frame-push>;
-		<populate>;
 		{
 			global-exprs;
 		||

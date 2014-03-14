@@ -45,45 +45,6 @@ debug_flags(const char *s)
 }
 
 static int
-populate(struct frame *frame)
-{
-	size_t i;
-	static char pid[32];
-
-	struct {
-		const char *name;
-		const char *s;
-	} a[] = {
-		{ "?", "0"  },
-		{ "_", NULL },
-		{ "$", pid  }, /* TODO: getpid()  */
-		{ "^", "\t" }
-	};
-
-	assert(frame != NULL);
-
-	sprintf(pid,  "%ld", (long) getpid()); /* XXX */
-
-	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		struct code *code;
-
-		code = NULL;
-
-		if (a[i].s != NULL) {
-			if (!code_data(&code, frame, strlen(a[i].s), a[i].s)) {
-				return -1;
-			}
-		}
-
-		if (!frame_set(frame, strlen(a[i].name), a[i].name, code)) {
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-static int
 dispatch(FILE *f, struct frame *frame, char *args[], struct code **code)
 {
 	const struct data *p;
@@ -164,7 +125,7 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (-1 == parse(&l, populate, dispatch, argv)) {
+	if (-1 == parse(&l, dispatch, argv)) {
 		perror("parse");
 		goto error;
 	}

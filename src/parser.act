@@ -36,7 +36,6 @@
 		enum lex_type type, save;
 		struct frame *frame;
 		int (*dispatch)(FILE *, struct frame *, char *args[], struct code **);
-		int (*populate)(struct frame *);
 		char **args;
 	};
 
@@ -60,7 +59,6 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*populate)(struct frame *),
 		int (*dispatch)(FILE *, struct frame *, char *args[], struct code **),
 		char *args[]);
 
@@ -109,18 +107,6 @@
 
 		/* if .dispatch() modifies @c then @c should be empty if successful */
 		assert(@c == NULL);
-	@};
-
-	<populate>: () -> () = @{
-		assert(act_state->frame != NULL);
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<populate>\n");
-		}
-
-		if (-1 == act_state->populate(act_state->frame)) {
-			@!;
-		}
 	@};
 
 	<var-top>:  () -> (s :string) = @{
@@ -264,7 +250,6 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*populate)(struct frame *),
 		int (*dispatch)(FILE *, struct frame *, char *args[], struct code **),
 		char *args[])
 	{
@@ -272,11 +257,9 @@
 
 		assert(lex_state != NULL);
 		assert(dispatch != NULL);
-		assert(populate != NULL);
 		assert(args != NULL);
 
 		act_state->dispatch = dispatch;
-		act_state->populate = populate;
 
 		act_state->args  = args;
 		act_state->frame = NULL;
