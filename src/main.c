@@ -132,11 +132,11 @@ main(int argc, char *argv[])
 		goto error;
 	}
 
-	return status.r;
+	proc_exit(status.r);
 
 error:
 
-	return 1;
+	proc_exit(1);
 
 usage:
 

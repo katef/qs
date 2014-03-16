@@ -12,6 +12,7 @@
 #include "debug.h"
 #include "code.h"
 #include "data.h"
+#include "proc.h"
 #include "frame.h"
 #include "status.h"
 #include "builtin.h"
@@ -58,7 +59,7 @@ builtin_exec(struct frame *f, int argc, char *const *argv)
 
 	/* TODO: hook on export for setenv here */
 
-	(void) execv(argv[0], argv);
+	(void) proc_exec(argv[0], argv);
 
 	perror(argv[0]);
 
@@ -100,17 +101,13 @@ builtin_exit(struct frame *f, int argc, char *const *argv)
 		return 1;
 	}
 
-	exit(r);
-
-	perror(argv[0]);
-
+	proc_exit(r);
 	return -1;
 }
 
 static int
 builtin_wait(struct frame *f, int argc, char *const *argv)
 {
-	int status;
 	pid_t pid;
 
 	assert(f != NULL);
@@ -129,24 +126,12 @@ builtin_wait(struct frame *f, int argc, char *const *argv)
 	/* TODO: strtol and some error-checking */
 	pid = atol(argv[1]);
 
-	(void) execv(argv[0], argv);
-	if (-1 == waitpid(pid, &status, 0)) {
-		return -1;
+	if (-1 == proc_wait(pid)) {
+		fprintf(stderr, "wait %s: %s\n", argv[1], strerror(errno));
+		return 1;
 	}
 
-	if (WIFEXITED(status)) {
-		status_exit(WEXITSTATUS(status));
-		return 0;
-	}
-
-	if (WIFSIGNALED(status)) {
-		status_sig(WTERMSIG(status));
-		/* TODO: call a hook */
-		return 0;
-	}
-
-	errno = EINVAL;
-	return -1;
+	return 0;
 }
 
 static int
@@ -167,19 +152,26 @@ builtin_fork(struct frame *f, int argc, char *const *argv)
 
 	/* TODO: support argc=1 for various rfork-style flags */
 
-	pid = fork();
-	switch (pid) {
-	case -1:
-		return -1;
+	pid = proc_rfork(0);
 
-	case 0:
-		/* TODO: store $pid = getpid() */
+	return (int) pid; /* XXX: pid_t may be larger than an int */
+}
 
-		return 0;
+static int
+builtin_status(struct frame *f, int argc, char *const *argv)
+{
+	assert(f != NULL);
+	assert(argc >= 1);
+	assert(argv != NULL);
 
-	default:
-		return pid;
+	if (argc != 1) {
+		fprintf(stderr, "usage: status\n");
+		return 1;
 	}
+
+	(void) f;
+
+	return status_print(stdout);
 }
 
 /* TODO: eventually to be replaced by a shell function */
@@ -214,23 +206,6 @@ builtin_spawn(struct frame *f, int argc, char *const *argv)
 	}
 }
 
-static int
-builtin_status(struct frame *f, int argc, char *const *argv)
-{
-	assert(f != NULL);
-	assert(argc >= 1);
-	assert(argv != NULL);
-
-	if (argc != 1) {
-		fprintf(stderr, "usage: status\n");
-		return 1;
-	}
-
-	(void) f;
-
-	return status_print(stdout);
-}
-
 int
 builtin(struct frame *f, int argc, char *const *argv)
 {
@@ -245,8 +220,8 @@ builtin(struct frame *f, int argc, char *const *argv)
 		{ "exit",   builtin_exit   },
 		{ "wait",   builtin_wait   },
 		{ "fork",   builtin_fork   },
-		{ "spawn",  builtin_spawn  },
-		{ "status", builtin_status }
+		{ "status", builtin_status },
+		{ "spawn",  builtin_spawn  }
 	};
 
 	if (argc < 1) {
@@ -260,11 +235,18 @@ builtin(struct frame *f, int argc, char *const *argv)
 
 	/* TODO: bsearch */
 	for (i = 0; i < sizeof a / sizeof *a; i++) {
-		if (0 == strcmp(argv[0], a[i].name)) {
-			return a[i].f(f, argc, argv);
+		int r;
+
+		if (0 != strcmp(argv[0], a[i].name)) {
+			continue;
 		}
+
+		r = a[i].f(f, argc, argv);
+		status_exit(r);
+
+		return 0;
 	}
 
-	return builtin_spawn(f, argc, argv);
+	return 1;
 }
 
