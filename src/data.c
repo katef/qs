@@ -66,49 +66,6 @@ data_free(struct data *data)
 	}
 }
 
-struct data **
-data_clone(struct data **dst, const struct data *src)
-{
-	const struct data *p;
-	struct data **q, *end;
-
-	assert(dst != NULL);
-	assert(*dst == NULL);
-
-	end = *dst;
-
-fprintf(stderr, "clone src: ");
-data_dump(stderr, src);
-	for (p = src, q = dst; p != NULL; p = p->next) {
-		*q = malloc(sizeof **q);
-		if (*q == NULL) {
-			goto error;
-		}
-
-		if (debug & DEBUG_STACK) {
-			fprintf(stderr, "data -> %s\n", p->s ? p->s : "NULL");
-		}
-
-		/* note .s still points into src */
-		(*q)->s = p->s;
-
-		q = &(*q)->next;
-	}
-fprintf(stderr, "clone dst: ");
-data_dump(stderr, *dst);
-
-	*q = end;
-
-	return q;
-
-error:
-
-	data_free(*dst);
-	*dst = end;
-
-	return NULL;
-}
-
 int
 data_dump(FILE *f, const struct data *data)
 {
