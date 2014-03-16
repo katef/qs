@@ -10,6 +10,7 @@
 #include "code.h"
 #include "args.h"
 #include "eval.h"
+#include "proc.h"
 #include "frame.h"
 #include "status.h"
 #include "builtin.h"
@@ -142,8 +143,9 @@ eval_exec(struct code *node, struct data **data)
 {
 	struct data *p, *next;
 	struct var *v;
-	char **args;
+	pid_t pid;
 	int argc;
+	char **args;
 
 	assert(node != NULL);
 	assert(data != NULL);
@@ -167,6 +169,7 @@ eval_exec(struct code *node, struct data **data)
 		return -1;
 	}
 
+	/* variable */
 	v = frame_get(node->frame, strlen(args[0]), args[0]);
 	if (v != NULL) {
 		if (!code_anon(&node->next, node->frame, v->code)) {
@@ -182,16 +185,32 @@ eval_exec(struct code *node, struct data **data)
 		goto done;
 	}
 
-	errno = 0;
-
-	if (debug & DEBUG_EXEC) {
-		dump_args("execv", args);
+	/* builtin */
+	switch (builtin(node->frame, argc, args)) {
+	case -1: goto error;
+	case  0: goto done;
+	case  1: break;
 	}
 
-	status_exit(builtin(node->frame, argc, args));
-
-	if (status.r == -1 && errno != 0) {
+	/* program */
+	pid = proc_rfork(0);
+	switch (pid) {
+	case -1:
 		goto error;
+
+	case 0:
+		assert(argc >= 1);
+		assert(args != NULL);
+
+		(void) proc_exec(args[0], args);
+		abort();
+
+	default:
+		if (-1 == proc_wait(pid)) {
+			return -1;
+		}
+
+		break;
 	}
 
 done:

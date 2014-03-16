@@ -174,38 +174,6 @@ builtin_status(struct frame *f, int argc, char *const *argv)
 	return status_print(stdout);
 }
 
-/* TODO: eventually to be replaced by a shell function */
-static int
-builtin_spawn(struct frame *f, int argc, char *const *argv)
-{
-	char *fork_argv[] = { "fork", NULL };
-	char *wait_argv[] = { "wait", NULL, NULL };
-	pid_t pid;
-	char s[128];
-
-	assert(f != NULL);
-	assert(argc >= 1);
-	assert(argv != NULL);
-
-	pid = builtin_fork(f, 1, fork_argv);
-	switch (pid) {
-	case -1:
-		return -1;
-
-	case 0:
-		(void) builtin_exec(f, argc, argv);
-
-		exit(errno);
-
-	default:
-		sprintf(s, "%ld", (long) pid); /* XXX */
-
-		wait_argv[1] = s;
-
-		return builtin_wait(f, 2, wait_argv);
-	}
-}
-
 int
 builtin(struct frame *f, int argc, char *const *argv)
 {
@@ -220,8 +188,7 @@ builtin(struct frame *f, int argc, char *const *argv)
 		{ "exit",   builtin_exit   },
 		{ "wait",   builtin_wait   },
 		{ "fork",   builtin_fork   },
-		{ "status", builtin_status },
-		{ "spawn",  builtin_spawn  }
+		{ "status", builtin_status }
 	};
 
 	if (argc < 1) {
