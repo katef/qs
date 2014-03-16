@@ -80,7 +80,7 @@ error:
 }
 
 int
-dump_args(const char *name, char *args[])
+dump_args(const char *name, char *const args[])
 {
 	int i;
 

@@ -11,7 +11,7 @@ int
 set_args(struct frame *frame, char *args[]);
 
 int
-dump_args(const char *name, char *args[]);
+dump_args(const char *name, char *const args[]);
 
 #endif
 
