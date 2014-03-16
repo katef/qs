@@ -8,6 +8,7 @@
 
 #include "debug.h"
 #include "lex.h"
+#include "proc.h"
 #include "code.h"
 #include "data.h"
 #include "frame.h"

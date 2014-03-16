@@ -1,6 +1,9 @@
 #ifndef PROC_H
 #define PROC_H
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 enum rfork {
 	RFORK_DETACH = 1 << 0
 };
