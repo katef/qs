@@ -128,6 +128,7 @@
 
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
+	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
 	<type-exec>: () -> (t :type) = @{ @t = CODE_EXEC; @};
 	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};

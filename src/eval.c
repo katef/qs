@@ -1,8 +1,12 @@
+#define _POSIX_SOURCE
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+
+#include <unistd.h>
 
 #include "debug.h"
 #include "var.h"
@@ -146,10 +150,12 @@ eval_exec(struct code *node, struct data **data)
 	pid_t pid;
 	int argc;
 	char **args;
+	FILE *tick;
+	int fd[2];
 
 	assert(node != NULL);
 	assert(data != NULL);
-	assert(node->type == CODE_EXEC);
+	assert(node->type == CODE_EXEC || node->type == CODE_TICK);
 
 	if (debug & DEBUG_STACK) {
 		for (p = *data; p->s != NULL; p = p->next) {
@@ -192,6 +198,14 @@ eval_exec(struct code *node, struct data **data)
 	case  1: break;
 	}
 
+	/* TODO: set stdio pipes here, before command execution */
+	/* TODO: maybe pass function pointers for before/after pipe stuff */
+	if (node->type == CODE_TICK) {
+		if (-1 == pipe(fd)) {
+			goto error;
+		}
+	}
+
 	/* program */
 	pid = proc_rfork(0);
 	switch (pid) {
@@ -202,15 +216,111 @@ eval_exec(struct code *node, struct data **data)
 		assert(argc >= 1);
 		assert(args != NULL);
 
+		if (node->type == CODE_TICK) {
+			close(fd[0]);
+
+			if (-1 == dup2(fd[1], fileno(stdout))) {
+				goto error;
+			}
+		}
+
 		(void) proc_exec(args[0], args);
 		abort();
 
 	default:
-		if (-1 == proc_wait(pid)) {
-			return -1;
+		break;
+	}
+
+#ifdef __GNUC__
+	tick = NULL;
+#endif
+
+	if (node->type == CODE_TICK) {
+		ssize_t r;
+		char c;
+
+		close(fd[1]);
+
+		tick = tmpfile();
+		if (tick == NULL) {
+			goto error;
 		}
 
-		break;
+		/* XXX: read a block at a time */
+		/* XXX: centralise fcat() */
+		while (r = read(fd[0], &c, 1), r == 1) {
+			if (EOF == fputc(c, tick)) {
+				goto error;
+			}
+		}
+
+		if (r == -1) {
+			goto error;
+		}
+
+		close(fd[0]);
+	}
+
+	if (-1 == proc_wait(pid)) {
+/* TODO: lots of cleanup on errors all over this function. split it up */
+		goto error;
+	}
+
+	/* if this is CODE_TICK, rewind() tmpfile(), fread() and push to *data stack */
+	/* maybe ` can be implemented in terms of pipes in general */
+	if (node->type == CODE_TICK) {
+		char *s, *e;
+		long l;
+		int c;
+
+		l = ftell(tick);
+		if (l == -1) {
+			goto error;
+		}
+
+		rewind(tick);
+
+		s = malloc(l);
+		if (s == NULL) {
+			goto error;
+		}
+
+		for (e = s; c = fgetc(tick), c != EOF; e++) {
+			*e = c;
+		}
+
+		if (ferror(tick)) {
+			goto error;
+		}
+
+		fclose(tick);
+
+		/* TODO: tokenise by $^ here, e.g. { echo `date | wc } */
+		/* TODO: can tokenisation be shared with the lexer's guts exposed? */
+		/* TODO: the lexer should use $^ */
+
+		if (debug & DEBUG_VAR) {
+			fprintf(stderr, "` read: %.*s\n", (int) l, s);
+		}
+
+		/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
+		for (p = *data; p->s != NULL; p = next) {
+			assert(p != NULL);
+
+			next = p->next;
+			free(p);
+		}
+
+		*data = p->next;
+		free(p);
+
+		if (!data_push(data, l, s)) {
+			goto error;
+		}
+
+		free(s);
+
+		return 0;
 	}
 
 done:
@@ -293,8 +403,6 @@ eval_set(struct code *node, struct data **data)
 	assert(node->type == CODE_SET);
 
 	(void) node;
-	(void) a;
-	(void) b;
 
 	if (node->next == NULL || *data == NULL) {
 		errno = 0;
@@ -407,6 +515,7 @@ eval(struct code **code, struct data **data)
 		case CODE_NOT:  r = eval_not (node, data); break;
 		case CODE_IF:   r = eval_if  (node, data); break;
 		case CODE_CALL: r = eval_call(node, data); break;
+		case CODE_TICK: r = eval_exec(node, data); break;
 		case CODE_EXEC: r = eval_exec(node, data); break;
 		case CODE_SET:  r = eval_set (node, data); break;
 

@@ -12,7 +12,7 @@ enum lex_type {
 	tok_bg     = '&',
 	tok_equ    = '=',
 	tok_dot    = '.',
-	tok_back   = '`',
+	tok_tick   = '`',
 	tok_var    = '$',
 	tok_join   = '^',
 	tok_pipe   = '|',

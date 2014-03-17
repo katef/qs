@@ -14,6 +14,7 @@ code_name(enum code_type type)
 	case CODE_ANON: return "anon";
 	case CODE_DATA: return "data";
 	case CODE_NOT:  return "not";
+	case CODE_TICK: return "tick";
 	case CODE_CALL: return "call";
 	case CODE_EXEC: return "exec";
 	case CODE_IF:   return "if";

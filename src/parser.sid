@@ -16,7 +16,7 @@
 	bg;
 	equ;
 	!dot;
-	!back;
+	tick;
 	pipe;
 	obrace;
 	cbrace;
@@ -39,6 +39,7 @@
 
 	<type-null>: () -> (:type);
 	<type-not>:  () -> (:type);
+	<type-tick>: () -> (:type);
 	<type-call>: () -> (:type);
 	<type-exec>: () -> (:type);
 	<type-if>:   () -> (:type);
@@ -58,21 +59,28 @@
 	<err-expected-sep>;
 	<err-syntax>: (:code) -> ();
 
-	exprs: (:code &) -> ();
+	arg:        (:code &) -> ();
+	exprs:      (:code &) -> ();
+	tick-value: (:code &) -> ();
 
-	arg: (c :code &) -> () = {
-	/* TODO: || backtick */
-		s = str;
-		<push-data>(&c, s);
-	||
-		s = var;
-		t = <type-call>;
-		<push-code>(&c, t);
-		<push-data>(&c, s);
-	};
+	list: (c :code &) -> () [
 
-	list: (c :code &) -> () = {
-		arg(&c);
+		::arg: (c :code &) -> () = {
+			s = str;
+			<push-data>(&c, s);
+		||
+			s = var;
+			t = <type-call>;
+			<push-code>(&c, t);
+			<push-data>(&c, s);
+		};
+
+	] = {
+		{
+			arg(&c);
+		||
+			tick-value(&c);
+		};
 
 		{
 			list(&c);
@@ -106,6 +114,30 @@
 			arg(&c);
 		};
 
+		::tick-value: (c :code &) -> () = {
+			tick;
+
+			t1 = <type-tick>;
+			<push-code>(&c, t1);
+
+			{
+				arg(&c);
+
+				t2 = <type-null>;
+				<push-code>(&c, t2);
+			||
+				ci = <empty>;
+				block(&ci);
+				<push-anon>(&c, ci);
+
+				t3 = <type-null>;
+				<push-code>(&c, t3);
+
+				/* XXX: would need to set up pipe for ` here, first. inner #exec are not dup2'd */
+				/* XXX: maybe best to have #exec take a u.pipe argument for dup2 */
+			};
+		};
+
 	] = {
 		ci = <empty>;
 
@@ -128,7 +160,11 @@
 		||
 			s = str;
 			equ;
-			value(&ci);
+			{
+				value(&ci);
+			||
+				tick-value(&ci);
+			};
 
 			<push-data>(&c, s);
 
