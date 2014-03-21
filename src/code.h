@@ -52,9 +52,6 @@ code_pop(struct code **head);
 void
 code_free(struct code *code);
 
-struct code **
-code_clone(struct code **dst, const struct code *src);
-
 int
 code_dump(FILE *f, const struct code *code);
 

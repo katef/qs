@@ -145,51 +145,6 @@ code_free(struct code *code)
 	}
 }
 
-struct code **
-code_clone(struct code **dst, const struct code *src)
-{
-	const struct code *p;
-	struct code **q, *end;
-
-	assert(dst != NULL);
-
-	end = *dst;
-
-	for (p = src, q = dst; p != NULL; p = p->next) {
-		*q = malloc(sizeof **q);
-		if (*q == NULL) {
-			goto error;
-		}
-
-		if (debug & DEBUG_STACK) {
-			fprintf(stderr, "code -> %s\n", code_name(p->type));
-		}
-
-		(*q)->type  = p->type;
-		(*q)->frame = p->frame;
-
-		/* note .u still points into src */
-		switch (p->type) {
-		case CODE_DATA: (*q)->u.s    = p->u.s;    break;
-		case CODE_ANON: (*q)->u.code = p->u.code; break;
-		default: ;
-		}
-
-		q = &(*q)->next;
-	}
-
-	*q = end;
-
-	return q;
-
-error:
-
-	code_free(*dst);
-	*dst = end;
-
-	return NULL;
-}
-
 static int
 code_dumpinline(FILE *f, const struct code *code)
 {
