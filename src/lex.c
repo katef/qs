@@ -57,11 +57,11 @@ lex_push(const char **p, const char **s, const char **e)
 	case '^':
 	case ';':
 	case '=':
+	case ',':
 	case '`':
-	case '{':
-	case '}':
-	case '(':
-	case ')':
+	case '{': case '}':
+	case '(': case ')':
+	case '[': case ']':
 		*s = *p;
 		*e = *s + 1;
 		(*p)++;

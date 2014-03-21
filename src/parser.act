@@ -14,11 +14,19 @@
 	frame  -> frame;
 	type   -> type;
 	code   -> code;
+	pipe   -> pipen;
+	fd     -> int;
 
 %header% @{
 
 	#include <assert.h>
+	#include <limits.h>
+	#include <string.h>
+	#include <stdlib.h>
 	#include <stdio.h>
+	#include <errno.h>
+
+	#include <unistd.h>
 
 	#include "debug.h"
 	#include "lex.h"
@@ -42,6 +50,7 @@
 	typedef struct act_string string;
 	typedef enum code_type type;
 	typedef struct code *code;
+	typedef struct pipe *pipen;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -115,13 +124,25 @@
 		}
 	@};
 
-	<empty>: () -> (c :code) = @{
+	<empty-code>: () -> (c :code) = @{
 		@c = NULL;
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<empty>\n");
+			fprintf(stderr, "<empty-code>\n");
 		}
 	@};
+
+	<empty-pipe>: () -> (p :pipe) = @{
+		@p = NULL;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<empty-pipe>\n");
+		}
+	@};
+
+	<stdin>:  () -> (fd :fd) = @{ @fd = STDIN_FILENO;  @};
+	<stdout>: () -> (fd :fd) = @{ @fd = STDOUT_FILENO; @};
+	<stderr>: () -> (fd :fd) = @{ @fd = STDERR_FILENO; @};
 
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
 	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
@@ -133,6 +154,64 @@
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
+
+	<make-fd>: (s :string) -> (fd :fd) = @{
+		char *s, *e;
+		long l;
+		size_t n;
+
+		n = @s.e - @s.s;
+
+		/* XXX: horrible */
+		s = malloc(n);
+		if (s == NULL) {
+			@!;
+		}
+
+		memcpy(s, @s.s, n);
+		s[n] = '\0';
+
+		/* TODO: centralise the strtol error handling */
+
+		l = strtol(s, &e, 10);
+
+		free(s);
+
+		if (l < INT_MIN || l > INT_MAX) {
+			errno = ERANGE;
+			l = LONG_MIN;
+		}
+
+		if ((l == LONG_MIN || l == LONG_MAX) && errno != 0) {
+			@!;
+		}
+
+		if (*e != '\0') {
+			errno = EINVAL;
+			@!;
+		}
+
+		@fd = l;
+	@};
+
+	<make-pipe>: (p :pipe &, m :fd, n :fd) -> () = @{
+		struct pipe *new;
+		int d[2];
+
+		d[0] = @m;
+		d[1] = @n;
+
+		(void) @p;
+		(void) new;
+		(void) d;
+
+		/* TODO:
+		new = pipe_new(@&p, PIPE_LTR, PIPE_NONE, d);
+		if (new == NULL) {
+			@!;
+		}
+		*/
+	@};
 
 	<push-anon>: (c :code &, ci :code) -> () = @{
 		struct code **tail;

@@ -4,6 +4,8 @@
 	!frame;
 	type;
 	code;
+	pipe;
+	fd;
 
 %terminals%
 
@@ -15,13 +17,13 @@
 	semi;
 	bg;
 	equ;
+	comma;
 	!dot;
 	tick;
-	pipe;
-	obrace;
-	cbrace;
-	oparen;
-	cparen;
+	bar;
+	obrace;  cbrace;
+	oparen;  cparen;
+	osquare; csquare;
 	or;
 	and;
 	!exec;
@@ -35,7 +37,12 @@
 
 	<var-top>:  () -> (:string);
 
-	<empty>: () -> (:code);
+	<empty-code>: () -> (:code);
+	<empty-pipe>: () -> (:pipe);
+
+	<stdin>:   () -> (:fd);
+	!<stdout>: () -> (:fd);
+	!<stderr>: () -> (:fd);
 
 	<type-null>: () -> (:type);
 	<type-ret>:  () -> (:type);
@@ -47,6 +54,9 @@
 	!<type-join>:() -> (:type);
 	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
+
+	<make-fd>:   (:string) -> (:fd);
+	<make-pipe>: (:pipe &, :fd, :fd) -> ();
 
 	<push-anon>: (:code &, :code)   -> ();
 	<push-data>: (:code &, :string) -> ();
@@ -64,7 +74,7 @@
 	exprs:      (:code &) -> ();
 	tick-value: (:code &) -> ();
 
-	list: (c :code &) -> () [
+	arg-list: (c :code &) -> () [
 
 		::arg: (c :code &) -> () = {
 			s = str;
@@ -84,7 +94,7 @@
 		};
 
 		{
-			list(&c);
+			arg-list(&c);
 		||
 			t = <type-null>;
 			<push-code>(&c, t);
@@ -107,7 +117,7 @@
 
 		value: (c :code &) -> () = {
 			oparen;
-			list(&c);
+			arg-list(&c);
 			cparen;
 		||
 			block(&c);
@@ -127,7 +137,7 @@
 				t2 = <type-null>;
 				<push-code>(&c, t2);
 			||
-				ci = <empty>;
+				ci = <empty-code>;
 
 				block(&ci);
 
@@ -145,7 +155,7 @@
 		};
 
 	] = {
-		ci = <empty>;
+		ci = <empty-code>;
 
 		/*
 		 * SID's parsing has single-token lookahead. This has the effect that
@@ -157,7 +167,7 @@
 		 */
 
 		{
-			list(&ci);
+			arg-list(&ci);
 
 			<push-stack>(&c, ci);
 
@@ -186,12 +196,55 @@
 		};
 	};
 
-	pipe-expr: (c :code &) -> () = {
+	pipe-expr: (c :code &, p :pipe &) -> () [
+
+		/* here I would use zones if the lexer supported it, and emit tok_fd */
+		redir: (p :pipe &) -> () = {
+			{
+				n = str;
+				equ;
+				m = str;
+
+				l = <make-fd>(n);
+				r = <make-fd>(m);
+			||
+				n = str;
+
+				l = <make-fd>(n);
+				r = <stdin>;
+			};
+
+			<make-pipe>(&p, l, r);
+		};
+
+		redir-list: (p :pipe &) -> () = {
+			redir(&p);
+
+			{
+				comma;
+				redir-list(&p);
+			||
+				$;
+			};
+		};
+
+	] = {
 		assign-expr(&c);
 
 		{
-			pipe;
-			pipe-expr(&c);
+			pi = <empty-pipe>;
+
+			bar;
+			{
+				osquare;
+				redir-list(&pi);
+				csquare;
+			||
+				$;
+			};
+
+			pipe-expr(&c, &pi);
+
 			t = <type-pipe>;
 			<push-code>(&c, t);
 		||
@@ -200,7 +253,9 @@
 	};
 
 	and-expr: (c :code &) -> () = {
-		pipe-expr(&c);
+		p = <empty-pipe>;
+
+		pipe-expr(&c, &p);
 
 		{
 			and;
@@ -208,7 +263,7 @@
 			t1 = <type-if>;
 			<push-code>(&c, t1);
 
-			ci = <empty>;
+			ci = <empty-code>;
 
 			and-expr(&ci);
 
@@ -233,7 +288,7 @@
 			t2 = <type-if>;
 			<push-code>(&c, t2);
 
-			ci = <empty>;
+			ci = <empty-code>;
 
 			or-expr(&ci);
 
@@ -281,7 +336,7 @@
 	script [
 
 		global-exprs = {
-			c = <empty>;
+			c = <empty-code>;
 
 			expr(&c);
 			sep;
