@@ -35,7 +35,7 @@
 		struct lex_tok t;
 		enum lex_type type, save;
 		struct frame *frame;
-		int (*dispatch)(FILE *, struct frame *, char *args[], struct code **);
+		int (*dispatch)(FILE *, struct frame *, char *args[], const struct code *);
 		char **args;
 	};
 
@@ -59,7 +59,7 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*dispatch)(FILE *, struct frame *, char *args[], struct code **),
+		int (*dispatch)(FILE *, struct frame *, char *args[], const struct code *),
 		char *args[]);
 
 @};
@@ -100,13 +100,10 @@
 			fprintf(stderr, "<dispatch>\n");
 		}
 
-		if (-1 == act_state->dispatch(stdout, act_state->frame, act_state->args, @&c)) {
+		if (-1 == act_state->dispatch(stdout, act_state->frame, act_state->args, @c)) {
 			code_free(@c);
 			@!;
 		}
-
-		/* if .dispatch() modifies @c then @c should be empty if successful */
-		assert(@c == NULL);
 	@};
 
 	<var-top>:  () -> (s :string) = @{
@@ -127,6 +124,7 @@
 	@};
 
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
+	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
@@ -251,7 +249,7 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*dispatch)(FILE *, struct frame *, char *args[], struct code **),
+		int (*dispatch)(FILE *, struct frame *, char *args[], const struct code *),
 		char *args[])
 	{
 		struct act_state a, *act_state = &a;

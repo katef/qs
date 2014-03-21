@@ -12,6 +12,7 @@ code_name(enum code_type type)
 	switch (type) {
 	case CODE_NULL: return "null";
 	case CODE_ANON: return "anon";
+	case CODE_RET:  return "ret";
 	case CODE_DATA: return "data";
 	case CODE_NOT:  return "not";
 	case CODE_TICK: return "tick";

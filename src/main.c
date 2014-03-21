@@ -48,7 +48,7 @@ debug_flags(const char *s)
 }
 
 static int
-dispatch(FILE *f, struct frame *frame, char *args[], struct code **code)
+dispatch(FILE *f, struct frame *frame, char *args[], const struct code *code)
 {
 	const struct data *p;
 	struct data *out;
@@ -56,21 +56,16 @@ dispatch(FILE *f, struct frame *frame, char *args[], struct code **code)
 
 	assert(f != NULL);
 	assert(args != NULL);
-	assert(code != NULL);
-
-	ci = NULL;
 
 	if (-1 == set_args(frame, args)) {
 		return -1;
 	}
 
-	out = NULL;
+	out  = NULL;
 
 	if (-1 == eval(code, &out)) {
 		return -1;
 	}
-
-	assert(*code == NULL);
 
 	ci = NULL;
 

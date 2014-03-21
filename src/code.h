@@ -5,17 +5,18 @@ enum code_type {
 	/* terminals */
 	CODE_NULL = 1 <<  0,
 	CODE_ANON = 1 <<  1,
-	CODE_DATA = 1 <<  2,
-	CODE_NOT  = 1 <<  3,
+	CODE_RET  = 1 <<  2,
+	CODE_DATA = 1 <<  3,
+	CODE_NOT  = 1 <<  4,
 
 	/* operators */
-	CODE_TICK = 1 <<  4,
-	CODE_CALL = 1 <<  5,
-	CODE_EXEC = 1 <<  6,
-	CODE_IF   = 1 <<  7,
-	CODE_JOIN = 1 <<  8,
-	CODE_PIPE = 1 <<  9,
-	CODE_SET  = 1 << 10
+	CODE_TICK = 1 <<  5,
+	CODE_CALL = 1 <<  6,
+	CODE_EXEC = 1 <<  7,
+	CODE_IF   = 1 <<  8,
+	CODE_JOIN = 1 <<  9,
+	CODE_PIPE = 1 << 10,
+	CODE_SET  = 1 << 11
 };
 
 struct code {

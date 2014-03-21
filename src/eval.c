@@ -16,18 +16,24 @@
 #include "eval.h"
 #include "proc.h"
 #include "frame.h"
+#include "return.h"
 #include "status.h"
 #include "builtin.h"
 
 /* push .s=NULL to data */
 static int
-eval_null(struct code *node, struct data **data)
+eval_null(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
+	assert(next != NULL);
 	assert(data != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_NULL);
+	assert(rtrn != NULL);
+	assert(data != NULL);
 
+	(void) next;
 	(void) node;
+	(void) rtrn;
 
 	if (!data_push(data, 0, NULL)) {
 		return -1;
@@ -36,20 +42,20 @@ eval_null(struct code *node, struct data **data)
 	return 0;
 }
 
+/* push current code pointer to rtrn stack; set current code pointer to anon block */
 static int
-eval_anon(struct code *node, struct data **data)
+eval_anon(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
-	struct code *a;
-
-	assert(data != NULL);
+	assert(next != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_ANON);
+	assert(rtrn != NULL);
+	assert(data != NULL);
 
 	(void) data;
 
-	a = node;
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %s\n", code_name(a->type));
+		fprintf(stderr, "code <- %s\n", code_name(node->type));
 	}
 
 	if (debug & DEBUG_STACK) {
@@ -57,29 +63,60 @@ eval_anon(struct code *node, struct data **data)
 		code_dump(stderr, node->u.code);
 	}
 
-	if (!code_clone(&node->next, node->u.code)) {
+	if (!rtrn_push(rtrn, *next)) {
 		return -1;
 	}
+
+	*next = node->u.code;
+
+	return 0;
+}
+
+/* pop from return stack; set current code pointer to that */
+static int
+eval_ret(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
+{
+	struct rtrn *a;
+
+	assert(next != NULL);
+	assert(node != NULL);
+	assert(node->type == CODE_RET);
+	assert(rtrn != NULL);
+	assert(data != NULL);
+
+	(void) data;
+
+	a = rtrn_pop(rtrn);
+	if (a == NULL) {
+		errno = 0;
+		return -1;
+	}
+
+	*next = a->code;
+
+	free(a);
 
 	return 0;
 }
 
 /* push .s=NULL to data */
 static int
-eval_data(struct code *node, struct data **data)
+eval_data(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
-	struct code *a;
-
-	assert(data != NULL);
+	assert(next != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_DATA);
+	assert(rtrn != NULL);
+	assert(data != NULL);
 
-	a = node;
+	(void) rtrn;
+	(void) next;
+
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %s \"%s\"\n", code_name(a->type), a->u.s);
+		fprintf(stderr, "code <- %s \"%s\"\n", code_name(node->type), node->u.s);
 	}
 
-	if (!data_push(data, strlen(a->u.s), a->u.s)) {
+	if (!data_push(data, strlen(node->u.s), node->u.s)) {
 		return -1;
 	}
 
@@ -88,13 +125,17 @@ eval_data(struct code *node, struct data **data)
 
 /* pop $?, push !$? to *data */
 static int
-eval_not(struct code *node, struct data **data)
+eval_not(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
-	assert(data != NULL);
+	assert(next != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_NOT);
+	assert(rtrn != NULL);
+	assert(data != NULL);
 
+	(void) next;
 	(void) node;
+	(void) rtrn;
 	(void) data;
 
 	status_exit(!status.r);
@@ -104,15 +145,19 @@ eval_not(struct code *node, struct data **data)
 
 /* pop variable name; wind from variable to *data and &node->next */
 static int
-eval_call(struct code *node, struct data **data)
+eval_call(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
 	const struct var *q;
 	struct data *a;
 
-	assert(data != NULL);
+	assert(next != NULL);
 	assert(node != NULL);
 	assert(node->type == CODE_CALL);
 	assert(node->frame != NULL);
+	assert(rtrn != NULL);
+	assert(data != NULL);
+
+	(void) next;
 
 	if (*data == NULL) {
 		errno = 0;
@@ -131,9 +176,13 @@ eval_call(struct code *node, struct data **data)
 		return -1;
 	}
 
-	if (!code_anon(&node->next, node->frame, q->code)) {
+	/* XXX: share guts with eval_anon */
+
+	if (!rtrn_push(rtrn, *next)) {
 		return -1;
 	}
+
+	*next = node->u.code;
 
 	*data = a->next;
 	free(a);
@@ -143,9 +192,9 @@ eval_call(struct code *node, struct data **data)
 
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
-eval_exec(struct code *node, struct data **data)
+eval_exec(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
-	struct data *p, *next;
+	struct data *p, *pnext;
 	struct var *v;
 	pid_t pid;
 	int argc;
@@ -153,9 +202,13 @@ eval_exec(struct code *node, struct data **data)
 	FILE *tick;
 	int fd[2];
 
+	assert(next != NULL);
 	assert(node != NULL);
-	assert(data != NULL);
 	assert(node->type == CODE_EXEC || node->type == CODE_TICK);
+	assert(rtrn != NULL);
+	assert(data != NULL);
+
+	(void) next;
 
 	if (debug & DEBUG_STACK) {
 		for (p = *data; p->s != NULL; p = p->next) {
@@ -178,10 +231,13 @@ eval_exec(struct code *node, struct data **data)
 	/* variable */
 	v = frame_get(node->frame, strlen(args[0]), args[0]);
 	if (v != NULL) {
-		if (!code_anon(&node->next, node->frame, v->code)) {
-			free(args);
+		/* XXX: share guts with eval_anon */
+
+		if (!rtrn_push(rtrn, *next)) {
 			return -1;
 		}
+
+		*next = v->code;
 
 		if (-1 == set_args(node->frame, args + 1)) {
 			free(args);
@@ -304,10 +360,10 @@ eval_exec(struct code *node, struct data **data)
 		}
 
 		/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
-		for (p = *data; p->s != NULL; p = next) {
+		for (p = *data; p->s != NULL; p = pnext) {
 			assert(p != NULL);
 
-			next = p->next;
+			pnext = p->next;
 			free(p);
 		}
 
@@ -326,10 +382,10 @@ eval_exec(struct code *node, struct data **data)
 done:
 
 	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
-	for (p = *data; p->s != NULL; p = next) {
+	for (p = *data; p->s != NULL; p = pnext) {
 		assert(p != NULL);
 
-		next = p->next;
+		pnext = p->next;
 		free(p);
 	}
 
@@ -349,20 +405,22 @@ error:
 
 /* TODO: explain what happens here: status.r is the predicate, CODE_ANON is a block to call */
 static int
-eval_if(struct code *node, struct data **data)
+eval_if(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
-	struct code *a;
+	const struct code *a;
 
+	assert(next != NULL);
 	assert(node != NULL);
-	assert(data != NULL);
 	assert(node->type == CODE_IF);
+	assert(rtrn != NULL);
+	assert(data != NULL);
 
-	if (node->next == NULL) {
+	if (*next == NULL) {
 		errno = 0;
 		return -1;
 	}
 
-	a = node->next;
+	a = *next;
 	if (a->type != CODE_ANON) {
 		errno = EINVAL;
 		return -1;
@@ -384,8 +442,7 @@ eval_if(struct code *node, struct data **data)
 				a->type == CODE_DATA ? a->u.s : "");
 		}
 
-		node->next = a->next;
-		free(a);
+		*next = a->next;
 	}
 
 	return 0;
@@ -393,24 +450,26 @@ eval_if(struct code *node, struct data **data)
 
 /* TODO: explain what happens here */
 static int
-eval_set(struct code *node, struct data **data)
+eval_set(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data)
 {
 	struct data *a;
-	struct code *b;
+	const struct code *b;
 
+	assert(next != NULL);
 	assert(node != NULL);
-	assert(data != NULL);
 	assert(node->type == CODE_SET);
+	assert(rtrn != NULL);
+	assert(data != NULL);
 
 	(void) node;
 
-	if (node->next == NULL || *data == NULL) {
+	if (*next == NULL || *data == NULL) {
 		errno = 0;
 		return -1;
 	}
 
 	a = *data;
-	b = node->next;
+	b = *next;
 
 	if (b->type != CODE_ANON) {
 		errno = 0;
@@ -425,8 +484,7 @@ eval_set(struct code *node, struct data **data)
 	*data = a->next;
 	free(a);
 
-	node->next = b->next;
-	free(b);
+	*next = b->next;
 
 	return 0;
 }
@@ -460,15 +518,19 @@ op_pipe(struct data **node, struct frame *frame, struct data *a, struct data *b)
 }
 
 static int
-eval_binop(struct code *node, struct data **data,
+eval_binop(const struct code **next, const struct code *node, struct rtrn **rtrn, struct data **data,
 	int (*op)(struct data **, struct frame *, struct data *a, struct data *b))
 {
 	struct data *a;
 	struct data *b;
 
+	assert(next != NULL);
 	assert(node != NULL);
+	assert(rtrn != NULL);
 	assert(data != NULL);
 	assert(op != NULL);
+
+	(void) next;
 
 	if (*data == NULL || (*data)->next == NULL) {
 		errno = 0;
@@ -494,33 +556,48 @@ eval_binop(struct code *node, struct data **data,
 }
 
 int
-eval(struct code **code, struct data **data)
+eval(const struct code *code, struct data **data)
 {
-	struct code *node;
+	const struct code *node, *next;
+	struct rtrn *rtrn;
 	int r;
 
-	assert(code != NULL);
+	rtrn = NULL;
+
 	assert(data != NULL);
 
-	while (node = *code, node != NULL) {
+	/* XXX: share guts with eval_anon */
+
+	next = code;
+
+	while (node = next, node != NULL) {
 		if (debug & DEBUG_EVAL) {
-			fprintf(stderr, "code: "); code_dump(stderr, *code);
+			fprintf(stderr, "code: "); code_dump(stderr,  node);
 			fprintf(stderr, "data: "); data_dump(stderr, *data);
 		}
 
-		switch (node->type) {
-		case CODE_NULL: r = eval_null(node, data); break;
-		case CODE_ANON: r = eval_anon(node, data); break;
-		case CODE_DATA: r = eval_data(node, data); break;
-		case CODE_NOT:  r = eval_not (node, data); break;
-		case CODE_IF:   r = eval_if  (node, data); break;
-		case CODE_CALL: r = eval_call(node, data); break;
-		case CODE_TICK: r = eval_exec(node, data); break;
-		case CODE_EXEC: r = eval_exec(node, data); break;
-		case CODE_SET:  r = eval_set (node, data); break;
+		/* XXX: instead of overwriting this, have jaling nodes push node->next perhaps */
+		next = node->next;
 
-		case CODE_JOIN: r = eval_binop(node, data, op_join); break;
-		case CODE_PIPE: r = eval_binop(node, data, op_pipe); break;
+		if (rtrn != NULL) {
+			rtrn->code = next;
+		}
+
+		/* TODO: don't pass node; pass node->frame and node->u.whatever explicitly where required */
+		switch (node->type) {
+		case CODE_NULL: r = eval_null(&next, node, &rtrn, data); break;
+		case CODE_ANON: r = eval_anon(&next, node, &rtrn, data); break;
+		case CODE_RET:  r = eval_ret (&next, node, &rtrn, data); break;
+		case CODE_DATA: r = eval_data(&next, node, &rtrn, data); break;
+		case CODE_NOT:  r = eval_not (&next, node, &rtrn, data); break;
+		case CODE_IF:   r = eval_if  (&next, node, &rtrn, data); break;
+		case CODE_CALL: r = eval_call(&next, node, &rtrn, data); break;
+		case CODE_TICK: r = eval_exec(&next, node, &rtrn, data); break;
+		case CODE_EXEC: r = eval_exec(&next, node, &rtrn, data); break;
+		case CODE_SET:  r = eval_set (&next, node, &rtrn, data); break;
+
+		case CODE_JOIN: r = eval_binop(&next, node, &rtrn, data, op_join); break;
+		case CODE_PIPE: r = eval_binop(&next, node, &rtrn, data, op_pipe); break;
 
 		default:
 			errno = EINVAL;
@@ -530,9 +607,6 @@ eval(struct code **code, struct data **data)
 		if (r == -1) {
 			return -1;
 		}
-
-		*code = node->next;
-		free(node);
 	}
 
 	if (debug & DEBUG_EVAL) {

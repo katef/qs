@@ -38,6 +38,7 @@
 	<empty>: () -> (:code);
 
 	<type-null>: () -> (:type);
+	<type-ret>:  () -> (:type);
 	<type-not>:  () -> (:type);
 	<type-tick>: () -> (:type);
 	<type-call>: () -> (:type);
@@ -127,7 +128,12 @@
 				<push-code>(&c, t2);
 			||
 				ci = <empty>;
+
 				block(&ci);
+
+				t0 = <type-ret>;
+				<push-code>(&ci, t0);
+
 				<push-anon>(&c, ci);
 
 				t3 = <type-null>;
@@ -152,7 +158,9 @@
 
 		{
 			list(&ci);
+
 			<push-stack>(&c, ci);
+
 			t = <type-exec>;
 			<push-code>(&c, t);
 		||
@@ -168,8 +176,11 @@
 
 			<push-data>(&c, s);
 
-			t = <type-set>;
-			<push-code>(&c, t);
+			t1 = <type-set>;
+			<push-code>(&c, t1);
+
+			t0 = <type-ret>;
+			<push-code>(&ci, t0);
 
 			<push-anon>(&c, ci);
 		};
@@ -194,11 +205,16 @@
 		{
 			and;
 
-			t = <type-if>;
-			<push-code>(&c, t);
+			t1 = <type-if>;
+			<push-code>(&c, t1);
 
 			ci = <empty>;
+
 			and-expr(&ci);
+
+			t0 = <type-ret>;
+			<push-code>(&ci, t0);
+
 			<push-anon>(&c, ci);
 		||
 			$;
@@ -218,7 +234,12 @@
 			<push-code>(&c, t2);
 
 			ci = <empty>;
+
 			or-expr(&ci);
+
+			t0 = <type-ret>;
+			<push-code>(&ci, t0);
+
 			<push-anon>(&c, ci);
 		||
 			$;
