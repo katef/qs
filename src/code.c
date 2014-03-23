@@ -94,7 +94,6 @@ code_pipe(struct code **head, struct frame *frame,
 
 	assert(head != NULL);
 	assert(frame != NULL);
-	assert(pipe != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
