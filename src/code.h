@@ -26,6 +26,7 @@ struct code {
 	union {
 		char *s;
 		struct code *code;
+		struct pipe *pipe;
 	} u;
 
 	struct code *next;
@@ -41,6 +42,10 @@ code_anon(struct code **head, struct frame *frame,
 struct code *
 code_data(struct code **head, struct frame *frame,
 	size_t n, const char *s);
+
+struct code *
+code_pipe(struct code **head, struct frame *frame,
+	struct pipe *pipe);
 
 struct code *
 code_push(struct code **head, struct frame *frame,

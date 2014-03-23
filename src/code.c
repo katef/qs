@@ -50,6 +50,7 @@ code_anon(struct code **head, struct frame *frame,
 
 	if (debug & DEBUG_STACK) {
 		fprintf(stderr, "code -> %s\n", code_name(new->type));
+		/* TODO: could dump code here */
 	}
 
 	return new;
@@ -80,6 +81,36 @@ code_data(struct code **head, struct frame *frame,
 
 	if (debug & DEBUG_STACK) {
 		fprintf(stderr, "code -> %s \"%.*s\"\n", code_name(new->type), (int) n, s);
+	}
+
+	return new;
+}
+
+struct code *
+code_pipe(struct code **head, struct frame *frame,
+	struct pipe *pipe)
+{
+	struct code *new;
+
+	assert(head != NULL);
+	assert(frame != NULL);
+	assert(pipe != NULL);
+
+	new = malloc(sizeof *new);
+	if (new == NULL) {
+		return NULL;
+	}
+
+	new->type   = CODE_PIPE;
+	new->frame  = frame;
+	new->u.pipe = pipe;
+
+	new->next = *head;
+	*head = new;
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "code -> %s\n", code_name(CODE_PIPE));
+		/* TODO: could dump pipe redir list here */
 	}
 
 	return new;
