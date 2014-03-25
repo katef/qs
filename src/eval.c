@@ -105,7 +105,7 @@ eval_not(void)
 /* pop variable name; wind from variable to *data and next */
 static int
 eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
-	struct frame *frame, const struct code *ci)
+	struct frame *frame)
 {
 	const struct var *q;
 	struct data *a;
@@ -138,7 +138,7 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 		return -1;
 	}
 
-	*next = ci;
+	*next = q->code;
 
 	*data = a->next;
 	free(a);
@@ -422,6 +422,7 @@ eval_set(const struct code **next, struct rtrn **rtrn, struct data **data,
 	a = *data;
 	b = *next;
 
+/* XXX: could pass as u.code instead */
 	if (b->type != CODE_ANON) {
 		errno = 0;
 		return -1;
@@ -536,7 +537,7 @@ eval(const struct code *code, struct data **data)
 		case CODE_DATA: r = eval_data(data, node->u.s);                               break;
 		case CODE_NOT:  r = eval_not ();                                              break;
 		case CODE_IF:   r = eval_if  (&next, &rtrn, data);                            break;
-		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame, node->u.code); break;
+		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);               break;
 		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type);   break;
 		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type);   break;
 		case CODE_SET:  r = eval_set (&next, &rtrn, data, node->frame);               break;
