@@ -142,6 +142,9 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 		return -1;
 	}
 
+	*data = a->next;
+	free(a);
+
 	/* XXX: share guts with eval_anon */
 	if (debug & DEBUG_STACK) {
 		fprintf(stderr, "push return from: ");
@@ -153,9 +156,6 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 	}
 
 	*next = q->code;
-
-	*data = a->next;
-	free(a);
 
 	return 0;
 }
