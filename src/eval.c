@@ -522,10 +522,6 @@ eval(const struct code *code, struct data **data)
 
 		next = node->next;
 
-		if (rtrn != NULL) {
-			rtrn->code = next;
-		}
-
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(data);                                        break;
 		case CODE_ANON: r = eval_anon(&next, &rtrn, node->u.code);                  break;
