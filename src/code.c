@@ -29,7 +29,7 @@ code_name(enum code_type type)
 
 struct code *
 code_anon(struct code **head, struct frame *frame,
-	struct code *code)
+	enum code_type type, struct code *code)
 {
 	struct code *new;
 
@@ -41,7 +41,7 @@ code_anon(struct code **head, struct frame *frame,
 		return NULL;
 	}
 
-	new->type   = CODE_ANON;
+	new->type   = type;
 	new->frame  = frame;
 	new->u.code = code;
 

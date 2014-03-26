@@ -360,42 +360,27 @@ error:
 
 /* TODO: explain what happens here: status.r is the predicate, CODE_ANON is a block to call */
 static int
-eval_if(const struct code **next, struct rtrn **rtrn, struct data **data)
+eval_if(const struct code **next, struct rtrn **rtrn, struct data **data,
+	struct code *code)
 {
-	const struct code *a;
-
 	assert(next != NULL);
 	assert(rtrn != NULL);
 	assert(data != NULL);
 
-	if (*next == NULL) {
-		errno = 0;
-		return -1;
-	}
-
-	a = *next;
-	if (a->type != CODE_ANON) {
-		errno = EINVAL;
-		return -1;
-	}
-
 	/*
-	 * When the status condition is true, we simply leave the forthcoming node
-	 * on the code stack to evaulate next. Otherwise, it is consumed and
-	 * discarded here.
+	 * When the status condition is true, we simply ignore the u.code pointer.
+	 * Otherwise, the current code is pushed to the return stack, and control
+	 * transfered to the code passed.
 	 */
 
-	if (status.r != EXIT_SUCCESS) {
-		if (debug & DEBUG_EVAL) {
-			fprintf(stderr, "discarding anon\n");
+	if (status.r == EXIT_SUCCESS) {
+		/* XXX: share guts with eval_anon */
+
+		if (!rtrn_push(rtrn, *next)) {
+			return -1;
 		}
 
-		if (debug & DEBUG_STACK) {
-			fprintf(stderr, "code <- %s %s\n", code_name(a->type),
-				a->type == CODE_DATA ? a->u.s : "");
-		}
-
-		*next = a->next;
+		*next = code;
 	}
 
 	return 0;
@@ -403,40 +388,29 @@ eval_if(const struct code **next, struct rtrn **rtrn, struct data **data)
 
 /* TODO: explain what happens here */
 static int
-eval_set(const struct code **next, struct rtrn **rtrn, struct data **data,
-	struct frame *frame)
+eval_set(struct rtrn **rtrn, struct data **data,
+	struct frame *frame, struct code *code)
 {
 	struct data *a;
-	const struct code *b;
 
-	assert(next != NULL);
 	assert(rtrn != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
 
-	if (*next == NULL || *data == NULL) {
+	if (*data == NULL) {
 		errno = 0;
 		return -1;
 	}
 
 	a = *data;
-	b = *next;
 
-/* XXX: could pass as u.code instead */
-	if (b->type != CODE_ANON) {
-		errno = 0;
-		return -1;
-	}
-
-	if (!frame_set(frame, strlen(a->s), a->s, b->u.code)) {
+	if (!frame_set(frame, strlen(a->s), a->s, code)) {
 		errno = EINVAL;
 		return -1;
 	}
 
 	*data = a->next;
 	free(a);
-
-	*next = b->next;
 
 	return 0;
 }
@@ -531,19 +505,19 @@ eval(const struct code *code, struct data **data)
 		}
 
 		switch (node->type) {
-		case CODE_NULL: r = eval_null(data);                                          break;
-		case CODE_ANON: r = eval_anon(&next, &rtrn, node->u.code);                    break;
-		case CODE_RET:  r = eval_ret (&next, &rtrn);                                  break;
-		case CODE_DATA: r = eval_data(data, node->u.s);                               break;
-		case CODE_NOT:  r = eval_not ();                                              break;
-		case CODE_IF:   r = eval_if  (&next, &rtrn, data);                            break;
-		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);               break;
-		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type);   break;
-		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type);   break;
-		case CODE_SET:  r = eval_set (&next, &rtrn, data, node->frame);               break;
+		case CODE_NULL: r = eval_null(data);                                        break;
+		case CODE_ANON: r = eval_anon(&next, &rtrn, node->u.code);                  break;
+		case CODE_RET:  r = eval_ret (&next, &rtrn);                                break;
+		case CODE_DATA: r = eval_data(data, node->u.s);                             break;
+		case CODE_NOT:  r = eval_not ();                                            break;
+		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);            break;
+		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);             break;
+		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type); break;
+		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type); break;
+		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);      break;
 
-		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);            break;
-		case CODE_PIPE: r = eval_binop(&rtrn, data, node->frame, op_pipe);            break;
+		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);          break;
+		case CODE_PIPE: r = eval_binop(&rtrn, data, node->frame, op_pipe);          break;
 
 		default:
 			errno = EINVAL;

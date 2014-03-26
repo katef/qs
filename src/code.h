@@ -37,7 +37,7 @@ code_name(enum code_type type);
 
 struct code *
 code_anon(struct code **head, struct frame *frame,
-	struct code *code);
+	enum code_type type, struct code *code);
 
 struct code *
 code_data(struct code **head, struct frame *frame,

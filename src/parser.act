@@ -145,6 +145,7 @@
 	<stderr>: () -> (fd :fd) = @{ @fd = STDERR_FILENO; @};
 
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
+	<type-anon>: () -> (t :type) = @{ @t = CODE_ANON; @};
 	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
@@ -213,7 +214,7 @@
 		*/
 	@};
 
-	<push-anon>: (c :code &, ci :code) -> () = @{
+	<push-anon>: (c :code &, t :type, ci :code) -> () = @{
 		struct code **tail;
 
 		if (debug & DEBUG_ACT) {
@@ -223,7 +224,7 @@
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
 			;
 
-		if (!code_anon(tail, act_state->frame, @ci)) {
+		if (!code_anon(tail, act_state->frame, @t, @ci)) {
 			@!;
 		}
 	@};

@@ -45,6 +45,7 @@
 	!<stderr>: () -> (:fd);
 
 	<type-null>: () -> (:type);
+	<type-anon>: () -> (:type);
 	<type-ret>:  () -> (:type);
 	<type-not>:  () -> (:type);
 	<type-tick>: () -> (:type);
@@ -58,10 +59,10 @@
 	<make-fd>:   (:string) -> (:fd);
 	<make-pipe>: (:pipe &, :fd, :fd) -> ();
 
-	<push-anon>: (:code &, :code)   -> ();
-	<push-data>: (:code &, :string) -> ();
-	<push-code>: (:code &, :type)   -> ();
-	<push-stack>:(:code &, :code)   -> ();
+	<push-anon>: (:code &, :type, :code) -> ();
+	<push-data>: (:code &, :string)      -> ();
+	<push-code>: (:code &, :type)        -> ();
+	<push-stack>:(:code &, :code)        -> ();
 
 	<frame-push>;
 	<frame-pop>;
@@ -144,7 +145,8 @@
 				t0 = <type-ret>;
 				<push-code>(&ci, t0);
 
-				<push-anon>(&c, ci);
+				t3 = <type-anon>;
+				<push-anon>(&c, t4, ci);
 
 				t3 = <type-null>;
 				<push-code>(&c, t3);
@@ -192,7 +194,8 @@
 			t0 = <type-ret>;
 			<push-code>(&ci, t0);
 
-			<push-anon>(&c, ci);
+			t2 = <type-anon>;
+			<push-anon>(&c, t2, ci);
 		};
 	};
 
@@ -260,17 +263,14 @@
 		{
 			and;
 
-			t1 = <type-if>;
-			<push-code>(&c, t1);
-
 			ci = <empty-code>;
-
 			and-expr(&ci);
 
 			t0 = <type-ret>;
 			<push-code>(&ci, t0);
 
-			<push-anon>(&c, ci);
+			t1 = <type-if>;
+			<push-anon>(&c, t1, ci);
 		||
 			$;
 		};
@@ -282,20 +282,17 @@
 		{
 			or;
 
-			t1 = <type-not>;
-			<push-code>(&c, t1);
-
-			t2 = <type-if>;
-			<push-code>(&c, t2);
-
 			ci = <empty-code>;
-
 			or-expr(&ci);
 
 			t0 = <type-ret>;
 			<push-code>(&ci, t0);
 
-			<push-anon>(&c, ci);
+			t1 = <type-not>;
+			<push-code>(&c, t1);
+
+			t2 = <type-if>;
+			<push-anon>(&c, t2, ci);
 		||
 			$;
 		};
