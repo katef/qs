@@ -44,6 +44,11 @@ eval_anon(const struct code **next, struct rtrn **rtrn, const struct code *ci)
 		fprintf(stderr, "code <- %s\n", code_name(CODE_DATA));
 	}
 
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "push return from: ");
+		code_dump(stderr, *next);
+	}
+
 	if (!rtrn_push(rtrn, *next)) {
 		return -1;
 	}
@@ -66,6 +71,11 @@ eval_ret(const struct code **next, struct rtrn **rtrn)
 	if (a == NULL) {
 		errno = 0;
 		return -1;
+	}
+
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "return to: ");
+		code_dump(stderr, a->code);
 	}
 
 	*next = a->code;
@@ -133,6 +143,10 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 	}
 
 	/* XXX: share guts with eval_anon */
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "push return from: ");
+		code_dump(stderr, *next);
+	}
 
 	if (!rtrn_push(rtrn, *next)) {
 		return -1;
@@ -187,6 +201,10 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 	v = frame_get(frame, strlen(args[0]), args[0]);
 	if (v != NULL) {
 		/* XXX: share guts with eval_anon */
+		if (debug & DEBUG_STACK) {
+			fprintf(stderr, "push return from: ");
+			code_dump(stderr, *next);
+		}
 
 		if (!rtrn_push(rtrn, *next)) {
 			return -1;
@@ -375,6 +393,10 @@ eval_if(const struct code **next, struct rtrn **rtrn, struct data **data,
 
 	if (status.r == EXIT_SUCCESS) {
 		/* XXX: share guts with eval_anon */
+		if (debug & DEBUG_STACK) {
+			fprintf(stderr, "push return from: ");
+			code_dump(stderr, *next);
+		}
 
 		if (!rtrn_push(rtrn, *next)) {
 			return -1;
