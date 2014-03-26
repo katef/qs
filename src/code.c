@@ -123,6 +123,8 @@ code_push(struct code **head, struct frame *frame,
 
 	assert(head != NULL);
 	assert(frame != NULL);
+	assert(type != CODE_IF);
+	assert(type != CODE_SET);
 	assert(type != CODE_ANON);
 	assert(type != CODE_DATA);
 	assert(type && !(type & (type - 1)));
@@ -188,7 +190,10 @@ code_dumpinline(FILE *f, const struct code *code)
 			fprintf(f, "'%s' ", p->u.s);
 			break;
 
+		case CODE_IF:
+		case CODE_SET:
 		case CODE_ANON:
+			fprintf(f, "#%s", code_name(p->type));
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);
 			fprintf(f, "} ");
