@@ -59,10 +59,15 @@
 	<make-fd>:   (:string) -> (:fd);
 	<make-pipe>: (:pipe &, :fd, :fd) -> ();
 
-	<push-anon>: (:code &, :type, :code) -> ();
-	<push-data>: (:code &, :string)      -> ();
-	<push-code>: (:code &, :type)        -> ();
-	<push-stack>:(:code &, :code)        -> ();
+	<prepend-anon>: (:code &, :type, :code) -> ();
+	<prepend-data>: (:code &, :string)      -> ();
+	<prepend-code>: (:code &, :type)        -> ();
+
+	<append-anon>:  (:code &, :type, :code) -> ();
+	<append-data>:  (:code &, :string)      -> ();
+	<append-pipe>:  (:code &, :pipe)        -> ();
+	<append-code>:  (:code &, :type)        -> ();
+	<append-cat>:   (:code &, :code)        -> ();
 
 	<frame-push>;
 	<frame-pop>;
@@ -71,20 +76,21 @@
 	<err-expected-sep>;
 	<err-syntax>: (:code) -> ();
 
-	arg:        (:code &) -> ();
-	exprs:      (:code &) -> ();
 	tick-value: (:code &) -> ();
+	block:      (:code &) -> ();
+	exprs:      (:code &) -> ();
 
 	arg-list: (c :code &) -> () [
 
 		::arg: (c :code &) -> () = {
 			s = str;
-			<push-data>(&c, s);
+			<prepend-data>(&c, s);
 		||
-			s = var;
 			t = <type-call>;
-			<push-code>(&c, t);
-			<push-data>(&c, s);
+			<prepend-code>(&c, t);
+
+			s = var;
+			<prepend-data>(&c, s);
 		};
 
 	] = {
@@ -97,26 +103,13 @@
 		{
 			arg-list(&c);
 		||
-			t = <type-null>;
-			<push-code>(&c, t);
+			$;
 		};
 	};
 
 	assign-expr: (c :code &) -> () [
 
-		block: (c :code &) -> () = {
-			obrace;
-			<frame-push>;
-			{
-				exprs(&c);
-			||
-				$;
-			};
-			<frame-pop>;
-			cbrace;
-		};
-
-		value: (c :code &) -> () = {
+		::value: (c :code &) -> () = {
 			oparen;
 			arg-list(&c);
 			cparen;
@@ -129,31 +122,64 @@
 		::tick-value: (c :code &) -> () = {
 			tick;
 
-			t1 = <type-tick>;
-			<push-code>(&c, t1);
+			t2 = <type-null>;
+			<prepend-code>(&c, t2);
 
 			{
 				arg(&c);
-
-				t2 = <type-null>;
-				<push-code>(&c, t2);
 			||
 				ci = <empty-code>;
 
 				block(&ci);
 
 				t0 = <type-ret>;
-				<push-code>(&ci, t0);
+				<append-code>(&ci, t0);
 
+				/* TODO: get rid of #anon and have #tick take @ci here */
 				t3 = <type-anon>;
-				<push-anon>(&c, t4, ci);
-
-				t3 = <type-null>;
-				<push-code>(&c, t3);
+				<prepend-anon>(&c, t3, ci);
 
 				/* XXX: would need to set up pipe for ` here, first. inner #exec are not dup2'd */
 				/* XXX: maybe best to have #exec take a u.pipe argument for dup2 */
 			};
+
+			t1 = <type-tick>;
+			<prepend-code>(&c, t1);
+		};
+
+	] = {
+		s = str;
+		equ;
+
+		ci = <empty-code>;
+
+		{
+			value(&ci);
+		||
+			tick-value(&ci);
+		};
+
+		t0 = <type-ret>;
+		<append-code>(&ci, t0);
+
+		<append-data>(&c, s);
+
+		t1 = <type-set>;
+		<append-anon>(&c, t1, ci);
+	};
+
+	block-expr: (c :code &) -> () [
+
+		::block: (c :code &) -> () = {
+			obrace;
+			<frame-push>;
+			{
+				exprs(&c);
+			||
+				$;
+			};
+			<frame-pop>;
+			cbrace;
 		};
 
 	] = {
@@ -164,64 +190,48 @@
 		 * actions must come before disambiguating the next token. Because LL(1)
 		 * parsing does not permit leftmost recursion, the <stack-push> actions
 		 * must be called after recurring - i.e. in reverse order.
-		 * So <push-stack> is expected to wind instructions in reverse order,
+TODO: update comment:
+		 * So <prepend-stack> is expected to wind instructions in reverse order,
 		 * to counter that &ci is constructed backwards.
 		 */
 
 		{
 			arg-list(&ci);
 
-			<push-stack>(&c, ci);
+			t0 = <type-null>;
+			<prepend-code>(&ci, t0);
 
-			t = <type-exec>;
-			<push-code>(&c, t);
+			t1 = <type-exec>;
+			<append-code>(&ci, t1);
+
+			<append-cat>(&c, ci);
 		||
 			block(&c);
 		||
-			s = str;
-			equ;
-			{
-				value(&ci);
-			||
-				tick-value(&ci);
-			};
-
-			<push-data>(&c, s);
-
-			t1 = <type-set>;
-			<push-code>(&c, t1);
-
-			t0 = <type-ret>;
-			<push-code>(&ci, t0);
-
-			t2 = <type-anon>;
-			<push-anon>(&c, t2, ci);
+			assign-expr(&c);
 		};
 	};
 
-	pipe-expr: (c :code &, p :pipe &) -> () [
+	pipe-expr: (c :code &) -> () [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		redir: (p :pipe &) -> () = {
-			{
-				n = str;
-				equ;
-				m = str;
+		redir: () -> (l :fd, r :fd) = {
+			n = str;
+			equ;
+			m = str;
 
-				l = <make-fd>(n);
-				r = <make-fd>(m);
-			||
-				n = str;
+			l = <make-fd>(n);
+			r = <make-fd>(m);
+		||
+			n = str;
 
-				l = <make-fd>(n);
-				r = <stdin>;
-			};
-
-			<make-pipe>(&p, l, r);
+			l = <make-fd>(n);
+			r = <stdin>;
 		};
 
 		redir-list: (p :pipe &) -> () = {
-			redir(&p);
+			(l, r) = redir;
+			<make-pipe>(&p, l, r);
 
 			{
 				comma;
@@ -232,7 +242,7 @@
 		};
 
 	] = {
-		assign-expr(&c);
+		block-expr(&c);
 
 		{
 			pi = <empty-pipe>;
@@ -246,19 +256,20 @@
 				$;
 			};
 
-			pipe-expr(&c, &pi);
-
 			t = <type-pipe>;
-			<push-code>(&c, t);
+			<append-pipe>(&c, pi);
+
+			ci = <empty-code>;
+			pipe-expr(&ci);
+
+			<append-cat>(&c, ci);
 		||
 			$;
 		};
 	};
 
 	and-expr: (c :code &) -> () = {
-		p = <empty-pipe>;
-
-		pipe-expr(&c, &p);
+		pipe-expr(&c);
 
 		{
 			and;
@@ -267,10 +278,10 @@
 			and-expr(&ci);
 
 			t0 = <type-ret>;
-			<push-code>(&ci, t0);
+			<append-code>(&ci, t0);
 
-			t1 = <type-if>;
-			<push-anon>(&c, t1, ci);
+			t2 = <type-if>;
+			<append-anon>(&c, t2, ci);
 		||
 			$;
 		};
@@ -286,13 +297,13 @@
 			or-expr(&ci);
 
 			t0 = <type-ret>;
-			<push-code>(&ci, t0);
+			<append-code>(&ci, t0);
 
 			t1 = <type-not>;
-			<push-code>(&c, t1);
+			<append-code>(&c, t1);
 
 			t2 = <type-if>;
-			<push-anon>(&c, t2, ci);
+			<append-anon>(&c, t2, ci);
 		||
 			$;
 		};
@@ -322,7 +333,11 @@
 
 		{
 			sep;
-			exprs(&c);
+
+			ci = <empty-code>;
+			exprs(&ci);
+
+			<append-cat>(&c, ci);
 		||
 			sep;
 		||

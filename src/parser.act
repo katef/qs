@@ -106,7 +106,8 @@
 		assert(act_state->args != NULL);
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<dispatch>\n");
+			fprintf(stderr, "<dispatch>: ");
+			code_dump(stderr, @c);
 		}
 
 		if (-1 == act_state->dispatch(stdout, act_state->frame, act_state->args, @c)) {
@@ -214,11 +215,46 @@
 		*/
 	@};
 
-	<push-anon>: (c :code &, t :type, ci :code) -> () = @{
+	<prepend-anon>: (c :code &, t :type, ci :code) -> () = @{
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<prepend-anon>\n");
+		}
+
+		if (!code_anon(@&c, act_state->frame, @t, @ci)) {
+			@!;
+		}
+	@};
+
+	<prepend-data>: (c :code &, s :string) -> () = @{
+		assert(@s.s != NULL && @s.e != NULL);
+		assert(@s.e >= @s.s);
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<prepend-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+		}
+
+		if (!code_data(@&c, act_state->frame, @s.e - @s.s, @s.s)) {
+			@!;
+		}
+	@};
+
+	<prepend-code>: (c :code &, t :type) -> () = @{
+		assert(act_state->frame != NULL);
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<prepend-code>: %s\n", code_name(@t));
+		}
+
+		if (!code_push(@&c, act_state->frame, @t)) {
+			@!;
+		}
+	@};
+
+	<append-anon>: (c :code &, t :type, ci :code) -> () = @{
 		struct code **tail;
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<push-anon>\n");
+			fprintf(stderr, "<append-anon>\n");
 		}
 
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
@@ -229,14 +265,14 @@
 		}
 	@};
 
-	<push-data>: (c :code &, s :string) -> () = @{
+	<append-data>: (c :code &, s :string) -> () = @{
 		struct code **tail;
 
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e >= @s.s);
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<push-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+			fprintf(stderr, "<append-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
 		}
 
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
@@ -247,13 +283,29 @@
 		}
 	@};
 
-	<push-code>: (c :code &, t :type) -> () = @{
+	<append-pipe>: (c :code &, p :pipe) -> () = @{
+		struct code **tail;
+
+		if (debug & DEBUG_ACT) {
+/* TODO: pipe_dump redir list here */
+			fprintf(stderr, "<append-pipe>\n");
+		}
+
+		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		if (!code_pipe(tail, act_state->frame, @p)) {
+			@!;
+		}
+	@};
+
+	<append-code>: (c :code &, t :type) -> () = @{
 		struct code **tail;
 
 		assert(act_state->frame != NULL);
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<push-code>: %s\n", code_name(@t));
+			fprintf(stderr, "<append-code>: %s\n", code_name(@t));
 		}
 
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
@@ -264,16 +316,13 @@
 		}
 	@};
 
-	/* Note this winds instructions in reverse order */
-	<push-stack>: (c :code &, new :code) -> () = @{
-		struct code *p, *next;
+	<append-cat>: (c :code &, ci :code) -> () = @{
+		struct code **tail;
 
-		for (p = @new; p != NULL; p = next) {
-			next = p->next;
+		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
+			;
 
-			p->next = @=c;
-			@=c = p;
-		}
+		*tail = @ci;
 	@};
 
 	<frame-push>: () -> () = @{
