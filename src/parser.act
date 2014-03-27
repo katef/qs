@@ -33,6 +33,7 @@
 	#include "code.h"
 	#include "frame.h"
 	#include "parser.h"
+	#include "pipe.h"
 
 	struct act_string {
 		const char *s;
@@ -154,7 +155,6 @@
 	<type-exec>: () -> (t :type) = @{ @t = CODE_EXEC; @};
 	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
-	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
 
 	<make-fd>: (s :string) -> (fd :fd) = @{
@@ -196,23 +196,12 @@
 		@fd = l;
 	@};
 
-	<make-pipe>: (p :pipe &, m :fd, n :fd) -> () = @{
-		struct pipe *new;
-		int d[2];
+	<make-pipe>: (p :pipe &, l :fd, r :fd) -> () = @{
+		assert(@&p != NULL);
 
-		d[0] = @m;
-		d[1] = @n;
-
-		(void) @p;
-		(void) new;
-		(void) d;
-
-		/* TODO:
-		new = pipe_new(@&p, PIPE_LTR, PIPE_NONE, d);
-		if (new == NULL) {
+		if (!pipe_push(@&p, @l, @r)) {
 			@!;
 		}
-		*/
 	@};
 
 	<prepend-anon>: (c :code &, t :type, ci :code) -> () = @{
@@ -285,6 +274,8 @@
 
 	<append-pipe>: (c :code &, p :pipe) -> () = @{
 		struct code **tail;
+
+		assert(act_state->frame != NULL);
 
 		if (debug & DEBUG_ACT) {
 /* TODO: pipe_dump redir list here */

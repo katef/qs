@@ -40,9 +40,9 @@
 	<empty-code>: () -> (:code);
 	<empty-pipe>: () -> (:pipe);
 
-	<stdin>:   () -> (:fd);
-	!<stdout>: () -> (:fd);
-	!<stderr>: () -> (:fd);
+	<stdin>:  () -> (:fd);
+	<stdout>: () -> (:fd);
+	!<stderr>:() -> (:fd);
 
 	<type-null>: () -> (:type);
 	<type-anon>: () -> (:type);
@@ -53,7 +53,6 @@
 	<type-exec>: () -> (:type);
 	<type-if>:   () -> (:type);
 	!<type-join>:() -> (:type);
-	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
 
 	<make-fd>:   (:string) -> (:fd);
@@ -241,30 +240,43 @@ TODO: update comment:
 			};
 		};
 
+		redir-default: (p :pipe &) -> () = {
+			l = <stdout>;
+			r = <stdin>;
+
+			<make-pipe>(&p, l, r);
+		};
+
 	] = {
-		block-expr(&c);
+		ci = <empty-code>;
+		pi = <empty-pipe>;
+
+		block-expr(&ci);
 
 		{
-			pi = <empty-pipe>;
-
 			bar;
 			{
 				osquare;
 				redir-list(&pi);
 				csquare;
 			||
-				$;
+				redir-default(&pi);
 			};
 
-			t = <type-pipe>;
 			<append-pipe>(&c, pi);
 
-			ci = <empty-code>;
-			pipe-expr(&ci);
-
 			<append-cat>(&c, ci);
+
+			/* TODO: maybe no need to append-cat here; could just pass &ci directly to pipe-expr() */
+			cii = <empty-code>;
+			pipe-expr(&cii);
+
+			<append-cat>(&ci, cii);
 		||
-			$;
+
+			/* TODO: append #end here */
+			/* TODO: wouldn't need #end if no pipe made. maybe have eval inspect &ps to see this */
+			<append-cat>(&c, ci);
 		};
 	};
 
