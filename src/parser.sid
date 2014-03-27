@@ -47,6 +47,7 @@
 	<type-null>: () -> (:type);
 	<type-anon>: () -> (:type);
 	<type-ret>:  () -> (:type);
+	<type-end>:  () -> (:type);
 	<type-not>:  () -> (:type);
 	<type-tick>: () -> (:type);
 	<type-call>: () -> (:type);
@@ -273,9 +274,9 @@ TODO: update comment:
 
 			<append-cat>(&ci, cii);
 		||
+			t = <type-end>;
+			<append-code>(&c, t);
 
-			/* TODO: append #end here */
-			/* TODO: wouldn't need #end if no pipe made. maybe have eval inspect &ps to see this */
 			<append-cat>(&c, ci);
 		};
 	};

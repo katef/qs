@@ -20,6 +20,12 @@
 #include "status.h"
 #include "builtin.h"
 
+struct pipe_state {
+	int fd[2];
+	int usein, useout;
+	int in, out;
+};
+
 /* push .s=NULL to data */
 static int
 eval_null(struct data **data)
@@ -103,6 +109,44 @@ eval_data(struct data **data, const char *s)
 	return 0;
 }
 
+static int
+eval_pipe(struct pipe_state *ps)
+{
+	assert(ps != NULL);
+	assert(ps->in != -1);
+
+	if (-1 == pipe(ps->fd)) {
+		return -1;
+	}
+
+	if (debug & DEBUG_FD) {
+		fprintf(stderr, "pipe [%d,%d]\n", ps->fd[0], ps->fd[1]);
+	}
+
+	/* XXX: close() previous pipe here (this triggers waitpid) */
+
+	ps->usein  = ps->in;
+	ps->in     = ps->fd[0];
+
+	ps->useout = ps->fd[1];
+
+	return 0;
+}
+
+static int
+eval_end(struct pipe_state *ps)
+{
+	ps->usein  = ps->in;
+	ps->in     = -1;
+
+	/* XXX: close() previous pipe here (this triggers waitpid) */
+
+	/* XXX: i don't like hardcoded knowledge of STDIN_FILENO and STDOUT_FILENO here */
+	ps->useout = STDOUT_FILENO;
+
+	return 0;
+}
+
 /* pop $?, push !$? to *data */
 static int
 eval_not(void)
@@ -163,7 +207,7 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
 eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
-	struct frame *frame, enum code_type type)
+	struct frame *frame, enum code_type type, struct pipe_state *ps)
 {
 	struct data *p, *pnext;
 	struct var *v;
@@ -178,6 +222,7 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 	assert(rtrn != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
+	assert(ps != NULL);
 
 	if (debug & DEBUG_STACK) {
 		for (p = *data; p->s != NULL; p = p->next) {
@@ -245,6 +290,28 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 		assert(argc >= 1);
 		assert(args != NULL);
 
+		/* XXX: i don't like hardcoded knowledge of STDIN_FILENO and STDOUT_FILENO here */
+
+		if (ps->usein != STDIN_FILENO) {
+			dup2(ps->usein, STDIN_FILENO);
+
+			if (debug & DEBUG_FD) {
+				fprintf(stderr, "child: dup2(%d, %d)\n", ps->usein, STDIN_FILENO);
+			}
+
+			close(ps->usein);
+		}
+
+		if (ps->useout != STDOUT_FILENO) {
+			dup2(ps->useout, STDOUT_FILENO);
+
+			if (debug & DEBUG_FD) {
+				fprintf(stderr, "child: dup2(%d, %d)\n", ps->useout, STDOUT_FILENO);
+			}
+
+			close(ps->useout);
+		}
+
 		if (type == CODE_TICK) {
 			close(fd[0]);
 
@@ -290,6 +357,8 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 		close(fd[0]);
 	}
 
+	/* XXX: but i don't want to waitpid for a multiple pipeline; wait for them all at the end.
+	 * maybe make a #wait perhaps? */
 	if (-1 == proc_wait(pid)) {
 /* TODO: lots of cleanup on errors all over this function. split it up */
 		goto error;
@@ -451,20 +520,6 @@ op_join(struct data **node, struct frame *frame, struct data *a, struct data *b)
 	return -1;
 }
 
-/* TODO: explain what happens here */
-static int
-op_pipe(struct data **node, struct frame *frame, struct data *a, struct data *b)
-{
-	(void) node;
-	(void) frame;
-	(void) a;
-	(void) b;
-
-	/* TODO */
-	errno = ENOSYS;
-	return -1;
-}
-
 static int
 eval_binop(struct rtrn **rtrn, struct data **data,
 	struct frame *frame,
@@ -505,6 +560,7 @@ int
 eval(const struct code *code, struct data **data)
 {
 	const struct code *node, *next;
+	struct pipe_state ps;
 	struct rtrn *rtrn;
 	int r;
 
@@ -513,6 +569,11 @@ eval(const struct code *code, struct data **data)
 	rtrn = NULL;
 
 	next = code;
+
+	/* XXX: this should be the only place where STDIN_FILENO and STDOUT_FILENO are set */
+	/* XXX: setting all of these is not neccessary. some should be -1 */
+	ps.in  = ps.usein  = STDIN_FILENO;
+	ps.out = ps.useout = STDOUT_FILENO;
 
 	while (node = next, node != NULL) {
 		if (debug & DEBUG_EVAL) {
@@ -523,19 +584,20 @@ eval(const struct code *code, struct data **data)
 		next = node->next;
 
 		switch (node->type) {
-		case CODE_NULL: r = eval_null(data);                                        break;
-		case CODE_ANON: r = eval_anon(&next, &rtrn, node->u.code);                  break;
-		case CODE_RET:  r = eval_ret (&next, &rtrn);                                break;
-		case CODE_DATA: r = eval_data(data, node->u.s);                             break;
-		case CODE_NOT:  r = eval_not ();                                            break;
-		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);            break;
-		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);             break;
-		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type); break;
-		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type); break;
-		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);      break;
+		case CODE_NULL: r = eval_null(data);                                             break;
+		case CODE_ANON: r = eval_anon(&next, &rtrn, node->u.code);                       break;
+		case CODE_RET:  r = eval_ret (&next, &rtrn);                                     break;
+		case CODE_DATA: r = eval_data(data, node->u.s);                                  break;
+		case CODE_PIPE: r = eval_pipe(&ps);                                              break;
+		case CODE_END:  r = eval_end(&ps);                                               break;
+		case CODE_NOT:  r = eval_not ();                                                 break;
+		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);                 break;
+		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);                  break;
+		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type, &ps); break;
+		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type, &ps); break;
+		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);           break;
 
-		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);          break;
-		case CODE_PIPE: r = eval_binop(&rtrn, data, node->frame, op_pipe);          break;
+		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);               break;
 
 		default:
 			errno = EINVAL;
