@@ -37,6 +37,7 @@ debug_flags(const char *s)
 		case 'e': debug |= DEBUG_EVAL;  break;
 		case 'x': debug |= DEBUG_EXEC;  break;
 		case 'r': debug |= DEBUG_PROC;  break;
+		case 'd': debug |= DEBUG_FD;    break;
 
 		default:
 			fprintf(stderr, "-d: unrecognised flag '%c'\n", *s);
@@ -136,7 +137,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablpcfsvexr]\n");
+	fprintf(stderr, "usage: kcsh [-d ablpcfsvexrd]\n");
 
 	return 1;
 }
