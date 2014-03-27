@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "pipe.h"
 #include "code.h"
 
 const char *
@@ -181,6 +182,7 @@ static int
 code_dumpinline(FILE *f, const struct code *code)
 {
 	const struct code *p;
+	const struct pipe *q;
 
 	assert(f != NULL);
 
@@ -188,6 +190,14 @@ code_dumpinline(FILE *f, const struct code *code)
 		switch (p->type) {
 		case CODE_DATA:
 			fprintf(f, "'%s' ", p->u.s);
+			break;
+
+		case CODE_PIPE:
+			fprintf(f, "#%s", code_name(p->type));
+			for (q = p->u.pipe; q != NULL; q = q->next) {
+				fprintf(f, "[%d=%d]", q->lfd, q->rfd);
+			}
+			fprintf(f, " ");
 			break;
 
 		case CODE_IF:
