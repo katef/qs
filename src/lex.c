@@ -85,7 +85,7 @@ lex_push(const char **p, const char **s, const char **e)
 
 	default:
 		*s = *p;
-		*p += strcspn(*p, WHITE "&^|;=`$'#{}(),");
+		*p += strcspn(*p, WHITE "&^|;=`$'#{}()[],"); /* XXX: , in [] zone only */
 		*e = *p;
 		break;
 	}
