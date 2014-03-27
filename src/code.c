@@ -22,6 +22,7 @@ code_name(enum code_type type)
 	case CODE_IF:   return "if";
 	case CODE_JOIN: return "join";
 	case CODE_PIPE: return "pipe";
+	case CODE_END:  return "end";
 	case CODE_SET:  return "set";
 	}
 
