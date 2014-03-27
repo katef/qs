@@ -8,8 +8,8 @@ struct pipe {
 	struct pipe *next;
 };
 
-int
-pipe_new(struct pipe **head, int lfd, int rfd);
+struct pipe *
+pipe_push(struct pipe **head, int lfd, int rfd);
 
 void
 pipe_free(struct pipe *p);
