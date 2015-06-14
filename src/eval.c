@@ -359,6 +359,7 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 
 	/* XXX: but i don't want to waitpid for a multiple pipeline; wait for them all at the end.
 	 * maybe make a #wait perhaps? */
+	/* TODO: increment waitfor counter instead. note for a pipeline a|b|c $? must come from c */
 	if (-1 == proc_wait(pid)) {
 /* TODO: lots of cleanup on errors all over this function. split it up */
 		goto error;
@@ -589,7 +590,7 @@ eval(const struct code *code, struct data **data)
 		case CODE_RET:  r = eval_ret (&next, &rtrn);                                     break;
 		case CODE_DATA: r = eval_data(data, node->u.s);                                  break;
 		case CODE_PIPE: r = eval_pipe(&ps);                                              break;
-		case CODE_END:  r = eval_end(&ps);                                               break;
+		case CODE_END:  r = eval_end (&ps);                                              break;
 		case CODE_NOT:  r = eval_not ();                                                 break;
 		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);                 break;
 		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);                  break;
