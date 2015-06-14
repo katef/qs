@@ -73,7 +73,7 @@ lex_push(const char **p, const char **s, const char **e)
 		*p += strcspn(*p, "\'");
 		*e = *p;
 		(*p) += **p == '\'';
-		return tok_str;
+		return tok_word;
 
 	case '$':
 		(*p)++;
@@ -106,7 +106,7 @@ lex_push(const char **p, const char **s, const char **e)
 	}
 #endif
 
-	return tok_str;
+	return tok_word;
 }
 
 void
@@ -161,11 +161,11 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		const char *name;
 
 		switch (t->type) {
-		case tok_eof: name = "eof "; break;
-		case tok_nl:  name = "nl ";  break;
-		case tok_str: name = "str "; break;
-		case tok_var: name = "var "; break;
-		default:      name = "";     break;
+		case tok_eof:  name = "eof ";  break;
+		case tok_nl:   name = "nl ";   break;
+		case tok_word: name = "word "; break;
+		case tok_var:  name = "var ";  break;
+		default:       name = "";      break;
 		}
 
 		fprintf(stderr, "<%s\"%.*s\">\n",

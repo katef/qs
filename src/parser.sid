@@ -28,8 +28,8 @@
 	and;
 	!exec;
 
-	str: () -> (:string);
-	var: () -> (:string);
+	word: () -> (:string);
+	var:  () -> (:string);
 
 %productions%
 
@@ -85,22 +85,22 @@
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
 		/* TODO: [n=] to close an fd */
-		dup: () -> (l :fd, r :fd) = {
-			n = str;
+		dup-item: () -> (l :fd, r :fd) = {
+			n = word;
 			equ;
-			m = str;
+			m = word;
 
 			l = <make-fd>(n);
 			r = <make-fd>(m);
 		||
-			n = str;
+			n = word;
 
 			l = <make-fd>(n);
 			r = <stdin>;
 		};
 
 		dup-list: (d :dup &) -> () = {
-			(l, r) = dup;
+			(l, r) = dup-item;
 			<make-dup>(&d, l, r);
 
 			{
@@ -121,10 +121,10 @@
 		<append-dup>(&c, di);
 	};
 
-	arg-list: (c :code &) -> () [
+	word-list: (c :code &) -> () [
 
-		::arg: (c :code &) -> () = {
-			s = str;
+		::word-item: (c :code &) -> () = {
+			s = word;
 			<prepend-data>(&c, s);
 		||
 			t = <type-call>;
@@ -136,13 +136,13 @@
 
 	] = {
 		{
-			arg(&c);
+			word-item(&c);
 		||
 			tick-value(&c);
 		};
 
 		{
-			arg-list(&c);
+			word-list(&c);
 		||
 			$;
 		};
@@ -152,12 +152,12 @@
 
 		::value: (c :code &) -> () = {
 			oparen;
-			arg-list(&c);
+			word-list(&c);
 			cparen;
 		||
 			block(&c);
 		||
-			arg(&c);
+			word-item(&c);
 		};
 
 		::tick-value: (c :code &) -> () = {
@@ -167,7 +167,7 @@
 			<prepend-code>(&c, t2);
 
 			{
-				arg(&c);
+				word-item(&c);
 			||
 				ci = <empty-code>;
 
@@ -189,7 +189,7 @@
 		};
 
 	] = {
-		s = str;
+		s = word;
 		equ;
 
 		ci = <empty-code>;
@@ -237,7 +237,7 @@ TODO: update comment:
 		 */
 
 		{
-			arg-list(&ci);
+			word-list(&ci);
 
 			{
 				dup-box(&ci);

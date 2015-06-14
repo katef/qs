@@ -76,7 +76,7 @@
 
 %terminals%
 
-	str: () -> (s :string) = @{
+	word: () -> (s :string) = @{
 		assert(act_state->t.s != NULL);
 		assert(act_state->t.e >= act_state->t.s);
 

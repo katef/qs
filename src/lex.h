@@ -7,7 +7,7 @@ enum lex_type {
 
 	tok_eof     = '\0',
 	tok_nl      = '\n',
-	tok_str     = '\'',
+	tok_word    = '\'',
 	tok_semi    = ';',
 	tok_bg      = '&',
 	tok_equ     = '=',
