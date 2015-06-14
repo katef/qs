@@ -35,11 +35,9 @@ void
 var_replace(struct var *v, struct code *code)
 {
 	assert(v != NULL);
-/* XXX:
 	assert(v->code == NULL || v->code != code);
 
-	code_free(curr->code);
-*/
+	code_free(v->code);
 
 	if (debug & DEBUG_VAR) {
 		fprintf(stderr, "$%s replace: ", v->name);

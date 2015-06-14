@@ -6,18 +6,19 @@ enum code_type {
 	CODE_NULL = 1 <<  0,
 	CODE_ANON = 1 <<  1,
 	CODE_RET  = 1 <<  2,
-	CODE_DATA = 1 <<  3,
-	CODE_PIPE = 1 <<  4,
-	CODE_END  = 1 <<  5,
-	CODE_NOT  = 1 <<  6,
+	CODE_END  = 1 <<  3,
+	CODE_DUP  = 1 <<  4,
+	CODE_DATA = 1 <<  5,
+	CODE_PIPE = 1 <<  6,
+	CODE_NOT  = 1 <<  7,
 
 	/* operators */
-	CODE_TICK = 1 <<  7,
-	CODE_CALL = 1 <<  8,
-	CODE_EXEC = 1 <<  9,
-	CODE_IF   = 1 << 10,
-	CODE_JOIN = 1 << 11,
-	CODE_SET  = 1 << 12
+	CODE_TICK = 1 <<  8,
+	CODE_CALL = 1 <<  9,
+	CODE_EXEC = 1 << 10,
+	CODE_IF   = 1 << 11,
+	CODE_JOIN = 1 << 12,
+	CODE_SET  = 1 << 13
 };
 
 struct code {
@@ -27,7 +28,7 @@ struct code {
 	union {
 		char *s;
 		struct code *code;
-		struct pipe *pipe;
+		struct dup  *dup;
 	} u;
 
 	struct code *next;
@@ -45,8 +46,8 @@ code_data(struct code **head, struct frame *frame,
 	size_t n, const char *s);
 
 struct code *
-code_pipe(struct code **head, struct frame *frame,
-	struct pipe *pipe);
+code_dup(struct code **head, struct frame *frame,
+	struct dup *dup);
 
 struct code *
 code_push(struct code **head, struct frame *frame,

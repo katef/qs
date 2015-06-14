@@ -4,7 +4,7 @@
 	!frame;
 	type;
 	code;
-	pipe;
+	dup;
 	fd;
 
 %terminals%
@@ -38,16 +38,17 @@
 	<var-top>:  () -> (:string);
 
 	<empty-code>: () -> (:code);
-	<empty-pipe>: () -> (:pipe);
+	<empty-dup>:  () -> (:dup);
 
 	<stdin>:  () -> (:fd);
-	<stdout>: () -> (:fd);
+	!<stdout>:() -> (:fd);
 	!<stderr>:() -> (:fd);
 
 	<type-null>: () -> (:type);
 	<type-anon>: () -> (:type);
 	<type-ret>:  () -> (:type);
 	<type-end>:  () -> (:type);
+	<type-pipe>: () -> (:type);
 	<type-not>:  () -> (:type);
 	<type-tick>: () -> (:type);
 	<type-call>: () -> (:type);
@@ -56,8 +57,8 @@
 	!<type-join>:() -> (:type);
 	<type-set>:  () -> (:type);
 
-	<make-fd>:   (:string) -> (:fd);
-	<make-pipe>: (:pipe &, :fd, :fd) -> ();
+	<make-fd>:  (:string) -> (:fd);
+	<make-dup>: (:dup &, :fd, :fd) -> ();
 
 	<prepend-anon>: (:code &, :type, :code) -> ();
 	<prepend-data>: (:code &, :string)      -> ();
@@ -65,7 +66,7 @@
 
 	<append-anon>:  (:code &, :type, :code) -> ();
 	<append-data>:  (:code &, :string)      -> ();
-	<append-pipe>:  (:code &, :pipe)        -> ();
+	<append-dup>:   (:code &, :dup)         -> ();
 	<append-code>:  (:code &, :type)        -> ();
 	<append-cat>:   (:code &, :code)        -> ();
 
@@ -79,6 +80,46 @@
 	tick-value: (:code &) -> ();
 	block:      (:code &) -> ();
 	exprs:      (:code &) -> ();
+
+	dup-box: (c :code &) -> () [
+
+		/* here I would use zones if the lexer supported it, and emit tok_fd */
+		/* TODO: [n=] to close an fd */
+		dup: () -> (l :fd, r :fd) = {
+			n = str;
+			equ;
+			m = str;
+
+			l = <make-fd>(n);
+			r = <make-fd>(m);
+		||
+			n = str;
+
+			l = <make-fd>(n);
+			r = <stdin>;
+		};
+
+		dup-list: (d :dup &) -> () = {
+			(l, r) = dup;
+			<make-dup>(&d, l, r);
+
+			{
+				comma;
+				dup-list(&d);
+			||
+				$;
+			};
+		};
+
+	] = {
+		di = <empty-dup>;
+
+		osquare;
+		dup-list(&di);
+		csquare;
+
+		<append-dup>(&c, di);
+	};
 
 	arg-list: (c :code &) -> () [
 
@@ -198,6 +239,12 @@ TODO: update comment:
 		{
 			arg-list(&ci);
 
+			{
+				dup-box(&ci);
+			||
+				$;
+			};
+
 			t0 = <type-null>;
 			<prepend-code>(&ci, t0);
 
@@ -207,68 +254,32 @@ TODO: update comment:
 			<append-cat>(&c, ci);
 		||
 			block(&c);
-		||
-			assign-expr(&c);
-		};
-	};
-
-	pipe-expr: (c :code &) -> () [
-
-		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		redir: () -> (l :fd, r :fd) = {
-			n = str;
-			equ;
-			m = str;
-
-			l = <make-fd>(n);
-			r = <make-fd>(m);
-		||
-			n = str;
-
-			l = <make-fd>(n);
-			r = <stdin>;
-		};
-
-		redir-list: (p :pipe &) -> () = {
-			(l, r) = redir;
-			<make-pipe>(&p, l, r);
 
 			{
-				comma;
-				redir-list(&p);
+				dup-box(&c);
 			||
 				$;
 			};
+		||
+			assign-expr(&c); /* XXX: possibly belongs elsewhere */
 		};
+	};
 
-		redir-default: (p :pipe &) -> () = {
-			l = <stdout>;
-			r = <stdin>;
-
-			<make-pipe>(&p, l, r);
-		};
-
-	] = {
+	pipe-expr: (c :code &) -> () = {
 		ci = <empty-code>;
-		pi = <empty-pipe>;
 
 		block-expr(&ci);
 
 		{
 			bar;
-			{
-				osquare;
-				redir-list(&pi);
-				csquare;
-			||
-				redir-default(&pi);
-			};
 
-			<append-pipe>(&c, pi);
-
-			<append-cat>(&c, ci);
+			t0 = <type-pipe>;
+			<append-code>(&ci, t0);
 
 			/* TODO: maybe no need to append-cat here; could just pass &ci directly to pipe-expr() */
+			<append-cat>(&c, ci);
+			/* TODO: pipe needs an #anon block or something, to hold the rhs */
+
 			cii = <empty-code>;
 			pipe-expr(&cii);
 
@@ -276,8 +287,6 @@ TODO: update comment:
 		||
 			t = <type-end>;
 			<append-code>(&c, t);
-
-			<append-cat>(&c, ci);
 		};
 	};
 

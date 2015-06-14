@@ -14,7 +14,7 @@
 	frame  -> frame;
 	type   -> type;
 	code   -> code;
-	pipe   -> pipen;
+	dup    -> dupn;
 	fd     -> int;
 
 %header% @{
@@ -33,7 +33,7 @@
 	#include "code.h"
 	#include "frame.h"
 	#include "parser.h"
-	#include "pipe.h"
+	#include "dup.h"
 
 	struct act_string {
 		const char *s;
@@ -51,7 +51,7 @@
 	typedef struct act_string string;
 	typedef enum code_type type;
 	typedef struct code *code;
-	typedef struct pipe *pipen;
+	typedef struct dup *dupn;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -134,11 +134,11 @@
 		}
 	@};
 
-	<empty-pipe>: () -> (p :pipe) = @{
-		@p = NULL;
+	<empty-dup>: () -> (d :dup) = @{
+		@d = NULL;
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<empty-pipe>\n");
+			fprintf(stderr, "<empty-dup>\n");
 		}
 	@};
 
@@ -150,6 +150,7 @@
 	<type-anon>: () -> (t :type) = @{ @t = CODE_ANON; @};
 	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
 	<type-end>:  () -> (t :type) = @{ @t = CODE_END;  @};
+	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
@@ -197,10 +198,10 @@
 		@fd = l;
 	@};
 
-	<make-pipe>: (p :pipe &, l :fd, r :fd) -> () = @{
-		assert(@&p != NULL);
+	<make-dup>: (d :dup &, l :fd, r :fd) -> () = @{
+		assert(@&d != NULL);
 
-		if (!pipe_push(@&p, @l, @r)) {
+		if (!dup_push(@&d, @l, @r)) {
 			@!;
 		}
 	@};
@@ -273,20 +274,20 @@
 		}
 	@};
 
-	<append-pipe>: (c :code &, p :pipe) -> () = @{
+	<append-dup>: (c :code &, d :dup) -> () = @{
 		struct code **tail;
 
 		assert(act_state->frame != NULL);
 
 		if (debug & DEBUG_ACT) {
-/* TODO: pipe_dump redir list here */
-			fprintf(stderr, "<append-pipe>\n");
+/* TODO: dup_dump dup list here */
+			fprintf(stderr, "<append-dup>\n");
 		}
 
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
 			;
 
-		if (!code_pipe(tail, act_state->frame, @p)) {
+		if (!code_dup(tail, act_state->frame, @d)) {
 			@!;
 		}
 	@};

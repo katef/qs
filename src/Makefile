@@ -19,7 +19,7 @@ OBJS += return.o
 OBJS += eval.o
 OBJS += args.o
 OBJS += proc.o
-OBJS += pipe.o
+OBJS += dup.o
 OBJS += status.o
 OBJS += builtin.o
 

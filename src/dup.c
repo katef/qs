@@ -1,16 +1,18 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "pipe.h"
+#include "dup.h"
 
-struct pipe *
-pipe_push(struct pipe **head, int lfd, int rfd)
+struct dup *
+dup_push(struct dup **head, int lfd, int rfd)
 {
-	struct pipe *new;
+	struct dup *new;
 
 	assert(head != NULL);
 	assert(lfd != -1);
 	assert(rfd != -1);
+
+	/* TODO: rework this to reassign existing fds */
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -27,14 +29,14 @@ pipe_push(struct pipe **head, int lfd, int rfd)
 }
 
 void
-pipe_free(struct pipe *p)
+dup_free(struct dup *d)
 {
-	struct pipe *q, *next;
+	struct dup *p, *next;
 
-	for (q = p; q != NULL; q = next) {
-		next = q->next;
+	for (p = d; p != NULL; p = next) {
+		next = p->next;
 
-		free(q);
+		free(p);
 	}
 }
 

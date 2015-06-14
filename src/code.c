@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "pipe.h"
+#include "dup.h"
 #include "code.h"
 
 const char *
@@ -13,6 +13,7 @@ code_name(enum code_type type)
 	switch (type) {
 	case CODE_NULL: return "null";
 	case CODE_ANON: return "anon";
+	case CODE_DUP:  return "dup";
 	case CODE_RET:  return "ret";
 	case CODE_DATA: return "data";
 	case CODE_NOT:  return "not";
@@ -89,8 +90,8 @@ code_data(struct code **head, struct frame *frame,
 }
 
 struct code *
-code_pipe(struct code **head, struct frame *frame,
-	struct pipe *pipe)
+code_dup(struct code **head, struct frame *frame,
+	struct dup *dup)
 {
 	struct code *new;
 
@@ -102,16 +103,16 @@ code_pipe(struct code **head, struct frame *frame,
 		return NULL;
 	}
 
-	new->type   = CODE_PIPE;
-	new->frame  = frame;
-	new->u.pipe = pipe;
+	new->type  = CODE_DUP;
+	new->frame = frame;
+	new->u.dup = dup;
 
 	new->next = *head;
 	*head = new;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %s\n", code_name(CODE_PIPE));
-		/* TODO: could dump pipe redir list here */
+		fprintf(stderr, "code -> %s\n", code_name(CODE_DUP));
+		/* TODO: could dump dup redir list here */
 	}
 
 	return new;
@@ -183,7 +184,7 @@ static int
 code_dumpinline(FILE *f, const struct code *code)
 {
 	const struct code *p;
-	const struct pipe *q;
+	const struct dup *q;
 
 	assert(f != NULL);
 
@@ -193,9 +194,9 @@ code_dumpinline(FILE *f, const struct code *code)
 			fprintf(f, "'%s' ", p->u.s);
 			break;
 
-		case CODE_PIPE:
+		case CODE_DUP:
 			fprintf(f, "#%s", code_name(p->type));
-			for (q = p->u.pipe; q != NULL; q = q->next) {
+			for (q = p->u.dup; q != NULL; q = q->next) {
 				fprintf(f, "[%d=%d]", q->lfd, q->rfd);
 			}
 			fprintf(f, " ");
