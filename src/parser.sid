@@ -79,7 +79,7 @@
 
 	tick-value: (:code &) -> ();
 	block:      (:code &) -> ();
-	exprs:      (:code &) -> ();
+	expr-list:  (:code &) -> ();
 
 	dup-box: (c :code &) -> () [
 
@@ -215,7 +215,7 @@
 			obrace;
 			<frame-push>;
 			{
-				exprs(&c);
+				expr-list(&c);
 			||
 				$;
 			};
@@ -330,7 +330,7 @@ TODO: update comment:
 		};
 	};
 
-	exprs: (c :code &) -> () [
+	expr-list: (c :code &) -> () [
 
 		::sep = {
 			nl;
@@ -356,7 +356,7 @@ TODO: update comment:
 			sep;
 
 			ci = <empty-code>;
-			exprs(&ci);
+			expr-list(&ci);
 
 			<append-cat>(&c, ci);
 		||
@@ -368,7 +368,7 @@ TODO: update comment:
 
 	script [
 
-		global-exprs = {
+		global-expr-list = {
 			c = <empty-code>;
 
 			expr(&c);
@@ -380,7 +380,7 @@ TODO: update comment:
 			<frame-set>(s, c);
 
 			{
-				global-exprs;
+				global-expr-list;
 			||
 				$;
 			};
@@ -389,7 +389,7 @@ TODO: update comment:
 	] = {
 		<frame-push>;
 		{
-			global-exprs;
+			global-expr-list;
 		||
 			$;
 		};
