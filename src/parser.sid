@@ -209,40 +209,6 @@
 		<append-anon>(&c, t1, ci);
 	};
 
-	dup-expr: (c :code &) -> () = {
-		ci = <empty-code>;
-
-		{
-			/*
-			 * SID's parsing has single-token lookahead. This has the effect that
-			 * actions must come before disambiguating the next token. Because LL(1)
-			 * parsing does not permit leftmost recursion, the <stack-push> actions
-			 * must be called after recurring - i.e. in reverse order.
-TODO: update comment:
-			 * So <prepend-stack> is expected to wind instructions in reverse order,
-			 * to counter that &ci is constructed backwards.
-			 */
-
-			word-list(&ci);
-
-			t0 = <type-null>;
-			<prepend-code>(&ci, t0);
-
-			t1 = <type-exec>;
-			<append-code>(&ci, t1);
-
-			<append-cat>(&c, ci);
-		||
-			block(&c);
-		};
-
-		{
-			dup-box(&c);
-		||
-			$;
-		};
-	};
-
 	block-expr: (c :code &) -> () [
 
 		::block: (c :code &) -> () = {
@@ -258,19 +224,48 @@ TODO: update comment:
 		};
 
 	] = {
-		dup-expr(&c);
+		ci = <empty-code>;
+
+		/*
+		 * SID's parsing has single-token lookahead. This has the effect that
+		 * actions must come before disambiguating the next token. Because LL(1)
+		 * parsing does not permit leftmost recursion, the <stack-push> actions
+		 * must be called after recurring - i.e. in reverse order.
+TODO: update comment:
+		 * So <prepend-stack> is expected to wind instructions in reverse order,
+		 * to counter that &ci is constructed backwards.
+		 */
+
+		word-list(&ci);
+
+		t0 = <type-null>;
+		<prepend-code>(&ci, t0);
+
+		t1 = <type-exec>;
+		<append-code>(&ci, t1);
+
+		<append-cat>(&c, ci);
 	||
-		! = <empty-code>; /* XXX: hack to keep SID happy */
-		assign-expr(&c); /* XXX: this belongs elsewhere */
+		block(&c);
+	};
+
+	dup-expr: (c :code &) -> () = {
+		block-expr(&c);
+
+		{
+			dup-box(&c);
+		||
+			$;
+		};
 	};
 
 	pipe-expr: (c :code &) -> () = {
-		ci = <empty-code>;
-
-		block-expr(&ci);
+		dup-expr(&c);
 
 		{
 			bar;
+
+			ci = <empty-code>;
 
 			t0 = <type-pipe>;
 			<append-code>(&ci, t0);
@@ -290,7 +285,12 @@ TODO: update comment:
 	};
 
 	and-expr: (c :code &) -> () = {
-		pipe-expr(&c);
+		{
+			pipe-expr(&c);
+		||
+			! = <empty-code>; /* XXX: hack to keep SID happy */
+			assign-expr(&c);
+		};
 
 		{
 			and;
