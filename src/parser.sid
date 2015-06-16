@@ -209,6 +209,40 @@
 		<append-anon>(&c, t1, ci);
 	};
 
+	dup-expr: (c :code &) -> () = {
+		ci = <empty-code>;
+
+		{
+			/*
+			 * SID's parsing has single-token lookahead. This has the effect that
+			 * actions must come before disambiguating the next token. Because LL(1)
+			 * parsing does not permit leftmost recursion, the <stack-push> actions
+			 * must be called after recurring - i.e. in reverse order.
+TODO: update comment:
+			 * So <prepend-stack> is expected to wind instructions in reverse order,
+			 * to counter that &ci is constructed backwards.
+			 */
+
+			word-list(&ci);
+
+			t0 = <type-null>;
+			<prepend-code>(&ci, t0);
+
+			t1 = <type-exec>;
+			<append-code>(&ci, t1);
+
+			<append-cat>(&c, ci);
+		||
+			block(&c);
+		};
+
+		{
+			dup-box(&c);
+		||
+			$;
+		};
+	};
+
 	block-expr: (c :code &) -> () [
 
 		::block: (c :code &) -> () = {
@@ -224,45 +258,10 @@
 		};
 
 	] = {
-		ci = <empty-code>;
-
-		/*
-		 * SID's parsing has single-token lookahead. This has the effect that
-		 * actions must come before disambiguating the next token. Because LL(1)
-		 * parsing does not permit leftmost recursion, the <stack-push> actions
-		 * must be called after recurring - i.e. in reverse order.
-TODO: update comment:
-		 * So <prepend-stack> is expected to wind instructions in reverse order,
-		 * to counter that &ci is constructed backwards.
-		 */
-
-		{
-			word-list(&ci);
-
-			{
-				dup-box(&ci);
-			||
-				$;
-			};
-
-			t0 = <type-null>;
-			<prepend-code>(&ci, t0);
-
-			t1 = <type-exec>;
-			<append-code>(&ci, t1);
-
-			<append-cat>(&c, ci);
-		||
-			block(&c);
-
-			{
-				dup-box(&c);
-			||
-				$;
-			};
-		||
-			assign-expr(&c); /* XXX: possibly belongs elsewhere */
-		};
+		dup-expr(&c);
+	||
+		! = <empty-code>; /* XXX: hack to keep SID happy */
+		assign-expr(&c); /* XXX: this belongs elsewhere */
 	};
 
 	pipe-expr: (c :code &) -> () = {
