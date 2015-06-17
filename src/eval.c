@@ -133,20 +133,6 @@ eval_pipe(struct pipe_state *ps)
 	return 0;
 }
 
-static int
-eval_end(struct pipe_state *ps)
-{
-	ps->usein  = ps->in;
-	ps->in     = -1;
-
-	/* XXX: close() previous pipe here (this triggers waitpid) */
-
-	/* XXX: i don't like hardcoded knowledge of STDIN_FILENO and STDOUT_FILENO here */
-	ps->useout = STDOUT_FILENO;
-
-	return 0;
-}
-
 /* pop $?, push !$? to *data */
 static int
 eval_not(void)
@@ -590,7 +576,6 @@ eval(const struct code *code, struct data **data)
 		case CODE_RET:  r = eval_ret (&next, &rtrn);                                     break;
 		case CODE_DATA: r = eval_data(data, node->u.s);                                  break;
 		case CODE_PIPE: r = eval_pipe(&ps);                                              break;
-		case CODE_END:  r = eval_end (&ps);                                              break;
 		case CODE_NOT:  r = eval_not ();                                                 break;
 		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);                 break;
 		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);                  break;

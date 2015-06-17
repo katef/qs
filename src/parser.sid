@@ -47,7 +47,6 @@
 	<type-null>: () -> (:type);
 	<type-anon>: () -> (:type);
 	<type-ret>:  () -> (:type);
-	<type-end>:  () -> (:type);
 	<type-pipe>: () -> (:type);
 	<type-not>:  () -> (:type);
 	<type-tick>: () -> (:type);
@@ -279,8 +278,7 @@ TODO: update comment:
 
 			<append-cat>(&ci, cii);
 		||
-			t = <type-end>;
-			<append-code>(&c, t);
+			$;
 		};
 	};
 

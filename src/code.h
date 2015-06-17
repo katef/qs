@@ -5,17 +5,16 @@ enum code_type {
 	CODE_NULL = 1 <<  0,
 	CODE_ANON = 1 <<  1,
 	CODE_RET  = 1 <<  2,
-	CODE_END  = 1 <<  3,
-	CODE_DUP  = 1 <<  4,
-	CODE_DATA = 1 <<  5,
-	CODE_PIPE = 1 <<  6,
-	CODE_NOT  = 1 <<  7,
-	CODE_TICK = 1 <<  8,
-	CODE_CALL = 1 <<  9,
-	CODE_EXEC = 1 << 10,
-	CODE_IF   = 1 << 11,
-	CODE_JOIN = 1 << 12,
-	CODE_SET  = 1 << 13
+	CODE_DUP  = 1 <<  3,
+	CODE_DATA = 1 <<  4,
+	CODE_PIPE = 1 <<  5,
+	CODE_NOT  = 1 <<  6,
+	CODE_TICK = 1 <<  7,
+	CODE_CALL = 1 <<  8,
+	CODE_EXEC = 1 <<  9,
+	CODE_IF   = 1 << 10,
+	CODE_JOIN = 1 << 11,
+	CODE_SET  = 1 << 12
 };
 
 struct code {

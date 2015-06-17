@@ -149,7 +149,6 @@
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
 	<type-anon>: () -> (t :type) = @{ @t = CODE_ANON; @};
 	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
-	<type-end>:  () -> (t :type) = @{ @t = CODE_END;  @};
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
