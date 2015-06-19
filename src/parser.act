@@ -240,6 +240,20 @@
 		}
 	@};
 
+	<prepend-cat>: (c :code &, ci :code) -> () = @{
+		struct code **tail;
+
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<prepend-cat>\n");
+		}
+
+		for (tail = @&ci; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		*tail = @c;
+		@=c = @ci;
+	@};
+
 	<append-anon>: (c :code &, t :type, ci :code) -> () = @{
 		struct code **tail;
 
@@ -311,6 +325,10 @@
 	<append-cat>: (c :code &, ci :code) -> () = @{
 		struct code **tail;
 
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<append-cat>\n");
+		}
+
 		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
 			;
 
@@ -361,8 +379,11 @@
 	@};
 
 	<err-syntax>: (c :code) -> () = @{
+		fprintf(stderr, "syntax error\n");
+		/* TODO:
 		fprintf(stderr, "syntax error at: ");
 		code_dump(stderr, @c);
+		*/
 		@!;
 	@};
 

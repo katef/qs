@@ -62,6 +62,7 @@
 	<prepend-anon>: (:code &, :type, :code) -> ();
 	<prepend-data>: (:code &, :string)      -> ();
 	<prepend-code>: (:code &, :type)        -> ();
+	<prepend-cat>:  (:code &, :code)        -> ();
 
 	<append-anon>:  (:code &, :type, :code) -> ();
 	<append-data>:  (:code &, :string)      -> ();
@@ -76,11 +77,11 @@
 	<err-expected-sep>;
 	<err-syntax>: (:code) -> ();
 
-	tick-value: (:code &) -> ();
-	block:      (:code &) -> ();
-	expr-list:  (:code &) -> ();
+	tick-value: () -> (:code);
+	block:      () -> (:code);
+	expr-list:  () -> (:code);
 
-	dup-box: (c :code &) -> () [
+	dup-box: () -> (d :dup) [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
 		/* TODO: [n=] to close an fd */
@@ -111,66 +112,69 @@
 		};
 
 	] = {
-		di = <empty-dup>;
-
 		osquare;
-		dup-list(&di);
+		d = <empty-dup>;
+		dup-list(&d);
 		csquare;
-
-		<append-dup>(&c, di);
 	};
 
-	word-list: (c :code &) -> () [
+	word-list: () -> (c :code) [
 
-		::word-item: (c :code &) -> () = {
+		::word-item: () -> (c :code) = {
 			s = word;
+			c = <empty-code>;
 			<prepend-data>(&c, s);
 		||
+			s = var;
+			c = <empty-code>;
 			t = <type-call>;
 			<prepend-code>(&c, t);
-
-			s = var;
 			<prepend-data>(&c, s);
 		};
 
 	] = {
 		{
-			word-item(&c);
+			c = word-item;
 		||
-			tick-value(&c);
+			c = tick-value;
 		};
 
 		{
-			word-list(&c);
+			ci = word-list;
+			<prepend-cat>(&c, ci);
 		||
 			$;
 		};
 	};
 
-	assign-expr: (c :code &) -> () [
+	assign-expr: () -> (c :code) [
 
-		::value: (c :code &) -> () = {
+		::value: () -> (c :code) = {
 			oparen;
-			word-list(&c);
+			c = word-list;
 			cparen;
 		||
-			block(&c);
+			c = block;
 		||
-			word-item(&c);
+			c = word-item;
 		};
 
-		::tick-value: (c :code &) -> () = {
+		::tick-value: () -> (c :code) = {
 			tick;
 
-			t2 = <type-null>;
-			<prepend-code>(&c, t2);
+			c = <empty-code>;
+/* XXX: probably not going to work, due to SID stuff. maybe take x = &c here, and return x.
+or <append-*> need to return the new :code */
+/* TODO: make #tick take @ci, and the inner block just calls #exec */
+
+			t1 = <type-tick>;
+			<prepend-code>(&c, t1);
 
 			{
-				word-item(&c);
+				ci = word-item;
+				<prepend-cat>(&c, ci);
 			||
-				ci = <empty-code>;
-
-				block(&ci);
+				ci = block;
 
 				t0 = <type-ret>;
 				<append-code>(&ci, t0);
@@ -183,83 +187,70 @@
 				/* XXX: maybe best to have #exec take a u.pipe argument for dup2 */
 			};
 
-			t1 = <type-tick>;
-			<prepend-code>(&c, t1);
+			t2 = <type-null>;
+			<prepend-code>(&c, t2);
 		};
 
 	] = {
 		s = word;
 		equ;
 
-		ci = <empty-code>;
+		/* TODO: maybe prepend this, after, and just have c = value/tick-value */
+		c = <empty-code>;
+		<append-data>(&c, s);
 
 		{
-			value(&ci);
+			ci = value;
 		||
-			tick-value(&ci);
+			ci = tick-value;
 		};
 
 		t0 = <type-ret>;
 		<append-code>(&ci, t0);
 
-		<append-data>(&c, s);
-
 		t1 = <type-set>;
 		<append-anon>(&c, t1, ci);
 	};
 
-	block-expr: (c :code &) -> () [
+	block-expr: () -> (c :code) [
 
-		::block: (c :code &) -> () = {
+		::block: () -> (c :code) = {
 			obrace;
 			<frame-push>;
 			{
-				expr-list(&c);
+				c = expr-list;
 			||
-				$;
+				c = <empty-code>;
 			};
 			<frame-pop>;
 			cbrace;
 		};
 
 	] = {
-		ci = <empty-code>;
-
-		/*
-		 * SID's parsing has single-token lookahead. This has the effect that
-		 * actions must come before disambiguating the next token. Because LL(1)
-		 * parsing does not permit leftmost recursion, the <stack-push> actions
-		 * must be called after recurring - i.e. in reverse order.
-TODO: update comment:
-		 * So <prepend-stack> is expected to wind instructions in reverse order,
-		 * to counter that &ci is constructed backwards.
-		 */
-
-		word-list(&ci);
+		c = word-list;
 
 		t0 = <type-null>;
-		<prepend-code>(&ci, t0);
+		<prepend-code>(&c, t0);
 
 		t1 = <type-exec>;
-		<append-code>(&ci, t1);
-
-		<append-cat>(&c, ci);
+		<append-code>(&c, t1);
 	||
-		block(&c);
+		c = block;
 	};
 
-	dup-expr: (c :code &) -> () = {
-		block-expr(&c);
+	dup-expr: () -> (c :code) = {
+		c = block-expr;
 
 		{
-			dup-box(&c);
+			d = dup-box;
+			<append-dup>(&c, d);
 		||
 			$;
 		};
 	};
 
-	pipe-expr: (c :code &) -> () = {
-		dup-expr(&c);
+	pipe-expr: () -> (c :code) = {
+		c = dup-expr;
 
 		{
 			bar;
@@ -273,8 +264,7 @@ TODO: update comment:
 			<append-cat>(&c, ci);
 			/* TODO: pipe needs an #anon block or something, to hold the rhs */
 
-			cii = <empty-code>;
-			pipe-expr(&cii);
+			cii = pipe-expr;
 
 			<append-cat>(&ci, cii);
 		||
@@ -282,19 +272,17 @@ TODO: update comment:
 		};
 	};
 
-	and-expr: (c :code &) -> () = {
+	and-expr: () -> (c :code) = {
 		{
-			pipe-expr(&c);
+			c = pipe-expr;
 		||
-			! = <empty-code>; /* XXX: hack to keep SID happy */
-			assign-expr(&c);
+			c = assign-expr;
 		};
 
 		{
 			and;
 
-			ci = <empty-code>;
-			and-expr(&ci);
+			ci = and-expr;
 
 			t0 = <type-ret>;
 			<append-code>(&ci, t0);
@@ -306,14 +294,13 @@ TODO: update comment:
 		};
 	};
 
-	or-expr: (c :code &) -> () = {
-		and-expr(&c);
+	or-expr: () -> (c :code) = {
+		c = and-expr;
 
 		{
 			or;
 
-			ci = <empty-code>;
-			or-expr(&ci);
+			ci = or-expr;
 
 			t0 = <type-ret>;
 			<append-code>(&ci, t0);
@@ -328,7 +315,7 @@ TODO: update comment:
 		};
 	};
 
-	expr-list: (c :code &) -> () [
+	expr-list: () -> (c :code) [
 
 		::sep = {
 			nl;
@@ -341,20 +328,20 @@ TODO: update comment:
 			<err-expected-sep>;
 		};
 
-		::expr: (c :code &) -> () = {
-			or-expr(&c);
+		::expr: () -> (c :code) = {
+			c = or-expr;
 		##
+			c = <empty-code>;
 			<err-syntax>(c);
 		};
 
 	] = {
-		expr(&c);
+		c = expr;
 
 		{
 			sep;
 
-			ci = <empty-code>;
-			expr-list(&ci);
+			ci = expr-list;
 
 			<append-cat>(&c, ci);
 		||
@@ -367,9 +354,7 @@ TODO: update comment:
 	script [
 
 		global-expr-list = {
-			c = <empty-code>;
-
-			expr(&c);
+			c = expr;
 			sep;
 
 			<dispatch>(&c);
