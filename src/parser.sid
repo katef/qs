@@ -81,43 +81,6 @@
 	block:      () -> (:code);
 	expr-list:  () -> (:code);
 
-	dup-box: () -> (d :dup) [
-
-		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		/* TODO: [n=] to close an fd */
-		dup-item: () -> (l :fd, r :fd) = {
-			n = word;
-			equ;
-			m = word;
-
-			l = <make-fd>(n);
-			r = <make-fd>(m);
-		||
-			n = word;
-
-			l = <make-fd>(n);
-			r = <stdin>;
-		};
-
-		dup-list: (d :dup &) -> () = {
-			(l, r) = dup-item;
-			<make-dup>(&d, l, r);
-
-			{
-				comma;
-				dup-list(&d);
-			||
-				$;
-			};
-		};
-
-	] = {
-		osquare;
-		d = <empty-dup>;
-		dup-list(&d);
-		csquare;
-	};
-
 	word-list: () -> (c :code) [
 
 		::word-item: () -> (c :code) = {
@@ -238,11 +201,44 @@ or <append-*> need to return the new :code */
 		c = block;
 	};
 
-	dup-expr: () -> (c :code) = {
+	dup-expr: () -> (c :code) [
+
+		/* here I would use zones if the lexer supported it, and emit tok_fd */
+		/* TODO: [n=] to close an fd */
+		dup-item: () -> (l :fd, r :fd) = {
+			n = word;
+			equ;
+			m = word;
+
+			l = <make-fd>(n);
+			r = <make-fd>(m);
+		||
+			n = word;
+
+			l = <make-fd>(n);
+			r = <stdin>;
+		};
+
+		dup-list: (d :dup &) -> () = {
+			(l, r) = dup-item;
+			<make-dup>(&d, l, r);
+
+			{
+				comma;
+				dup-list(&d);
+			||
+				$;
+			};
+		};
+
+	] = {
 		c = block-expr;
 
 		{
-			d = dup-box;
+			osquare;
+			d = <empty-dup>;
+			dup-list(&d);
+			csquare;
 			<append-dup>(&c, d);
 		||
 			$;
