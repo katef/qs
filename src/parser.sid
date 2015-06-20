@@ -80,11 +80,10 @@
 
 	block:     () -> (:code);
 	expr-list: () -> (:code);
-	tick-item: () -> (:code);
 
-	word-list: () -> (c :code) [
+	list: () -> (c :code) [
 
-		::word-item: () -> (c :code) = {
+		::item: () -> (c :code) = {
 			s = word;
 			c = <empty-code>;
 			<prepend-data>(&c, s);
@@ -94,78 +93,69 @@
 			t = <type-call>;
 			<prepend-code>(&c, t);
 			<prepend-data>(&c, s);
+		||
+			tick;
+
+			c = <empty-code>;
+/* XXX: probably not going to work, due to SID stuff. maybe take x = &c here, and return x.
+or <append-*> need to return the new :code */
+/* TODO: make #tick take @ci, and the inner block just calls #exec */
+
+			t1 = <type-tick>;
+			<prepend-code>(&c, t1);
+
+			{
+				ci = item;
+				<prepend-cat>(&c, ci);
+			||
+				ci = block;
+
+				t0 = <type-ret>;
+				<append-code>(&ci, t0);
+
+				/* TODO: get rid of #anon and have #tick take @ci here */
+				t3 = <type-anon>;
+				<prepend-anon>(&c, t3, ci);
+
+				/* XXX: would need to set up pipe for ` here, first. inner #exec are not dup2'd */
+				/* XXX: maybe best to have #exec take a u.pipe argument for dup2 */
+			};
+
+			t2 = <type-null>;
+			<prepend-code>(&c, t2);
 		};
 
 	] = {
-		{
-			c = word-item;
-		||
-			c = tick-item;
-		};
+		c = item;
 
 		{
-			ci = word-list;
+			ci = list;
 			<prepend-cat>(&c, ci);
 		||
 			$;
 		};
 	};
 
-	tick-item: () -> (c :code) = {
-		tick;
-
-		c = <empty-code>;
-/* XXX: probably not going to work, due to SID stuff. maybe take x = &c here, and return x.
-or <append-*> need to return the new :code */
-/* TODO: make #tick take @ci, and the inner block just calls #exec */
-
-		t1 = <type-tick>;
-		<prepend-code>(&c, t1);
-
-		{
-			ci = word-item;
-			<prepend-cat>(&c, ci);
-		||
-			ci = block;
-
-			t0 = <type-ret>;
-			<append-code>(&ci, t0);
-
-			/* TODO: get rid of #anon and have #tick take @ci here */
-			t3 = <type-anon>;
-			<prepend-anon>(&c, t3, ci);
-
-			/* XXX: would need to set up pipe for ` here, first. inner #exec are not dup2'd */
-			/* XXX: maybe best to have #exec take a u.pipe argument for dup2 */
-		};
-
-		t2 = <type-null>;
-		<prepend-code>(&c, t2);
-	};
-
 	assign-expr: () -> (c :code) [
 
 		value: () -> (c :code) = {
 			oparen;
-			c = word-list;
+			c = list;
 			cparen;
 		||
+			c = item;
+		||
 			c = block;
-		||
-			c = word-item;
-		||
-			c = tick-item;
 		};
 
 	] = {
 		s = word;
 		equ;
+		ci = value;
 
 		/* TODO: maybe prepend this, after, and just have c = value */
 		c = <empty-code>;
 		<append-data>(&c, s);
-
-		ci = value;
 
 		t0 = <type-ret>;
 		<append-code>(&ci, t0);
@@ -189,7 +179,7 @@ or <append-*> need to return the new :code */
 		};
 
 	] = {
-		c = word-list;
+		c = list;
 
 		t0 = <type-null>;
 		<prepend-code>(&c, t0);
