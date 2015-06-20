@@ -39,31 +39,6 @@ eval_null(struct data **data)
 	return 0;
 }
 
-/* push current code pointer to rtrn stack; set current code pointer to anon block */
-static int
-eval_anon(const struct code **next, struct rtrn **rtrn, const struct code *ci)
-{
-	assert(next != NULL);
-	assert(rtrn != NULL);
-
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %s\n", code_name(CODE_DATA));
-	}
-
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "push return from: ");
-		code_dump(stderr, *next);
-	}
-
-	if (!rtrn_push(rtrn, *next)) {
-		return -1;
-	}
-
-	*next = ci;
-
-	return 0;
-}
-
 /* pop from return stack; set current code pointer to that */
 static int
 eval_ret(const struct code **next, struct rtrn **rtrn)
@@ -432,7 +407,7 @@ error:
 	return -1;
 }
 
-/* TODO: explain what happens here: status.r is the predicate, CODE_ANON is a block to call */
+/* TODO: explain what happens here: status.r is the predicate, u.code is a block to call */
 static int
 eval_if(const struct code **next, struct rtrn **rtrn, struct data **data,
 	struct code *code)
@@ -572,7 +547,6 @@ eval(const struct code *code, struct data **data)
 
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(data);                                             break;
-		case CODE_ANON: r = eval_anon(&next, &rtrn, node->u.code);                       break;
 		case CODE_RET:  r = eval_ret (&next, &rtrn);                                     break;
 		case CODE_DATA: r = eval_data(data, node->u.s);                                  break;
 		case CODE_PIPE: r = eval_pipe(&ps);                                              break;

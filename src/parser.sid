@@ -46,7 +46,6 @@
 	<close>:  () -> (:fd);
 
 	<type-null>: () -> (:type);
-	<type-anon>: () -> (:type);
 	<type-ret>:  () -> (:type);
 	<type-pipe>: () -> (:type);
 	<type-not>:  () -> (:type);

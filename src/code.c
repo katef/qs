@@ -12,7 +12,6 @@ code_name(enum code_type type)
 {
 	switch (type) {
 	case CODE_NULL: return "null";
-	case CODE_ANON: return "anon";
 	case CODE_DUP:  return "dup";
 	case CODE_RET:  return "ret";
 	case CODE_DATA: return "data";
@@ -127,7 +126,6 @@ code_push(struct code **head, struct frame *frame,
 	assert(frame != NULL);
 	assert(type != CODE_IF);
 	assert(type != CODE_SET);
-	assert(type != CODE_ANON);
 	assert(type != CODE_DATA);
 	assert(type != CODE_PIPE);
 	assert(type != CODE_TICK);
@@ -205,7 +203,6 @@ code_dumpinline(FILE *f, const struct code *code)
 
 		case CODE_IF:
 		case CODE_SET:
-		case CODE_ANON:
 		case CODE_PIPE:
 		case CODE_TICK:
 			fprintf(f, "#%s", code_name(p->type));
