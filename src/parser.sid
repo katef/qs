@@ -43,6 +43,7 @@
 	<stdin>:  () -> (:fd);
 	!<stdout>:() -> (:fd);
 	!<stderr>:() -> (:fd);
+	<close>:  () -> (:fd);
 
 	<type-null>: () -> (:type);
 	<type-anon>: () -> (:type);
@@ -204,7 +205,6 @@ or <append-*> need to return the new :code */
 	dup-expr: () -> (c :code) [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		/* TODO: [n=] to close an fd */
 		dup-item: () -> (l :fd, r :fd) = {
 			n = word;
 			equ;
@@ -212,6 +212,12 @@ or <append-*> need to return the new :code */
 
 			l = <make-fd>(n);
 			r = <make-fd>(m);
+		||
+			n = word;
+			equ;
+
+			l = <make-fd>(n);
+			r = <close>;
 		||
 			n = word;
 

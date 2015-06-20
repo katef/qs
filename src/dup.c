@@ -10,7 +10,6 @@ dup_push(struct dup **head, int lfd, int rfd)
 
 	assert(head != NULL);
 	assert(lfd != -1);
-	assert(rfd != -1);
 
 	/* TODO: rework this to reassign existing fds */
 
