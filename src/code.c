@@ -130,6 +130,7 @@ code_push(struct code **head, struct frame *frame,
 	assert(type != CODE_ANON);
 	assert(type != CODE_DATA);
 	assert(type != CODE_PIPE);
+	assert(type != CODE_TICK);
 	assert(type && !(type & (type - 1)));
 
 	new = malloc(sizeof *new);
@@ -206,6 +207,7 @@ code_dumpinline(FILE *f, const struct code *code)
 		case CODE_SET:
 		case CODE_ANON:
 		case CODE_PIPE:
+		case CODE_TICK:
 			fprintf(f, "#%s", code_name(p->type));
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);

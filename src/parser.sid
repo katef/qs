@@ -85,10 +85,12 @@
 
 		::item: () -> (c :code) = {
 			s = word;
+
 			c = <empty-code>;
 			<prepend-data>(&c, s);
 		||
 			s = var;
+
 			c = <empty-code>;
 			t = <type-call>;
 			<prepend-code>(&c, t);
@@ -96,33 +98,21 @@
 		||
 			tick;
 
-			c = <empty-code>;
-/* XXX: probably not going to work, due to SID stuff. maybe take x = &c here, and return x.
-or <append-*> need to return the new :code */
-/* TODO: make #tick take @ci, and the inner block just calls #exec */
-
-			t1 = <type-tick>;
-			<prepend-code>(&c, t1);
+			/* TODO: not sure if i need to <frame-push> here, for sake of pipes */
 
 			{
 				ci = item;
-				<prepend-cat>(&c, ci);
 			||
 				ci = block;
-
-				t0 = <type-ret>;
-				<append-code>(&ci, t0);
-
-				/* TODO: get rid of #anon and have #tick take @ci here */
-				t3 = <type-anon>;
-				<prepend-anon>(&c, t3, ci);
-
-				/* XXX: would need to set up pipe for ` here, first. inner #exec are not dup2'd */
-				/* XXX: maybe best to have #exec take a u.pipe argument for dup2 */
 			};
 
-			t2 = <type-null>;
-			<prepend-code>(&c, t2);
+			t0 = <type-ret>;
+			<append-code>(&ci, t0);
+
+			c = <empty-code>;
+
+			t2 = <type-tick>;
+			<prepend-anon>(&c, t2, ci);
 		};
 
 	] = {
