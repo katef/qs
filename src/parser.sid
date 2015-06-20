@@ -245,18 +245,13 @@ or <append-*> need to return the new :code */
 		{
 			bar;
 
-			ci = <empty-code>;
+			ci = pipe-expr;
 
-			t0 = <type-pipe>;
+			t0 = <type-ret>;
 			<append-code>(&ci, t0);
 
-			/* TODO: maybe no need to append-cat here; could just pass &ci directly to pipe-expr() */
-			<append-cat>(&c, ci);
-			/* TODO: pipe needs an #anon block or something, to hold the rhs */
-
-			cii = pipe-expr;
-
-			<append-cat>(&ci, cii);
+			t2 = <type-pipe>;
+			<prepend-anon>(&c, t2, ci);
 		||
 			$;
 		};
