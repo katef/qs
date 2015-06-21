@@ -1,19 +1,24 @@
 #ifndef CODE_H
 #define CODE_H
 
+enum {
+	CODE_NONE = (1 << 7)
+};
+
 enum code_type {
-	CODE_NULL = 1 <<  0,
-	CODE_RET  = 1 <<  1,
-	CODE_DUP  = 1 <<  2,
-	CODE_DATA = 1 <<  3,
-	CODE_PIPE = 1 <<  4,
-	CODE_NOT  = 1 <<  5,
-	CODE_TICK = 1 <<  6,
-	CODE_CALL = 1 <<  7,
-	CODE_EXEC = 1 <<  8,
-	CODE_IF   = 1 <<  9,
-	CODE_JOIN = 1 << 10,
-	CODE_SET  = 1 << 11
+	CODE_CALL = 0 | CODE_NONE,
+	CODE_EXEC = 1 | CODE_NONE,
+	CODE_JOIN = 2 | CODE_NONE,
+	CODE_NOT  = 3 | CODE_NONE,
+	CODE_NULL = 4 | CODE_NONE,
+	CODE_RET  = 5 | CODE_NONE,
+
+	CODE_DATA = 0, /* u.s */
+	CODE_DUP  = 1, /* u.dup */
+	CODE_IF   = 2, /* u.code */
+	CODE_PIPE = 3, /* u.code */
+	CODE_SET  = 4, /* u.code */
+	CODE_TICK = 5  /* u.code */
 };
 
 struct code {

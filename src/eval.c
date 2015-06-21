@@ -556,7 +556,6 @@ eval(const struct code *code, struct data **data)
 		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type, &ps); break;
 		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type, &ps); break;
 		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);           break;
-
 		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);               break;
 
 		default:

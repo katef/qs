@@ -11,18 +11,19 @@ const char *
 code_name(enum code_type type)
 {
 	switch (type) {
-	case CODE_NULL: return "null";
-	case CODE_DUP:  return "dup";
-	case CODE_RET:  return "ret";
-	case CODE_DATA: return "data";
-	case CODE_NOT:  return "not";
-	case CODE_TICK: return "tick";
 	case CODE_CALL: return "call";
 	case CODE_EXEC: return "exec";
-	case CODE_IF:   return "if";
 	case CODE_JOIN: return "join";
+	case CODE_NOT:  return "not";
+	case CODE_NULL: return "null";
+	case CODE_RET:  return "ret";
+
+	case CODE_DATA: return "data";
+	case CODE_DUP:  return "dup";
+	case CODE_IF:   return "if";
 	case CODE_PIPE: return "pipe";
 	case CODE_SET:  return "set";
+	case CODE_TICK: return "tick";
 	}
 
 	return "?";
@@ -124,12 +125,7 @@ code_push(struct code **head, struct frame *frame,
 
 	assert(head != NULL);
 	assert(frame != NULL);
-	assert(type != CODE_IF);
-	assert(type != CODE_SET);
-	assert(type != CODE_DATA);
-	assert(type != CODE_PIPE);
-	assert(type != CODE_TICK);
-	assert(type && !(type & (type - 1)));
+	assert(type & CODE_NONE);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {

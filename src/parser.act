@@ -147,16 +147,19 @@
 	<stderr>: () -> (fd :fd) = @{ @fd = STDERR_FILENO; @};
 	<close>:  () -> (fd :fd) = @{ @fd = -1;            @};
 
-	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
-	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
-	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
-	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
-	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
 	<type-exec>: () -> (t :type) = @{ @t = CODE_EXEC; @};
-	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
+	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
+	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
+	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
+
+	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
+	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};
+	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
+	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
+	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 
 	<make-fd>: (s :string) -> (fd :fd) = @{
 		char *s, *e;

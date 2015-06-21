@@ -45,16 +45,19 @@
 	!<stderr>:() -> (:fd);
 	<close>:  () -> (:fd);
 
-	<type-null>: () -> (:type);
-	<type-ret>:  () -> (:type);
-	<type-pipe>: () -> (:type);
-	<type-not>:  () -> (:type);
-	<type-tick>: () -> (:type);
 	<type-call>: () -> (:type);
 	<type-exec>: () -> (:type);
-	<type-if>:   () -> (:type);
 	!<type-join>:() -> (:type);
+	<type-not>:  () -> (:type);
+	<type-null>: () -> (:type);
+	<type-ret>:  () -> (:type);
+
+	!<type-data>:() -> (:type);
+	!<type-dup>: () -> (:type);
+	<type-if>:   () -> (:type);
+	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
+	<type-tick>: () -> (:type);
 
 	<make-fd>:  (:string) -> (:fd);
 	<make-dup>: (:dup &, :fd, :fd) -> ();
