@@ -12,11 +12,11 @@ code_name(enum code_type type)
 {
 	switch (type) {
 	case CODE_CALL: return "call";
-	case CODE_EXEC: return "exec";
 	case CODE_JOIN: return "join";
 	case CODE_NOT:  return "not";
 	case CODE_NULL: return "null";
 	case CODE_RET:  return "ret";
+	case CODE_RUN:  return "run";
 
 	case CODE_DATA: return "data";
 	case CODE_DUP:  return "dup";

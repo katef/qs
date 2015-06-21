@@ -148,11 +148,11 @@
 	<close>:  () -> (fd :fd) = @{ @fd = -1;            @};
 
 	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
-	<type-exec>: () -> (t :type) = @{ @t = CODE_EXEC; @};
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
 	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
+	<type-run>:  () -> (t :type) = @{ @t = CODE_RUN;  @};
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};

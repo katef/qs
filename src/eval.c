@@ -167,7 +167,7 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
-eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
+eval_run(const struct code **next, struct rtrn **rtrn, struct data **data,
 	struct frame *frame, enum code_type type, struct pipe_state *ps)
 {
 	struct data *p, *pnext;
@@ -179,7 +179,7 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 	int fd[2];
 
 	assert(next != NULL);
-	assert(type == CODE_EXEC || type == CODE_TICK);
+	assert(type == CODE_RUN || type == CODE_TICK);
 	assert(rtrn != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
@@ -318,13 +318,43 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 		close(fd[0]);
 	}
 
-	/* XXX: but i don't want to waitpid for a multiple pipeline; wait for them all at the end.
-	 * maybe make a #wait perhaps? */
+	/* TODO: associate waiting PID with code block for cooperative re-entry */
+
+	return 0;
+
+done:
+
+	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
+	for (p = *data; p->s != NULL; p = pnext) {
+		assert(p != NULL);
+
+		pnext = p->next;
+		free(p);
+	}
+
+	*data = p->next;
+	free(p);
+
+	return 0;
+
+error:
+
+	perror(args[0]);
+
+	free(args);
+
+	return -1;
+}
+
+#if XXX_TICKSTUFF
+{
 	/* TODO: increment waitfor counter instead. note for a pipeline a|b|c $? must come from c */
 	if (-1 == proc_wait(pid)) {
 /* TODO: lots of cleanup on errors all over this function. split it up */
 		goto error;
 	}
+
+/* TODO: this probably needs to be a #slurp instruction */
 
 	/* if this is CODE_TICK, rewind() tmpfile(), fread() and push to *data stack */
 	/* maybe ` can be implemented in terms of pipes in general */
@@ -382,30 +412,8 @@ eval_exec(const struct code **next, struct rtrn **rtrn, struct data **data,
 
 		return 0;
 	}
-
-done:
-
-	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
-	for (p = *data; p->s != NULL; p = pnext) {
-		assert(p != NULL);
-
-		pnext = p->next;
-		free(p);
-	}
-
-	*data = p->next;
-	free(p);
-
-	return 0;
-
-error:
-
-	perror(args[0]);
-
-	free(args);
-
-	return -1;
 }
+#endif
 
 /* TODO: explain what happens here: status.r is the predicate, u.code is a block to call */
 static int
@@ -553,8 +561,8 @@ eval(const struct code *code, struct data **data)
 		case CODE_NOT:  r = eval_not ();                                                 break;
 		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);                 break;
 		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);                  break;
-		case CODE_TICK: r = eval_exec(&next, &rtrn, data, node->frame, node->type, &ps); break;
-		case CODE_EXEC: r = eval_exec(&next, &rtrn, data, node->frame, node->type, &ps); break;
+		case CODE_TICK: r = eval_run (&next, &rtrn, data, node->frame, node->type, &ps); break;
+		case CODE_RUN:  r = eval_run (&next, &rtrn, data, node->frame, node->type, &ps); break;
 		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);           break;
 		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);               break;
 
@@ -566,6 +574,13 @@ eval(const struct code *code, struct data **data)
 		if (r == -1) {
 			return -1;
 		}
+
+		if (-1 == proc_wait(-1)) {
+			perror("wait");
+			continue;
+		}
+
+/* TODO: cooperative re-entry to the appropriate code stack. need PID->code lookup */
 	}
 
 	if (debug & DEBUG_EVAL) {

@@ -46,11 +46,11 @@
 	<close>:  () -> (:fd);
 
 	<type-call>: () -> (:type);
-	<type-exec>: () -> (:type);
 	!<type-join>:() -> (:type);
 	<type-not>:  () -> (:type);
 	<type-null>: () -> (:type);
 	<type-ret>:  () -> (:type);
+	<type-run>:  () -> (:type);
 
 	!<type-data>:() -> (:type);
 	!<type-dup>: () -> (:type);
@@ -176,7 +176,7 @@
 		t0 = <type-null>;
 		<prepend-code>(&c, t0);
 
-		t1 = <type-exec>;
+		t1 = <type-run>;
 		<append-code>(&c, t1);
 	||
 		c = block;

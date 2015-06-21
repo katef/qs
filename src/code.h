@@ -7,11 +7,11 @@ enum {
 
 enum code_type {
 	CODE_CALL = 0 | CODE_NONE,
-	CODE_EXEC = 1 | CODE_NONE,
-	CODE_JOIN = 2 | CODE_NONE,
-	CODE_NOT  = 3 | CODE_NONE,
-	CODE_NULL = 4 | CODE_NONE,
-	CODE_RET  = 5 | CODE_NONE,
+	CODE_JOIN = 1 | CODE_NONE,
+	CODE_NOT  = 2 | CODE_NONE,
+	CODE_NULL = 3 | CODE_NONE,
+	CODE_RET  = 4 | CODE_NONE,
+	CODE_RUN  = 5 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
 	CODE_DUP  = 1, /* u.dup */
