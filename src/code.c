@@ -184,13 +184,14 @@ code_dumpinline(FILE *f, const struct code *code)
 	assert(f != NULL);
 
 	for (p = code; p != NULL; p = p->next) {
+		fprintf(f, "#%s", code_name(p->type));
+
 		switch (p->type) {
 		case CODE_DATA:
 			fprintf(f, "'%s' ", p->u.s);
 			break;
 
 		case CODE_DUP:
-			fprintf(f, "#%s", code_name(p->type));
 			for (q = p->u.dup; q != NULL; q = q->next) {
 				fprintf(f, "[%d=%d]", q->lfd, q->rfd);
 			}
@@ -200,14 +201,14 @@ code_dumpinline(FILE *f, const struct code *code)
 		case CODE_IF:
 		case CODE_SET:
 		case CODE_PIPE:
-			fprintf(f, "#%s", code_name(p->type));
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);
 			fprintf(f, "} ");
 			break;
 
 		default:
-			fprintf(f, "#%s ", code_name(p->type));
+			fprintf(f, " ");
+			break;
 		}
 	}
 
