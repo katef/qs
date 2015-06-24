@@ -188,14 +188,13 @@ code_dumpinline(FILE *f, const struct code *code)
 
 		switch (p->type) {
 		case CODE_DATA:
-			fprintf(f, "'%s' ", p->u.s);
+			fprintf(f, "'%s'", p->u.s);
 			break;
 
 		case CODE_DUP:
 			for (q = p->u.dup; q != NULL; q = q->next) {
 				fprintf(f, "[%d=%d]", q->lfd, q->rfd);
 			}
-			fprintf(f, " ");
 			break;
 
 		case CODE_IF:
@@ -203,12 +202,15 @@ code_dumpinline(FILE *f, const struct code *code)
 		case CODE_PIPE:
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);
-			fprintf(f, "} ");
+			fprintf(f, "}");
 			break;
 
 		default:
-			fprintf(f, " ");
 			break;
+		}
+
+		if (p->next != NULL) {
+			fprintf(f, " ");
 		}
 	}
 
