@@ -12,13 +12,13 @@ enum code_type {
 	CODE_NULL = 3 | CODE_NONE,
 	CODE_RET  = 4 | CODE_NONE,
 	CODE_RUN  = 5 | CODE_NONE,
+	CODE_TICK = 6 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
 	CODE_DUP  = 1, /* u.dup */
 	CODE_IF   = 2, /* u.code */
 	CODE_PIPE = 3, /* u.code */
-	CODE_SET  = 4, /* u.code */
-	CODE_TICK = 5  /* u.code */
+	CODE_SET  = 4  /* u.code */
 };
 
 struct code {

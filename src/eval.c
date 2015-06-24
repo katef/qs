@@ -17,6 +17,7 @@
 #include "proc.h"
 #include "frame.h"
 #include "return.h"
+#include "readfd.h"
 #include "status.h"
 #include "builtin.h"
 
@@ -24,6 +25,13 @@ struct pipe_state {
 	int fd[2];
 	int usein, useout;
 	int in, out;
+};
+
+struct tick_state {
+	/* TODO: decide where to store the growing block. need to keep state for re-entry */
+	/* XXX: s needs to be kept statefully elsewhere. need state for re-entry */
+	char *s;
+	size_t l;
 };
 
 /* push .s=NULL to data */
@@ -168,18 +176,15 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
 eval_run(const struct code **next, struct rtrn **rtrn, struct data **data,
-	struct frame *frame, enum code_type type, struct pipe_state *ps)
+	struct frame *frame, struct pipe_state *ps)
 {
 	struct data *p, *pnext;
 	struct var *v;
 	pid_t pid;
 	int argc;
 	char **args;
-	FILE *tick;
-	int fd[2];
 
 	assert(next != NULL);
-	assert(type == CODE_RUN || type == CODE_TICK);
 	assert(rtrn != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
@@ -233,14 +238,6 @@ eval_run(const struct code **next, struct rtrn **rtrn, struct data **data,
 	case  1: break;
 	}
 
-	/* TODO: set stdio pipes here, before command execution */
-	/* TODO: maybe pass function pointers for before/after pipe stuff */
-	if (type == CODE_TICK) {
-		if (-1 == pipe(fd)) {
-			goto error;
-		}
-	}
-
 	/* program */
 	pid = proc_rfork(0);
 	switch (pid) {
@@ -252,6 +249,7 @@ eval_run(const struct code **next, struct rtrn **rtrn, struct data **data,
 		assert(args != NULL);
 
 		/* XXX: i don't like hardcoded knowledge of STDIN_FILENO and STDOUT_FILENO here */
+		/* TODO: error handling for dup2, here and elsewhere */
 
 		if (ps->usein != STDIN_FILENO) {
 			dup2(ps->usein, STDIN_FILENO);
@@ -273,14 +271,6 @@ eval_run(const struct code **next, struct rtrn **rtrn, struct data **data,
 			close(ps->useout);
 		}
 
-		if (type == CODE_TICK) {
-			close(fd[0]);
-
-			if (-1 == dup2(fd[1], fileno(stdout))) {
-				goto error;
-			}
-		}
-
 		(void) proc_exec(args[0], args);
 		abort();
 
@@ -288,41 +278,13 @@ eval_run(const struct code **next, struct rtrn **rtrn, struct data **data,
 		break;
 	}
 
-#ifdef __GNUC__
-	tick = NULL;
-#endif
-
-	if (type == CODE_TICK) {
-		ssize_t r;
-		char c;
-
-		close(fd[1]);
-
-		tick = tmpfile();
-		if (tick == NULL) {
-			goto error;
-		}
-
-		/* XXX: read a block at a time */
-		/* XXX: centralise fcat() */
-		while (r = read(fd[0], &c, 1), r == 1) {
-			if (EOF == fputc(c, tick)) {
-				goto error;
-			}
-		}
-
-		if (r == -1) {
-			goto error;
-		}
-
-		close(fd[0]);
-	}
-
 	/* TODO: associate waiting PID with code block for cooperative re-entry */
 
 	return 0;
 
 done:
+
+	/* XXX: why not data_free here? */
 
 	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
 	for (p = *data; p->s != NULL; p = pnext) {
@@ -346,74 +308,62 @@ error:
 	return -1;
 }
 
-#if XXX_TICKSTUFF
+/* read from the pipe and push to *data */
+/* note will need to be able to re-enter here after EINTR */
+static int
+eval_tick(const struct code **next, struct rtrn **rtrn, struct data **data,
+	struct frame *frame, struct pipe_state *ps, struct tick_state *ts)
 {
-	/* TODO: increment waitfor counter instead. note for a pipeline a|b|c $? must come from c */
-	if (-1 == proc_wait(pid)) {
-/* TODO: lots of cleanup on errors all over this function. split it up */
+	assert(next != NULL);
+	assert(rtrn != NULL);
+	assert(data != NULL);
+	assert(frame != NULL);
+	assert(ps != NULL);
+	assert(ts != NULL);
+
+	{
+		int r;
+
+		r = readfd(ps->in, &ts->s, &ts->l);
+
+		if (r == -1 && errno == EINTR) {
+			return 0;
+		}
+
+		if (r == -1) {
+			return -1;
+		}
+
+		if (debug & DEBUG_VAR) {
+			fprintf(stderr, "` read: %.*s\n", (int) ts->l, ts->s);
+		}
+	}
+
+	/* TODO: tokenise by $^ here, e.g. { echo `date | wc } */
+	/* TODO: can tokenisation be shared with the lexer's guts exposed? */
+	/* TODO: the lexer should use $^ */
+	/* TODO: \0 should implicitly always be in the $^ set */
+	/* TODO: after reading, always split by '\0'. dealing with $^ is just s//ing more '\0' in situ */
+	/* TODO: push each token as a separate item to the data stack */
+
+	if (!data_push(data, ts->l, ts->s)) {
 		goto error;
 	}
 
-/* TODO: this probably needs to be a #slurp instruction */
+	free(ts->s);
 
-	/* if this is CODE_TICK, rewind() tmpfile(), fread() and push to *data stack */
-	/* maybe ` can be implemented in terms of pipes in general */
-	if (type == CODE_TICK) {
-		char *s, *e;
-		long l;
-		int c;
+ts->s = NULL; /* XXX: doesn't belong here */
 
-		l = ftell(tick);
-		if (l == -1) {
-			goto error;
-		}
+	return 0;
 
-		rewind(tick);
+error:
 
-		s = malloc(l);
-		if (s == NULL) {
-			goto error;
-		}
+	free(ts->s);
 
-		for (e = s; c = fgetc(tick), c != EOF; e++) {
-			*e = c;
-		}
+ts->s = NULL; /* XXX: doesn't belong here */
 
-		if (ferror(tick)) {
-			goto error;
-		}
-
-		fclose(tick);
-
-		/* TODO: tokenise by $^ here, e.g. { echo `date | wc } */
-		/* TODO: can tokenisation be shared with the lexer's guts exposed? */
-		/* TODO: the lexer should use $^ */
-
-		if (debug & DEBUG_VAR) {
-			fprintf(stderr, "` read: %.*s\n", (int) l, s);
-		}
-
-		/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
-		for (p = *data; p->s != NULL; p = pnext) {
-			assert(p != NULL);
-
-			pnext = p->next;
-			free(p);
-		}
-
-		*data = p->next;
-		free(p);
-
-		if (!data_push(data, l, s)) {
-			goto error;
-		}
-
-		free(s);
-
-		return 0;
-	}
+	return -1;
 }
-#endif
 
 /* TODO: explain what happens here: status.r is the predicate, u.code is a block to call */
 static int
@@ -531,6 +481,7 @@ eval(const struct code *code, struct data **data)
 {
 	const struct code *node, *next;
 	struct pipe_state ps;
+	struct tick_state ts;
 	struct rtrn *rtrn;
 	int r;
 
@@ -545,6 +496,9 @@ eval(const struct code *code, struct data **data)
 	ps.in  = ps.usein  = STDIN_FILENO;
 	ps.out = ps.useout = STDOUT_FILENO;
 
+	/* XXX: will need an independent ts per context. ditto for pipe state */
+	ts.s = NULL;
+
 	while (node = next, node != NULL) {
 		if (debug & DEBUG_EVAL) {
 			fprintf(stderr, "code: "); code_dump(stderr,  node);
@@ -554,17 +508,17 @@ eval(const struct code *code, struct data **data)
 		next = node->next;
 
 		switch (node->type) {
-		case CODE_NULL: r = eval_null(data);                                             break;
-		case CODE_RET:  r = eval_ret (&next, &rtrn);                                     break;
-		case CODE_DATA: r = eval_data(data, node->u.s);                                  break;
-		case CODE_PIPE: r = eval_pipe(&ps);                                              break;
-		case CODE_NOT:  r = eval_not ();                                                 break;
-		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);                 break;
-		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);                  break;
-		case CODE_TICK: r = eval_run (&next, &rtrn, data, node->frame, node->type, &ps); break;
-		case CODE_RUN:  r = eval_run (&next, &rtrn, data, node->frame, node->type, &ps); break;
-		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);           break;
-		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);               break;
+		case CODE_NULL: r = eval_null(data);                                      break;
+		case CODE_RET:  r = eval_ret (&next, &rtrn);                              break;
+		case CODE_DATA: r = eval_data(data, node->u.s);                           break;
+		case CODE_PIPE: r = eval_pipe(&ps);                                       break;
+		case CODE_NOT:  r = eval_not ();                                          break;
+		case CODE_IF:   r = eval_if  (&next, &rtrn, data, node->u.code);          break;
+		case CODE_CALL: r = eval_call(&next, &rtrn, data, node->frame);           break;
+		case CODE_TICK: r = eval_tick(&next, &rtrn, data, node->frame, &ps, &ts); break;
+		case CODE_RUN:  r = eval_run (&next, &rtrn, data, node->frame, &ps);      break;
+		case CODE_SET:  r = eval_set (&rtrn, data, node->frame, node->u.code);    break;
+		case CODE_JOIN: r = eval_binop(&rtrn, data, node->frame, op_join);        break;
 
 		default:
 			errno = EINVAL;

@@ -17,13 +17,13 @@ code_name(enum code_type type)
 	case CODE_NULL: return "null";
 	case CODE_RET:  return "ret";
 	case CODE_RUN:  return "run";
+	case CODE_TICK: return "tick";
 
 	case CODE_DATA: return "data";
 	case CODE_DUP:  return "dup";
 	case CODE_IF:   return "if";
 	case CODE_PIPE: return "pipe";
 	case CODE_SET:  return "set";
-	case CODE_TICK: return "tick";
 	}
 
 	return "?";
@@ -200,7 +200,6 @@ code_dumpinline(FILE *f, const struct code *code)
 		case CODE_IF:
 		case CODE_SET:
 		case CODE_PIPE:
-		case CODE_TICK:
 			fprintf(f, "#%s", code_name(p->type));
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);

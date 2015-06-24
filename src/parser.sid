@@ -100,20 +100,30 @@
 		||
 			tick;
 
-			/* TODO: not sure if i need to <frame-push> here, for sake of pipes */
-
 			{
-				ci = item;
+				c = item;
 			||
-				ci = block;
+				c = block;
 			};
 
-			t0 = <type-ret>;
-			<append-code>(&ci, t0);
+			/* tick rhs */
+			{
+				ci = <empty-code>;
 
-			c = <empty-code>;
+				t3 = <type-tick>;
+				<prepend-code>(&ci, t3);
 
-			t2 = <type-tick>;
+				t4 = <type-ret>;
+				<append-code>(&ci, t4);
+			};
+
+			t0 = <type-null>;
+			<prepend-code>(&c, t0);
+
+			t5 = <type-run>;
+			<append-code>(&c, t5);
+
+			t2 = <type-pipe>;
 			<prepend-anon>(&c, t2, ci);
 		};
 

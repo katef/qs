@@ -153,13 +153,13 @@
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
 	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
 	<type-run>:  () -> (t :type) = @{ @t = CODE_RUN;  @};
+	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};
 	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
-	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 
 	<make-fd>: (s :string) -> (fd :fd) = @{
 		char *s, *e;
