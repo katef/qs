@@ -15,7 +15,7 @@
 	eof;
 	nl;
 	semi;
-	bg;
+	!bg;
 	equ;
 	comma;
 	!dot;
@@ -308,9 +308,6 @@
 			nl;
 		||
 			semi;
-		||
-			bg;
-			/* TODO: <code-bg>(c); and set $% as jobid */
 		##
 			<err-expected-sep>;
 		};
