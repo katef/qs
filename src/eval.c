@@ -143,7 +143,7 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 		return -1;
 	}
 
-	a = *data;
+	a = data_pop(data);
 	if (debug & DEBUG_STACK) {
 		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
 	}
@@ -154,9 +154,6 @@ eval_call(const struct code **next, struct rtrn **rtrn, struct data **data,
 		errno = 0;
 		return -1;
 	}
-
-	*data = a->next;
-	free(a);
 
 	/* XXX: share guts with eval_anon */
 	if (debug & DEBUG_STACK) {
@@ -413,14 +410,13 @@ eval_set(struct rtrn **rtrn, struct data **data,
 		return -1;
 	}
 
-	a = *data;
+	a = data_pop(data);
 
 	if (!frame_set(frame, strlen(a->s), a->s, code)) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	*data = a->next;
 	free(a);
 
 	return 0;
@@ -458,18 +454,17 @@ eval_binop(struct rtrn **rtrn, struct data **data,
 		return -1;
 	}
 
-	a =  *data;
-	b = (*data)->next;
+	a = data_pop(data);
+	b = data_pop(data);
 	if (debug & DEBUG_STACK) {
 		fprintf(stderr, "data <- %s\n", a->s);
 		fprintf(stderr, "data <- %s\n", b->s);
 	}
 
-	if (-1 == op(&b->next, frame, a, b)) {
+	if (-1 == op(data, frame, a, b)) {
 		return -1;
 	}
 
-	*data = b->next;
 	free(a);
 	free(b);
 
