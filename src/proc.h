@@ -11,7 +11,7 @@ enum rfork {
 void
 proc_exec(const char *name, char *const *argv);
 
-int
+pid_t
 proc_wait(pid_t pid);
 
 pid_t

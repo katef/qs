@@ -26,10 +26,11 @@ proc_exec(const char *name, char *const *argv)
 	execv(name, argv);
 }
 
-int
+pid_t
 proc_wait(pid_t pid)
 {
 	int status;
+	pid_t r;
 
 	if (debug & DEBUG_PROC) {
 		fprintf(stderr, "wait %ld\n", (long) pid);
@@ -41,13 +42,13 @@ proc_wait(pid_t pid)
 
 	if (WIFEXITED(status)) {
 		status_exit(WEXITSTATUS(status));
-		return 0;
+		return r;
 	}
 
 	if (WIFSIGNALED(status)) {
 		status_sig(WTERMSIG(status));
 		/* TODO: call a hook */
-		return 0;
+		return r;
 	}
 
 	errno = EINVAL;
