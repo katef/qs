@@ -74,7 +74,7 @@ eval_ret(const struct code **next, struct rtrn **rtrn)
 	return 0;
 }
 
-/* push .s=NULL to data */
+/* push .s="xyz" to data */
 static int
 eval_data(struct data **data, const char *s)
 {
