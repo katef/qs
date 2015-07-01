@@ -42,6 +42,7 @@ data_pop(struct data **head)
 	struct data *node;
 
 	assert(head != NULL);
+	assert(*head != NULL);
 
 	node = *head;
 	*head = node->next;

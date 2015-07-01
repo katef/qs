@@ -151,6 +151,7 @@ code_pop(struct code **head)
 	struct code *node;
 
 	assert(head != NULL);
+	assert(*head != NULL);
 
 	node = *head;
 	*head = node->next;
