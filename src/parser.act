@@ -152,6 +152,7 @@
 			fprintf(stderr, "<prepend-anon>\n");
 		}
 
+		/* XXX: leak */
 		if (!code_anon(@&c, act_state->frame, @t, @ci)) {
 			@!;
 		}
