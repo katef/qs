@@ -25,7 +25,13 @@ void
 task_remove(struct task **t);
 
 struct task *
+task_next(const struct task *tasks);
+
+struct task *
 task_find(const struct task *head, pid_t pid);
+
+struct task *
+task_wait(const struct task *tasks, pid_t pid);
 
 #endif
 

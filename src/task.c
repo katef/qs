@@ -2,8 +2,10 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "task.h"
+#include "proc.h"
 
 struct task *
 task_add(struct task **head, struct code *code)
@@ -43,6 +45,31 @@ task_remove(struct task **head)
 }
 
 struct task *
+task_next(const struct task *tasks)
+{
+	const struct task *t;
+
+	assert(tasks != NULL);
+
+	for (t = tasks; t != NULL; t = t->next) {
+		if (t->pid != -1) {
+			/* blocked on waiting for child */
+			continue;
+		}
+
+		return (struct task *) t;
+	}
+
+	/*
+	 * All tasks are blocked on waiting for their respective child.
+	 * Now the caller should wait(2) for whichever raises SIGCHLD first,
+	 * and re-enter for that child's task.
+	 */
+
+	return NULL;
+}
+
+struct task *
 task_find(const struct task *head, pid_t pid)
 {
 	const struct task *p;
@@ -56,5 +83,26 @@ task_find(const struct task *head, pid_t pid)
 	}
 
 	return NULL;
+}
+
+struct task *
+task_wait(const struct task *tasks, pid_t pid)
+{
+	const struct task *t;
+
+	assert(tasks != NULL);
+
+	pid = proc_wait(pid);
+	if (pid == -1) {
+		return NULL;
+	}
+
+	t = task_find(tasks, pid);
+	if (t == NULL) {
+		errno = ECHILD; /* stray child */
+		return NULL;
+	}
+
+	return (struct task *) t;
 }
 
