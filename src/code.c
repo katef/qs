@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "debug.h"
 #include "code.h"
@@ -113,6 +114,51 @@ code_push(struct code **head, struct frame *frame,
 	}
 
 	return new;
+}
+
+static struct code *
+code_clone(struct code **head, const struct code *code)
+{
+	switch (code->type) {
+	case CODE_DATA: return code_data(head, code->frame, strlen(code->u.s), code->u.s);
+	case CODE_IF:   return code_anon(head, code->frame, code->type, code->u.code);
+	case CODE_PIPE: return code_anon(head, code->frame, code->type, code->u.code);
+	case CODE_SET:  return code_anon(head, code->frame, code->type, code->u.code);
+	default:        return code_push(head, code->frame, code->type);
+	}
+
+	if (code->type == CODE_RET) {
+		errno = ENOTSUP;
+		return NULL;
+	}
+
+	errno = EINVAL;
+	return NULL;
+}
+
+int
+code_wind(struct code **head, const struct code *code)
+{
+	const struct code *p;
+	struct code *new, **q;
+
+	assert(head != NULL);
+
+	new = NULL;
+
+	for (p = code, q = &new; p != NULL; p = p->next, q = &(*q)->next) {
+		if (!code_clone(q, p)) {
+			code_free(new);
+			return -1;
+		}
+	}
+
+	assert((*q)->next == NULL);
+	(*q)->next = *head;
+
+	*head = new;
+
+	return 0;
 }
 
 struct code *

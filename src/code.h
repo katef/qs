@@ -48,6 +48,9 @@ struct code *
 code_push(struct code **head, struct frame *frame,
 	enum code_type type);
 
+int
+code_wind(struct code **head, const struct code *code);
+
 struct code *
 code_pop(struct code **head);
 
