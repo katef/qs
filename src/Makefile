@@ -21,6 +21,7 @@ OBJS += args.o
 OBJS += proc.o
 OBJS += status.o
 OBJS += builtin.o
+OBJS += task.o
 
 qs: $(OBJS)
 	$(CC) -o $@ $>
