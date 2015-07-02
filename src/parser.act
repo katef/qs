@@ -14,8 +14,6 @@
 	frame  -> frame;
 	type   -> type;
 	code   -> code;
-	dup    -> dupn;
-	fd     -> int;
 
 %header% @{
 
@@ -33,7 +31,6 @@
 	#include "code.h"
 	#include "frame.h"
 	#include "parser.h"
-	#include "dup.h"
 
 	struct act_string {
 		const char *s;
@@ -51,7 +48,6 @@
 	typedef struct act_string string;
 	typedef enum code_type type;
 	typedef struct code *code;
-	typedef struct dup *dupn;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -134,18 +130,9 @@
 		}
 	@};
 
-	<empty-dup>: () -> (d :dup) = @{
-		@d = NULL;
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<empty-dup>\n");
-		}
-	@};
-
-	<stdin>:  () -> (fd :fd) = @{ @fd = STDIN_FILENO;  @};
-	<stdout>: () -> (fd :fd) = @{ @fd = STDOUT_FILENO; @};
-	<stderr>: () -> (fd :fd) = @{ @fd = STDERR_FILENO; @};
-	<close>:  () -> (fd :fd) = @{ @fd = -1;            @};
+	<stdin>:  () -> (s :string) = @{ @s.s = "0"; @s.e = @s.s + 1; @};
+	<stdout>: () -> (s :string) = @{ @s.s = "1"; @s.e = @s.s + 1; @};
+	<stderr>: () -> (s :string) = @{ @s.s = "2"; @s.e = @s.s + 1; @};
 
 	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
@@ -160,53 +147,6 @@
 	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
-
-	<make-fd>: (s :string) -> (fd :fd) = @{
-		char *s, *e;
-		long l;
-		size_t n;
-
-		n = @s.e - @s.s;
-
-		/* XXX: horrible */
-		s = malloc(n);
-		if (s == NULL) {
-			@!;
-		}
-
-		memcpy(s, @s.s, n);
-		s[n] = '\0';
-
-		/* TODO: centralise the strtol error handling */
-
-		l = strtol(s, &e, 10);
-
-		free(s);
-
-		if (l < INT_MIN || l > INT_MAX) {
-			errno = ERANGE;
-			l = LONG_MIN;
-		}
-
-		if ((l == LONG_MIN || l == LONG_MAX) && errno != 0) {
-			@!;
-		}
-
-		if (*e != '\0') {
-			errno = EINVAL;
-			@!;
-		}
-
-		@fd = l;
-	@};
-
-	<make-dup>: (d :dup &, l :fd, r :fd) -> () = @{
-		assert(@&d != NULL);
-
-		if (!dup_push(@&d, @l, @r)) {
-			@!;
-		}
-	@};
 
 	<prepend-anon>: (c :code &, t :type, ci :code) -> () = @{
 		if (debug & DEBUG_ACT) {
@@ -286,24 +226,6 @@
 			;
 
 		if (!code_data(tail, act_state->frame, @s.e - @s.s, @s.s)) {
-			@!;
-		}
-	@};
-
-	<append-dup>: (c :code &, d :dup) -> () = @{
-		struct code **tail;
-
-		assert(act_state->frame != NULL);
-
-		if (debug & DEBUG_ACT) {
-/* TODO: dup_dump dup list here */
-			fprintf(stderr, "<append-dup>\n");
-		}
-
-		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
-			;
-
-		if (!code_dup(tail, act_state->frame, @d)) {
 			@!;
 		}
 	@};

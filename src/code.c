@@ -4,7 +4,6 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "dup.h"
 #include "code.h"
 
 const char *
@@ -89,35 +88,6 @@ code_data(struct code **head, struct frame *frame,
 }
 
 struct code *
-code_dup(struct code **head, struct frame *frame,
-	struct dup *dup)
-{
-	struct code *new;
-
-	assert(head != NULL);
-	assert(frame != NULL);
-
-	new = malloc(sizeof *new);
-	if (new == NULL) {
-		return NULL;
-	}
-
-	new->type  = CODE_DUP;
-	new->frame = frame;
-	new->u.dup = dup;
-
-	new->next = *head;
-	*head = new;
-
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %s\n", code_name(CODE_DUP));
-		/* TODO: could dump dup redir list here */
-	}
-
-	return new;
-}
-
-struct code *
 code_push(struct code **head, struct frame *frame,
 	enum code_type type)
 {
@@ -180,7 +150,6 @@ static int
 code_dumpinline(FILE *f, const struct code *code)
 {
 	const struct code *p;
-	const struct dup *q;
 
 	assert(f != NULL);
 
@@ -190,12 +159,6 @@ code_dumpinline(FILE *f, const struct code *code)
 		switch (p->type) {
 		case CODE_DATA:
 			fprintf(f, "'%s'", p->u.s);
-			break;
-
-		case CODE_DUP:
-			for (q = p->u.dup; q != NULL; q = q->next) {
-				fprintf(f, "[%d=%d]", q->lfd, q->rfd);
-			}
 			break;
 
 		case CODE_IF:

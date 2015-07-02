@@ -20,7 +20,6 @@ OBJS += readfd.o
 OBJS += eval.o
 OBJS += args.o
 OBJS += proc.o
-OBJS += dup.o
 OBJS += status.o
 OBJS += builtin.o
 

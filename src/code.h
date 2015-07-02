@@ -13,12 +13,12 @@ enum code_type {
 	CODE_RET  = 4 | CODE_NONE,
 	CODE_RUN  = 5 | CODE_NONE,
 	CODE_TICK = 6 | CODE_NONE,
+	CODE_DUP  = 7 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
-	CODE_DUP  = 1, /* u.dup */
-	CODE_IF   = 2, /* u.code */
-	CODE_PIPE = 3, /* u.code */
-	CODE_SET  = 4  /* u.code */
+	CODE_IF   = 1, /* u.code */
+	CODE_PIPE = 2, /* u.code */
+	CODE_SET  = 3  /* u.code */
 };
 
 struct code {
@@ -28,7 +28,6 @@ struct code {
 	union {
 		char *s;
 		struct code *code;
-		struct dup  *dup;
 	} u;
 
 	struct code *next;
@@ -44,10 +43,6 @@ code_anon(struct code **head, struct frame *frame,
 struct code *
 code_data(struct code **head, struct frame *frame,
 	size_t n, const char *s);
-
-struct code *
-code_dup(struct code **head, struct frame *frame,
-	struct dup *dup);
 
 struct code *
 code_push(struct code **head, struct frame *frame,

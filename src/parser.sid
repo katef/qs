@@ -4,8 +4,6 @@
 	!frame;
 	type;
 	code;
-	dup;
-	fd;
 
 %terminals%
 
@@ -38,12 +36,10 @@
 	<var-top>:  () -> (:string);
 
 	<empty-code>: () -> (:code);
-	<empty-dup>:  () -> (:dup);
 
-	<stdin>:  () -> (:fd);
-	!<stdout>:() -> (:fd);
-	!<stderr>:() -> (:fd);
-	<close>:  () -> (:fd);
+	<stdin>:  () -> (:string);
+	!<stdout>:() -> (:string);
+	!<stderr>:() -> (:string);
 
 	<type-call>: () -> (:type);
 	!<type-join>:() -> (:type);
@@ -53,14 +49,11 @@
 	<type-run>:  () -> (:type);
 
 	!<type-data>:() -> (:type);
-	!<type-dup>: () -> (:type);
+	<type-dup>:  () -> (:type);
 	<type-if>:   () -> (:type);
 	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
 	<type-tick>: () -> (:type);
-
-	<make-fd>:  (:string) -> (:fd);
-	<make-dup>: (:dup &, :fd, :fd) -> ();
 
 	<prepend-anon>: (:code &, :type, :code) -> ();
 	<prepend-data>: (:code &, :string)      -> ();
@@ -69,7 +62,6 @@
 
 	<append-anon>:  (:code &, :type, :code) -> ();
 	<append-data>:  (:code &, :string)      -> ();
-	<append-dup>:   (:code &, :dup)         -> ();
 	<append-code>:  (:code &, :type)        -> ();
 	<append-cat>:   (:code &, :code)        -> ();
 
@@ -195,33 +187,34 @@
 	dup-expr: () -> (c :code) [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		dup-item: () -> (l :fd, r :fd) = {
-			n = word;
+		/* TODO: permit [$x=$y] here */
+		dup-item: (c :code &) -> () = {
+			l = word;
 			equ;
-			m = word;
+			r = word;
 
-			l = <make-fd>(n);
-			r = <make-fd>(m);
+			<prepend-data>(&c, r);
+			<prepend-data>(&c, l);
 		||
-			n = word;
+			l = word;
 			equ;
 
-			l = <make-fd>(n);
-			r = <close>;
+			<prepend-null>(&c);
+			<prepend-data>(&c, l);
 		||
-			n = word;
-
-			l = <make-fd>(n);
+			l = word;
 			r = <stdin>;
+
+			<prepend-data>(&c, r);
+			<prepend-data>(&c, l);
 		};
 
-		dup-list: (d :dup &) -> () = {
-			(l, r) = dup-item;
-			<make-dup>(&d, l, r);
+		dup-list: (c :code &) -> () = {
+			dup-item(&c);
 
 			{
 				comma;
-				dup-list(&d);
+				dup-list(&c);
 			||
 				$;
 			};
@@ -232,10 +225,11 @@
 
 		{
 			osquare;
-			d = <empty-dup>;
-			dup-list(&d);
+			dup-list(&c);
 			csquare;
-			<append-dup>(&c, d);
+
+			t0 = <type-dup>;
+			<prepend-code>(&c, t0);
 		||
 			$;
 		};
