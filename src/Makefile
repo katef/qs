@@ -15,7 +15,6 @@ OBJS += var.o
 OBJS += frame.o
 OBJS += code.o
 OBJS += data.o
-OBJS += return.o
 OBJS += readfd.o
 OBJS += eval.o
 OBJS += args.o

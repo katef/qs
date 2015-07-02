@@ -15,12 +15,11 @@ code_name(enum code_type type)
 	case CODE_JOIN: return "join";
 	case CODE_NOT:  return "not";
 	case CODE_NULL: return "null";
-	case CODE_RET:  return "ret";
 	case CODE_RUN:  return "run";
 	case CODE_TICK: return "tick";
+	case CODE_DUP:  return "dup";
 
 	case CODE_DATA: return "data";
-	case CODE_DUP:  return "dup";
 	case CODE_IF:   return "if";
 	case CODE_PIPE: return "pipe";
 	case CODE_SET:  return "set";
@@ -125,11 +124,6 @@ code_clone(struct code **head, const struct code *code)
 	case CODE_PIPE: return code_anon(head, code->frame, code->type, code->u.code);
 	case CODE_SET:  return code_anon(head, code->frame, code->type, code->u.code);
 	default:        return code_push(head, code->frame, code->type);
-	}
-
-	if (code->type == CODE_RET) {
-		errno = ENOTSUP;
-		return NULL;
 	}
 
 	errno = EINVAL;

@@ -45,7 +45,6 @@
 	!<type-join>:() -> (:type);
 	<type-not>:  () -> (:type);
 	<type-null>: () -> (:type);
-	<type-ret>:  () -> (:type);
 	<type-run>:  () -> (:type);
 
 	!<type-data>:() -> (:type);
@@ -104,9 +103,6 @@
 
 				t3 = <type-tick>;
 				<prepend-code>(&ci, t3);
-
-				t4 = <type-ret>;
-				<append-code>(&ci, t4);
 			};
 
 			t0 = <type-null>;
@@ -150,9 +146,6 @@
 		/* TODO: maybe prepend this, after, and just have c = value */
 		c = <empty-code>;
 		<append-data>(&c, s);
-
-		t0 = <type-ret>;
-		<append-code>(&ci, t0);
 
 		t1 = <type-set>;
 		<append-anon>(&c, t1, ci);
@@ -243,9 +236,6 @@
 
 			ci = pipe-expr;
 
-			t0 = <type-ret>;
-			<append-code>(&ci, t0);
-
 			t2 = <type-pipe>;
 			<prepend-anon>(&c, t2, ci);
 		||
@@ -265,9 +255,6 @@
 
 			ci = and-expr;
 
-			t0 = <type-ret>;
-			<append-code>(&ci, t0);
-
 			t2 = <type-if>;
 			<append-anon>(&c, t2, ci);
 		||
@@ -282,9 +269,6 @@
 			or;
 
 			ci = or-expr;
-
-			t0 = <type-ret>;
-			<append-code>(&ci, t0);
 
 			t1 = <type-not>;
 			<append-code>(&c, t1);

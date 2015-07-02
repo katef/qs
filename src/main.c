@@ -49,7 +49,7 @@ debug_flags(const char *s)
 }
 
 static int
-dispatch(FILE *f, struct frame *frame, char *args[], const struct code *code)
+dispatch(FILE *f, struct frame *frame, char *args[], struct code *code)
 {
 	const struct data *p;
 	struct data *out;

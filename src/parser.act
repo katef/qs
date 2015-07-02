@@ -41,7 +41,7 @@
 		struct lex_tok t;
 		enum lex_type type, save;
 		struct frame *frame;
-		int (*dispatch)(FILE *, struct frame *, char *args[], const struct code *);
+		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *);
 		char **args;
 	};
 
@@ -65,7 +65,7 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*dispatch)(FILE *, struct frame *, char *args[], const struct code *),
+		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *),
 		char *args[]);
 
 @};
@@ -138,7 +138,6 @@
 	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
 	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
-	<type-ret>:  () -> (t :type) = @{ @t = CODE_RET;  @};
 	<type-run>:  () -> (t :type) = @{ @t = CODE_RUN;  @};
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 
@@ -316,7 +315,7 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*dispatch)(FILE *, struct frame *, char *args[], const struct code *),
+		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *),
 		char *args[])
 	{
 		struct act_state a, *act_state = &a;

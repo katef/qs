@@ -60,10 +60,6 @@ set_args(struct frame *frame, char *args[])
 
 	ci = NULL;
 
-	if (!code_push(&ci, frame, CODE_RET)) {
-		goto error;
-	}
-
 	for (i = 0; args[i] != NULL; i++) {
 		if (!code_data(&ci, frame, strlen(args[i]), args[i])) {
 			goto error;
