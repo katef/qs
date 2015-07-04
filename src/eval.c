@@ -195,7 +195,7 @@ eval_run(struct code **next, struct data **data,
 	}
 
 	/* builtin */
-	switch (builtin(frame, argc, args)) {
+	switch (builtin(NULL, frame, argc, args)) { /* XXX */
 	case -1: goto error;
 	case  0: goto done;
 	case  1: break;

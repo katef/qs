@@ -16,6 +16,7 @@
 #include "frame.h"
 #include "status.h"
 #include "builtin.h"
+#include "task.h"
 
 /*
  * Only eval.c is responsible for setting the status.
@@ -27,8 +28,9 @@
  */
 
 static int
-builtin_cd(struct frame *f, int argc, char *const *argv)
+builtin_cd(struct task *task, struct frame *f, int argc, char *const *argv)
 {
+	assert(task != NULL);
 	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -51,8 +53,9 @@ builtin_cd(struct frame *f, int argc, char *const *argv)
 }
 
 static int
-builtin_exec(struct frame *f, int argc, char *const *argv)
+builtin_exec(struct task *task, struct frame *f, int argc, char *const *argv)
 {
+	assert(task != NULL);
 	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -67,11 +70,12 @@ builtin_exec(struct frame *f, int argc, char *const *argv)
 }
 
 static int
-builtin_exit(struct frame *f, int argc, char *const *argv)
+builtin_exit(struct task *task, struct frame *f, int argc, char *const *argv)
 {
 	char *e;
 	long r;
 
+	assert(task != NULL);
 	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -106,10 +110,12 @@ builtin_exit(struct frame *f, int argc, char *const *argv)
 }
 
 static int
-builtin_wait(struct frame *f, int argc, char *const *argv)
+builtin_wait(struct task *task, struct frame *f, int argc, char *const *argv)
 {
 	pid_t pid;
 
+	assert(task != NULL);
+	assert(task->pid != -1);
 	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -126,19 +132,23 @@ builtin_wait(struct frame *f, int argc, char *const *argv)
 	/* TODO: strtol and some error-checking */
 	pid = atol(argv[1]);
 
-	if (-1 == proc_wait(pid)) {
-		fprintf(stderr, "wait %s: %s\n", argv[1], strerror(errno));
-		return 1;
-	}
+	/* TODO: check that the given PID is actually our child (i.e. from the "fork" builtin) */
+
+	/*
+	 * The child PID is marked here just as #run would, and the main loop
+	 * in eval() will wait(-1) for all child processes collectively.
+	 */
+	task->pid = pid;
 
 	return 0;
 }
 
 static int
-builtin_fork(struct frame *f, int argc, char *const *argv)
+builtin_fork(struct task *task, struct frame *f, int argc, char *const *argv)
 {
 	pid_t pid;
 
+	assert(task != NULL);
 	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -158,8 +168,9 @@ builtin_fork(struct frame *f, int argc, char *const *argv)
 }
 
 static int
-builtin_status(struct frame *f, int argc, char *const *argv)
+builtin_status(struct task *task, struct frame *f, int argc, char *const *argv)
 {
+	assert(task != NULL);
 	assert(f != NULL);
 	assert(argc >= 1);
 	assert(argv != NULL);
@@ -175,13 +186,13 @@ builtin_status(struct frame *f, int argc, char *const *argv)
 }
 
 int
-builtin(struct frame *f, int argc, char *const *argv)
+builtin(struct task *task, struct frame *f, int argc, char *const *argv)
 {
 	size_t i;
 
 	struct {
 		const char *name;
-		int (*f)(struct frame *f, int, char *const *);
+		int (*f)(struct task *task, struct frame *f, int, char *const *);
 	} a[] = {
 		{ "cd",     builtin_cd     },
 		{ "exec",   builtin_exec   },
@@ -196,6 +207,7 @@ builtin(struct frame *f, int argc, char *const *argv)
 		return -1;
 	}
 
+	assert(task != NULL);
 	assert(f != NULL);
 	assert(argv != NULL);
 	assert(argv[0] != NULL);
@@ -208,7 +220,7 @@ builtin(struct frame *f, int argc, char *const *argv)
 			continue;
 		}
 
-		r = a[i].f(f, argc, argv);
+		r = a[i].f(task, f, argc, argv);
 		status_exit(r);
 
 		return 0;
