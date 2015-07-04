@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #include "task.h"
@@ -105,21 +106,56 @@ task_promote(struct task **head, struct task *task)
 struct task *
 task_wait(const struct task *tasks, pid_t pid)
 {
-	const struct task *t;
+	struct task *t;
 
-	assert(tasks != NULL);
+	assert(head != NULL);
 
-	pid = proc_wait(pid);
+	/*
+	 * When we're called here, at least one SIGCHLD was delivered, so there
+	 * must be at least one child waiting. There may also be more, and so we
+	 * wait() repeatedly until they're all reaped.
+	 *
+	 * When we're called to wait because all tasks are blocked, this ought to
+	 * block until a child is reaped. So our first call here is a blocking
+	 * wait(), and further calls are passed WNOHANG.
+	 */
+
+	/* TODO: this code is awkward, and could do with some refactoring */
+
+	pid = proc_wait(pid, 0);
 	if (pid == -1) {
-		return NULL;
+		return -1;
 	}
 
-	t = task_find(tasks, pid);
-	if (t == NULL) {
-		errno = ECHILD; /* stray child */
-		return NULL;
-	}
+	do {
+		t = task_find(*head, pid);
+		if (t == NULL) {
+			fprintf(stderr, "stray child, PID=%lu\n", (unsigned long) pid);
+			goto wait;
+		}
 
-	return (struct task *) t;
+		/*
+		 * TODO: maybe set some variables about the child here; stuff from waitpid()
+		 *
+		 * If this is called from inside the SIGCHLD handler
+		 * (rather than using a self pipe), I'd need to pre-populate these variables,
+		 * because I won't malloc(3) inside a signal handler.
+		 */
+
+		/* This task is no longer waiting for a child */
+		t->pid = -1;
+
+		task_promote(head, t);
+
+wait:
+
+		pid = proc_wait(pid, WNOHANG);
+		if (pid == -1) {
+			return -1;
+		}
+
+	} while(pid != 0);
+
+	return 0;
 }
 

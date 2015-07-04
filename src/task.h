@@ -2,6 +2,7 @@
 #define TASK_H
 
 struct code;
+struct task;
 
 struct task {
 	/*
@@ -35,8 +36,8 @@ task_find(const struct task *head, pid_t pid);
 void
 task_promote(struct task **head, struct task *task);
 
-struct task *
-task_wait(const struct task *tasks, pid_t pid);
+int
+task_wait(struct task **head, pid_t pid);
 
 #endif
 
