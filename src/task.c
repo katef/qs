@@ -103,8 +103,8 @@ task_promote(struct task **head, struct task *task)
 	*head = task;
 }
 
-struct task *
-task_wait(const struct task *tasks, pid_t pid)
+int
+task_wait(struct task **head, pid_t pid)
 {
 	struct task *t;
 
