@@ -1,6 +1,8 @@
 #ifndef TASK_H
 #define TASK_H
 
+struct code;
+
 struct task {
 	/*
 	 * The next instruction to execute, set to code->next when complete.
