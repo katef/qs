@@ -37,7 +37,7 @@ void
 task_promote(struct task **head, struct task *task);
 
 int
-task_wait(struct task **head, pid_t pid);
+task_wait(struct task **head, pid_t pid, int options);
 
 #endif
 

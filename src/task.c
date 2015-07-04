@@ -104,10 +104,8 @@ task_promote(struct task **head, struct task *task)
 }
 
 int
-task_wait(struct task **head, pid_t pid)
+task_wait(struct task **head, pid_t pid, int options)
 {
-	struct task *t;
-
 	assert(head != NULL);
 
 	/*
@@ -115,23 +113,24 @@ task_wait(struct task **head, pid_t pid)
 	 * must be at least one child waiting. There may also be more, and so we
 	 * wait() repeatedly until they're all reaped.
 	 *
-	 * When we're called to wait because all tasks are blocked, this ought to
-	 * block until a child is reaped. So our first call here is a blocking
-	 * wait(), and further calls are passed WNOHANG.
+	 * A caller may also want to block, depending on the options flag passed.
+	 * Subsequent calls should never block, because there may be no further
+	 * children waiting. So subsequent calls are passed WNOHANG.
 	 */
 
-	/* TODO: this code is awkward, and could do with some refactoring */
+	for (;;) {
+		struct task *t;
+		pid_t r;
 
-	pid = proc_wait(pid, 0);
-	if (pid == -1) {
-		return -1;
-	}
+		r = proc_wait(pid, options);
 
-	do {
-		t = task_find(*head, pid);
-		if (t == NULL) {
-			fprintf(stderr, "stray child, PID=%lu\n", (unsigned long) pid);
-			goto wait;
+		if (r == -1 && errno == ECHILD) {
+			/* TODO: DEBUG_WAIT "no child" */
+			return 0;
+		}
+
+		if (r == -1) {
+			return -1;
 		}
 
 		/*
@@ -142,19 +141,23 @@ task_wait(struct task **head, pid_t pid)
 		 * because I won't malloc(3) inside a signal handler.
 		 */
 
+		t = task_find(*head, r);
+		if (t == NULL) {
+			fprintf(stderr, "stray child, PID=%lu\n", (unsigned long) r);
+			continue;
+		}
+
 		/* This task is no longer waiting for a child */
 		t->pid = -1;
 
 		task_promote(head, t);
 
-wait:
-
-		pid = proc_wait(pid, WNOHANG);
-		if (pid == -1) {
-			return -1;
+		if (pid != -1) {
+			break;
 		}
 
-	} while(pid != 0);
+		options |= WNOHANG;
+	}
 
 	return 0;
 }
