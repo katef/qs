@@ -85,6 +85,23 @@ task_find(const struct task *head, pid_t pid)
 	return NULL;
 }
 
+void
+task_promote(struct task **head, struct task *task)
+{
+	struct task **t;
+
+	assert(head != NULL);
+	assert(task != NULL);
+
+	for (t = head; *t != task; t = &(*t)->next)
+		;
+
+	*t = (*t)->next;
+
+	task->next = *head;
+	*head = task;
+}
+
 struct task *
 task_wait(const struct task *tasks, pid_t pid)
 {
