@@ -483,7 +483,7 @@ eval(struct code *code, struct data **data)
 			return -1;
 		}
 
-		if (-1 == proc_wait(-1)) {
+		if (-1 == proc_wait(-1, 0)) {
 			perror("wait");
 			continue;
 		}

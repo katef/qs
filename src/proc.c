@@ -27,7 +27,7 @@ proc_exec(const char *name, char *const *argv)
 }
 
 pid_t
-proc_wait(pid_t pid)
+proc_wait(pid_t pid, int options)
 {
 	int status;
 	pid_t r;
@@ -36,8 +36,14 @@ proc_wait(pid_t pid)
 		fprintf(stderr, "wait %ld\n", (long) pid);
 	}
 
-	if (-1 == waitpid(pid, &status, 0)) {
+	r = waitpid(pid, &status, options);
+	if (r == -1) {
 		return -1;
+	}
+
+	if (r == 0) {
+		assert(options & WNOHANG);
+		return 0;
 	}
 
 	if (WIFEXITED(status)) {

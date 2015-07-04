@@ -12,7 +12,7 @@ void
 proc_exec(const char *name, char *const *argv);
 
 pid_t
-proc_wait(pid_t pid);
+proc_wait(pid_t pid, int options);
 
 pid_t
 proc_rfork(enum rfork flags);
