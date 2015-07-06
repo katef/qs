@@ -11,7 +11,7 @@ struct task {
 	 * Some instructions are considered re-entrant, for which this remains
 	 * pointing to the same node so that it may be evaluated again.
 	 */
-	const struct code *code;
+	struct code *code;
 
 	/*
 	 * PID of child when waiting on a process; -1 otherwise.
