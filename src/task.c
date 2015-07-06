@@ -103,9 +103,13 @@ task_promote(struct task **head, struct task *task)
 	*head = task;
 }
 
+/* returns number of promoted tasks which were waiting for the given PID,
+ * or -1 on error */
 int
 task_wait(struct task **head, pid_t pid, int options)
 {
+	int n;
+
 	assert(head != NULL);
 
 	/*
@@ -117,6 +121,8 @@ task_wait(struct task **head, pid_t pid, int options)
 	 * Subsequent calls should never block, because there may be no further
 	 * children waiting. So subsequent calls are passed WNOHANG.
 	 */
+
+	n = 0;
 
 	for (;;) {
 		struct task *t;
@@ -152,6 +158,8 @@ task_wait(struct task **head, pid_t pid, int options)
 
 		task_promote(head, t);
 
+		n++;
+
 		if (pid != -1) {
 			break;
 		}
@@ -159,6 +167,6 @@ task_wait(struct task **head, pid_t pid, int options)
 		options |= WNOHANG;
 	}
 
-	return 0;
+	return n;
 }
 
