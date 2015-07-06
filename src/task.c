@@ -89,7 +89,7 @@ task_find(const struct task *head, pid_t pid)
 }
 
 void
-task_promote(struct task **head, struct task *task)
+task_prioritise(struct task **head, struct task *task)
 {
 	struct task **t;
 
@@ -105,8 +105,11 @@ task_promote(struct task **head, struct task *task)
 	*head = task;
 }
 
-/* returns number of promoted tasks which were waiting for the given PID,
- * or -1 on error */
+/*
+ * Returns the number of newly prioritised tasks
+ * which were waiting for the given PID,
+ * or -1 on error.
+ */
 int
 task_wait(struct task **head, pid_t pid, int options)
 {
@@ -158,7 +161,7 @@ task_wait(struct task **head, pid_t pid, int options)
 		/* This task is no longer waiting for a child */
 		t->pid = -1;
 
-		task_promote(head, t);
+		task_prioritise(head, t);
 
 		n++;
 

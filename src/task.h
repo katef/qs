@@ -34,7 +34,7 @@ struct task *
 task_find(const struct task *head, pid_t pid);
 
 void
-task_promote(struct task **head, struct task *task);
+task_prioritise(struct task **head, struct task *task);
 
 int
 task_wait(struct task **head, pid_t pid, int options);
