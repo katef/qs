@@ -206,7 +206,7 @@ code_dumpinline(FILE *f, const struct code *code)
 		case CODE_PIPE:
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);
-			fprintf(f, "}");
+			fprintf(f, " }");
 			break;
 
 		default:
