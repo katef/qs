@@ -25,7 +25,7 @@ struct task *
 task_add(struct task **t, struct code *code);
 
 void
-task_remove(struct task **t);
+task_remove(struct task **head, struct task *task);
 
 struct task *
 task_next(const struct task *tasks);

@@ -30,19 +30,21 @@ task_add(struct task **head, struct code *code)
 }
 
 void
-task_remove(struct task **head)
+task_remove(struct task **head, struct task *task)
 {
-	struct task *tmp;
+	struct task **next, **t;
 
 	assert(head != NULL);
 
-	/* TODO: free rtrn stack */
+	for (t = head; *t != NULL; t = next) {
+		next = &(*t)->next;
 
-	tmp = *head;
-
-	*head = tmp->next;
-
-	free(tmp);
+		if (*t == task) {
+			free(*t);
+			*t = *next;
+			return;
+		}
+	}
 }
 
 struct task *
