@@ -146,6 +146,12 @@ task_wait(struct task **head, pid_t pid, int options)
 			return -1;
 		}
 
+		if (r == 0) {
+			/* children exist, but not dead yet */
+			assert(options & WNOHANG);
+			break;
+		}
+
 		/*
 		 * TODO: maybe set some variables about the child here; stuff from waitpid()
 		 *
