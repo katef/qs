@@ -43,14 +43,6 @@ struct pipe_state {
 	int in, out;
 };
 
-/* TODO: lives in struct task */
-struct tick_state {
-	/* TODO: decide where to store the growing buffer. need to keep state for re-entry */
-	/* XXX: s needs to be kept statefully elsewhere. need state for re-entry */
-	char *s;
-	size_t l;
-};
-
 static void
 sigchld(int s)
 {
@@ -337,7 +329,7 @@ eval_tick(struct code **next, struct data **data,
 	assert(data != NULL);
 	assert(frame != NULL);
 	assert(ps != NULL);
-	assert(ts != NULL);
+	assert(ts = NULL);
 
 	/*
 	 * There are two reasons to select here:
@@ -585,7 +577,7 @@ eval_binop(struct data **data,
 
 static int
 eval_task(struct task *task, struct data **data,
-	struct pipe_state *ps, struct tick_state *ts)
+	struct pipe_state *ps)
 {
 	struct code *node;
 	int r;
@@ -614,16 +606,16 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		}
 
 		switch (node->type) {
-		case CODE_NULL: r = eval_null(data);                                     break;
-		case CODE_DATA: r = eval_data(data, node->u.s);                          break;
-		case CODE_PIPE: r = eval_pipe(&task->next, &node->u.code, ps);           break;
-		case CODE_NOT:  r = eval_not ();                                         break;
-		case CODE_IF:   r = eval_if  (&task->code, data, &node->u.code);         break;
-		case CODE_RUN:  r = eval_run (&task->code, data, node->frame, ps, task); break;
-		case CODE_CALL: r = eval_call(&task->code, data, node->frame);           break;
-		case CODE_TICK: r = eval_tick(&task->code, data, node->frame, ps, ts);   break;
-		case CODE_SET:  r = eval_set (data, node->frame, &node->u.code);         break;
-		case CODE_JOIN: r = eval_binop(data, node->frame, op_join);              break;
+		case CODE_NULL: r = eval_null(data);                                          break;
+		case CODE_DATA: r = eval_data(data, node->u.s);                               break;
+		case CODE_PIPE: r = eval_pipe(&task->next, &node->u.code, ps);                break;
+		case CODE_NOT:  r = eval_not ();                                              break;
+		case CODE_IF:   r = eval_if  (&task->code, data, &node->u.code);              break;
+		case CODE_RUN:  r = eval_run (&task->code, data, node->frame, ps, task);      break;
+		case CODE_CALL: r = eval_call(&task->code, data, node->frame);                break;
+		case CODE_TICK: r = eval_tick(&task->code, data, node->frame, ps, &task->ts); break;
+		case CODE_SET:  r = eval_set (data, node->frame, &node->u.code);              break;
+		case CODE_JOIN: r = eval_binop(data, node->frame, op_join);                   break;
 
 		default:
 			code_free(node);
@@ -650,7 +642,6 @@ eval_main(struct code *code, struct data **data)
 {
 	struct task *tasks, *t;
 	struct pipe_state ps;
-	struct tick_state ts;
 	int r;
 
 	assert(data != NULL);
@@ -665,9 +656,6 @@ eval_main(struct code *code, struct data **data)
 	/* XXX: setting all of these is not neccessary. some should be -1 */
 	ps.in  = ps.usein  = STDIN_FILENO;
 	ps.out = ps.useout = STDOUT_FILENO;
-
-	/* XXX: will need an independent ts per task. ditto for pipe state */
-	ts.s = NULL;
 
 	/*
 	 * Terminology: What blocking (and sleeping) mean
@@ -707,7 +695,7 @@ eval_main(struct code *code, struct data **data)
 	t = tasks;
 
 	for (;;) {
-		r = eval_task(t, data, &ps, &ts);
+		r = eval_task(t, data, &ps);
 
 		if (r == -1 && errno != EINTR) {
 			goto error;

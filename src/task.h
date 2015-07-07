@@ -4,6 +4,11 @@
 struct code;
 struct task;
 
+struct tick_state {
+	char *s;
+	size_t l;
+};
+
 struct task {
 	/*
 	 * The next instruction to execute, set to code->next when complete.
@@ -17,6 +22,8 @@ struct task {
 	 * PID of child when waiting on a process; -1 otherwise.
 	 */
 	pid_t pid;
+
+	struct tick_state ts;
 
 	struct task *next;
 };

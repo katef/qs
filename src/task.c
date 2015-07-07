@@ -23,6 +23,8 @@ task_add(struct task **head, struct code *code)
 	new->code = code;
 	new->pid  = -1;
 
+	new->ts.s = NULL;
+
 	new->next = *head;
 	*head = new;
 
