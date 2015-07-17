@@ -192,7 +192,8 @@
 			l = word;
 			equ;
 
-			<prepend-null>(&c);
+			t = <type-null>;
+			<prepend-code>(&c, t);
 			<prepend-data>(&c, l);
 		||
 			l = word;
