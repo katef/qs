@@ -221,20 +221,6 @@
 		(void) frame_pop(&act_state->frame);
 	@};
 
-	<frame-set>: (s :string, c :code) -> () = @{
-		assert(act_state->frame != NULL);
-		assert(@s.s != NULL && @s.e != NULL);
-		assert(@s.e > @s.s);
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<frame-set>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
-		}
-
-		if (!frame_set(act_state->frame, @s.e - @s.s, @s.s, @c)) {
-			@!;
-		}
-	@};
-
 	<err-expected-sep>: () -> () = @{
 		fprintf(stderr, "syntax error: expected { '\\n' | ';' | '&' }\n");
 		@!;

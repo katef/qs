@@ -61,7 +61,6 @@
 
 	<frame-push>;
 	<frame-pop>;
-	<frame-set>: (:string, :code) -> ();
 
 	<err-expected-sep>;
 	<err-syntax>: (:code) -> ();
@@ -147,9 +146,10 @@
 		t1 = <type-set>;
 		<code-anon>(&c, t1, ci);
 
-		/* TODO: need a #null here? */
-
 		<code-data>(&c, s);
+
+		t2 = <type-null>;
+		<code-push>(&c, t2);
 	};
 
 	block-expr: () -> (c :code) [
@@ -334,10 +334,16 @@
 			c = expr;
 			sep;
 
-			<dispatch>(&c);
+			t1 = <type-set>;
+			<code-anon>(&c, t1, c);
 
 			s = <var-top>;
-			<frame-set>(s, c);
+			<code-data>(&c, s);
+
+			t2 = <type-null>;
+			<code-push>(&c, t2);
+
+			<dispatch>(&c);
 
 			{
 				global-expr-list;
