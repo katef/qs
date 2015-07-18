@@ -93,6 +93,12 @@
 
 			{
 				c = item;
+
+				t0 = <type-null>;
+				<prepend-code>(&c, t0);
+
+				t5 = <type-run>;
+				<append-code>(&c, t5);
 			||
 				c = block;
 			};
@@ -104,12 +110,6 @@
 				t3 = <type-tick>;
 				<prepend-code>(&ci, t3);
 			};
-
-			t0 = <type-null>;
-			<prepend-code>(&c, t0);
-
-			t5 = <type-run>;
-			<append-code>(&c, t5);
 
 			t2 = <type-pipe>;
 			<prepend-anon>(&c, t2, ci);
