@@ -197,69 +197,6 @@
 		@=c = @ci;
 	@};
 
-	<append-anon>: (c :code &, t :type, ci :code) -> () = @{
-		struct code **tail;
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<append-anon>\n");
-		}
-
-		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
-			;
-
-		if (!code_anon(tail, act_state->frame, @t, @ci)) {
-			@!;
-		}
-	@};
-
-	<append-data>: (c :code &, s :string) -> () = @{
-		struct code **tail;
-
-		assert(@s.s != NULL && @s.e != NULL);
-		assert(@s.e >= @s.s);
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<append-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
-		}
-
-		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
-			;
-
-		if (!code_data(tail, act_state->frame, @s.e - @s.s, @s.s)) {
-			@!;
-		}
-	@};
-
-	<append-code>: (c :code &, t :type) -> () = @{
-		struct code **tail;
-
-		assert(act_state->frame != NULL);
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<append-code>: %s\n", code_name(@t));
-		}
-
-		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
-			;
-
-		if (!code_push(tail, act_state->frame, @t)) {
-			@!;
-		}
-	@};
-
-	<append-cat>: (c :code &, ci :code) -> () = @{
-		struct code **tail;
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<append-cat>\n");
-		}
-
-		for (tail = @&c; *tail != NULL; tail = &(*tail)->next)
-			;
-
-		*tail = @ci;
-	@};
-
 	<frame-push>: () -> () = @{
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<frame-push>\n");

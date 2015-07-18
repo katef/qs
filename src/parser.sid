@@ -59,11 +59,6 @@
 	<prepend-code>: (:code &, :type)        -> ();
 	<prepend-cat>:  (:code &, :code)        -> ();
 
-	<append-anon>:  (:code &, :type, :code) -> ();
-	<append-data>:  (:code &, :string)      -> ();
-	<append-code>:  (:code &, :type)        -> ();
-	<append-cat>:   (:code &, :code)        -> ();
-
 	<frame-push>;
 	<frame-pop>;
 	<frame-set>: (:string, :code) -> ();
@@ -92,13 +87,17 @@
 			tick;
 
 			{
-				c = item;
+				cx = item;
+
+				c = <empty-code>;
+
+				t5 = <type-run>;
+				<prepend-code>(&c, t5);
+
+				<prepend-cat>(&c, cx);
 
 				t0 = <type-null>;
 				<prepend-code>(&c, t0);
-
-				t5 = <type-run>;
-				<append-code>(&c, t5);
 			||
 				c = block;
 			};
@@ -143,12 +142,14 @@
 		equ;
 		ci = value;
 
-		/* TODO: maybe prepend this, after, and just have c = value */
 		c = <empty-code>;
-		<append-data>(&c, s);
 
 		t1 = <type-set>;
-		<append-anon>(&c, t1, ci);
+		<prepend-anon>(&c, t1, ci);
+
+		/* TODO: need a #null here? */
+
+		<prepend-data>(&c, s);
 	};
 
 	block-expr: () -> (c :code) [
@@ -166,13 +167,17 @@
 		};
 
 	] = {
-		c = list;
+		cx = list;
 
-		t0 = <type-null>;
+		c = <empty-code>;
+
+		t0 = <type-run>;
 		<prepend-code>(&c, t0);
 
-		t1 = <type-run>;
-		<append-code>(&c, t1);
+		<prepend-cat>(&c, cx);
+
+		t1 = <type-null>;
+		<prepend-code>(&c, t1);
 	||
 		c = block;
 	};
@@ -246,9 +251,9 @@
 
 	and-expr: () -> (c :code) = {
 		{
-			c = pipe-expr;
+			cx = pipe-expr;
 		||
-			c = assign-expr;
+			cx = assign-expr;
 		};
 
 		{
@@ -256,28 +261,36 @@
 
 			ci = and-expr;
 
+			c = <empty-code>;
+
 			t2 = <type-if>;
-			<append-anon>(&c, t2, ci);
+			<prepend-anon>(&c, t2, ci);
+
+			<prepend-cat>(&c, cx);
 		||
-			$;
+			c = cx;
 		};
 	};
 
 	or-expr: () -> (c :code) = {
-		c = and-expr;
+		cx = and-expr;
 
 		{
 			or;
 
 			ci = or-expr;
 
+			c = <empty-code>;
+
 			t1 = <type-not>;
-			<append-code>(&c, t1);
+			<prepend-code>(&c, t1);
 
 			t2 = <type-if>;
-			<append-anon>(&c, t2, ci);
+			<prepend-anon>(&c, t2, ci);
+
+			<prepend-cat>(&c, cx);
 		||
-			$;
+			c = cx;
 		};
 	};
 
@@ -299,18 +312,19 @@
 		};
 
 	] = {
-		c = expr;
+		cx = expr;
 
 		{
 			sep;
 
-			ci = expr-list;
+			c = expr-list;
 
-			<append-cat>(&c, ci);
+			<prepend-cat>(&c, cx);
 		||
 			sep;
+			c = cx;
 		||
-			$;
+			c = cx;
 		};
 	};
 
