@@ -6,7 +6,7 @@ struct frame {
 	struct frame *parent;
 };
 
-struct var **
+struct frame *
 frame_push(struct frame **f);
 
 struct frame *

@@ -15,7 +15,7 @@
 #include "frame.h"
 #include "eval.h"
 
-struct var **
+struct frame *
 frame_push(struct frame **f)
 {
 	struct frame *new;
@@ -32,7 +32,7 @@ frame_push(struct frame **f)
 	new->parent = *f;
 	*f = new;
 
-	return &new->var;
+	return new;
 }
 
 struct frame *
