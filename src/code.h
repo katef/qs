@@ -13,6 +13,8 @@ enum code_type {
 	CODE_RUN  = 4 | CODE_NONE,
 	CODE_TICK = 5 | CODE_NONE,
 	CODE_DUP  = 7 | CODE_NONE,
+	CODE_PUSH = 8 | CODE_NONE,
+	CODE_POP  = 9 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
 	CODE_IF   = 1, /* u.code */
@@ -22,7 +24,6 @@ enum code_type {
 
 struct code {
 	enum code_type type;
-	struct frame *frame;
 
 	union {
 		char *s;
@@ -32,19 +33,21 @@ struct code {
 	struct code *next;
 };
 
+struct frame;
+
 const char *
 code_name(enum code_type type);
 
 struct code *
-code_anon(struct code **head, struct frame *frame,
+code_anon(struct code **head,
 	enum code_type type, struct code *code);
 
 struct code *
-code_data(struct code **head, struct frame *frame,
+code_data(struct code **head,
 	size_t n, const char *s);
 
 struct code *
-code_push(struct code **head, struct frame *frame,
+code_push(struct code **head,
 	enum code_type type);
 
 int

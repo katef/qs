@@ -46,6 +46,8 @@
 	<type-not>:  () -> (:type);
 	<type-null>: () -> (:type);
 	<type-run>:  () -> (:type);
+	<type-push>: () -> (:type);
+	<type-pop>:  () -> (:type);
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
@@ -58,9 +60,6 @@
 	<code-data>: (:code &, :string)      -> ();
 	<code-push>: (:code &, :type)        -> ();
 	<code-wind>: (:code &, :code)        -> ();
-
-	<frame-push>;
-	<frame-pop>;
 
 	<err-expected-sep>;
 	<err-syntax>: (:code) -> ();
@@ -156,14 +155,22 @@
 
 		::block: () -> (c :code) = {
 			obrace;
-			<frame-push>;
 			{
-				c = expr-list;
+				cx = expr-list;
 			||
-				c = <empty-code>;
+				cx = <empty-code>;
 			};
-			<frame-pop>;
 			cbrace;
+
+			c = <empty-code>;
+
+			t0 = <type-pop>;
+			<code-push>(&c, t0);
+
+			<code-wind>(&c, cx);
+
+			t1 = <type-push>;
+			<code-push>(&c, t1);
 		};
 
 	] = {
@@ -353,13 +360,11 @@
 		};
 
 	] = {
-		<frame-push>;
 		{
 			global-expr-list;
 		||
 			$;
 		};
-		<frame-pop>;
 
 		eof;
 	};

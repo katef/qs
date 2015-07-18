@@ -18,6 +18,8 @@ code_name(enum code_type type)
 	case CODE_RUN:  return "run";
 	case CODE_TICK: return "tick";
 	case CODE_DUP:  return "dup";
+	case CODE_PUSH: return "push";
+	case CODE_POP:  return "pop";
 
 	case CODE_DATA: return "data";
 	case CODE_IF:   return "if";
@@ -29,13 +31,12 @@ code_name(enum code_type type)
 }
 
 struct code *
-code_anon(struct code **head, struct frame *frame,
+code_anon(struct code **head,
 	enum code_type type, struct code *code)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(frame != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
@@ -43,7 +44,6 @@ code_anon(struct code **head, struct frame *frame,
 	}
 
 	new->type   = type;
-	new->frame  = frame;
 	new->u.code = code;
 
 	new->next = *head;
@@ -58,13 +58,12 @@ code_anon(struct code **head, struct frame *frame,
 }
 
 struct code *
-code_data(struct code **head, struct frame *frame,
+code_data(struct code **head,
 	size_t n, const char *s)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(frame != NULL);
 	assert(s != NULL);
 
 	new = malloc(sizeof *new + n + 1);
@@ -73,7 +72,6 @@ code_data(struct code **head, struct frame *frame,
 	}
 
 	new->type   = CODE_DATA;
-	new->frame  = frame;
 	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
 	new->u.s[n] = '\0';
 
@@ -88,13 +86,12 @@ code_data(struct code **head, struct frame *frame,
 }
 
 struct code *
-code_push(struct code **head, struct frame *frame,
+code_push(struct code **head,
 	enum code_type type)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(frame != NULL);
 	assert(type & CODE_NONE);
 
 	new = malloc(sizeof *new);
@@ -103,7 +100,6 @@ code_push(struct code **head, struct frame *frame,
 	}
 
 	new->type  = type;
-	new->frame = frame;
 
 	new->next = *head;
 	*head = new;
@@ -119,11 +115,11 @@ static struct code *
 code_clone(struct code **head, const struct code *code)
 {
 	switch (code->type) {
-	case CODE_DATA: return code_data(head, code->frame, strlen(code->u.s), code->u.s);
-	case CODE_IF:   return code_anon(head, code->frame, code->type, code->u.code);
-	case CODE_PIPE: return code_anon(head, code->frame, code->type, code->u.code);
-	case CODE_SET:  return code_anon(head, code->frame, code->type, code->u.code);
-	default:        return code_push(head, code->frame, code->type);
+	case CODE_DATA: return code_data(head, strlen(code->u.s), code->u.s);
+	case CODE_IF:   return code_anon(head, code->type, code->u.code);
+	case CODE_PIPE: return code_anon(head, code->type, code->u.code);
+	case CODE_SET:  return code_anon(head, code->type, code->u.code);
+	default:        return code_push(head, code->type);
 	}
 
 	errno = EINVAL;

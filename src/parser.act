@@ -11,7 +11,6 @@
 %maps%
 
 	string -> string;
-	frame  -> frame;
 	type   -> type;
 	code   -> code;
 
@@ -40,7 +39,7 @@
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type type, save;
-		struct frame *frame;
+		struct frame *top;
 		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *);
 		char **args;
 	};
@@ -99,7 +98,7 @@
 %actions%
 
 	<dispatch>: (c :code &) -> () = @{
-		assert(act_state->frame != NULL);
+		assert(act_state->top != NULL);
 		assert(act_state->args != NULL);
 
 		if (debug & DEBUG_ACT) {
@@ -107,7 +106,7 @@
 			code_dump(stderr, @c);
 		}
 
-		if (-1 == act_state->dispatch(stdout, act_state->frame, act_state->args, @c)) {
+		if (-1 == act_state->dispatch(stdout, act_state->top, act_state->args, @c)) {
 			code_free(@c);
 			@!;
 		}
@@ -140,6 +139,8 @@
 	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
 	<type-run>:  () -> (t :type) = @{ @t = CODE_RUN;  @};
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
+	<type-push>: () -> (t :type) = @{ @t = CODE_PUSH; @};
+	<type-pop>:  () -> (t :type) = @{ @t = CODE_POP;  @};
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};
@@ -153,7 +154,7 @@
 		}
 
 		/* XXX: leak */
-		if (!code_anon(@&c, act_state->frame, @t, @ci)) {
+		if (!code_anon(@&c, @t, @ci)) {
 			@!;
 		}
 	@};
@@ -166,19 +167,17 @@
 			fprintf(stderr, "<code-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
 		}
 
-		if (!code_data(@&c, act_state->frame, @s.e - @s.s, @s.s)) {
+		if (!code_data(@&c, @s.e - @s.s, @s.s)) {
 			@!;
 		}
 	@};
 
 	<code-push>: (c :code &, t :type) -> () = @{
-		assert(act_state->frame != NULL);
-
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<code-push>: %s\n", code_name(@t));
 		}
 
-		if (!code_push(@&c, act_state->frame, @t)) {
+		if (!code_push(@&c, @t)) {
 			@!;
 		}
 	@};
@@ -195,30 +194,6 @@
 
 		*tail = @c;
 		@=c = @ci;
-	@};
-
-	<frame-push>: () -> () = @{
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<frame-push>\n");
-		}
-
-		if (!frame_push(&act_state->frame)) {
-			@!;
-		}
-	@};
-
-	<frame-pop>: () -> () = @{
-		assert(act_state->frame != NULL);
-
-		/* TODO: could set $. inside here (yes, in <frame-pop>), iff &c is non-NULL.
-		 * if &c is NULL, either we're at the top scope, or there's no locally-scoped
-		 * code to dereference it anyway */
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<frame-pop>\n");
-		}
-
-		(void) frame_pop(&act_state->frame);
 	@};
 
 	<err-expected-sep>: () -> () = @{
@@ -250,8 +225,12 @@
 
 		act_state->dispatch = dispatch;
 
-		act_state->args  = args;
-		act_state->frame = NULL;
+		act_state->args = args;
+		act_state->top  = NULL;
+
+		if (!frame_push(&act_state->top)) {
+			return -1;
+		}
 
 		lex_state->p = lex_state->buf;
 
@@ -259,6 +238,9 @@
 
 		/* TODO: handle raising an error or ## */
 		p_script(lex_state, act_state);
+
+		(void) frame_pop(&act_state->top);
+		assert(act_state->top == NULL);
 
 		return 0;
 	}

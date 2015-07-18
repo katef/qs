@@ -61,7 +61,7 @@ set_args(struct frame *frame, char *args[])
 	ci = NULL;
 
 	for (i = 0; args[i] != NULL; i++) {
-		if (!code_data(&ci, frame, strlen(args[i]), args[i])) {
+		if (!code_data(&ci, strlen(args[i]), args[i])) {
 			goto error;
 		}
 	}

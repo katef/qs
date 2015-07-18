@@ -3,6 +3,7 @@
 
 struct code;
 struct task;
+struct frame;
 
 struct tick_state {
 	char *s;
@@ -10,6 +11,14 @@ struct tick_state {
 };
 
 struct task {
+	/*
+	 * Tasks fork from other tasks (at least conceptually); the only
+	 * evidence of this is that newly-created tasks share the stack of frames
+	 * from their parent. So in general this is a branch through a tree
+	 * to a common root. Both parent and child may push and pop frames.
+	 */
+	struct frame *frame;
+
 	/*
 	 * The next instruction to execute, set to code->next when complete.
 	 *
@@ -29,7 +38,7 @@ struct task {
 };
 
 struct task *
-task_add(struct task **t, struct code *code);
+task_add(struct task **t, struct frame *frame, struct code *code);
 
 void
 task_remove(struct task **head, struct task *task);

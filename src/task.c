@@ -9,19 +9,21 @@
 #include "proc.h"
 
 struct task *
-task_add(struct task **head, struct code *code)
+task_add(struct task **head, struct frame *frame, struct code *code)
 {
 	struct task *new;
 
 	assert(head != NULL);
+	assert(frame != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->code = code;
-	new->pid  = -1;
+	new->frame = frame;
+	new->code  = code;
+	new->pid   = -1;
 
 	new->ts.s = NULL;
 
@@ -37,6 +39,8 @@ task_remove(struct task **head, struct task *task)
 	struct task **next, **t;
 
 	assert(head != NULL);
+
+	/* TODO: kill our branch of the frame tree */
 
 	for (t = head; *t != NULL; t = next) {
 		next = &(*t)->next;

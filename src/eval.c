@@ -93,9 +93,10 @@ eval_data(struct data **data, const char *s)
 }
 
 static int
-eval_pipe(struct task **next, struct code **code, struct pipe_state *ps)
+eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pipe_state *ps)
 {
 	assert(ps->in != -1);
+	assert(frame != NULL);
 	assert(next != NULL);
 	assert(code != NULL);
 	assert(ps != NULL);
@@ -108,7 +109,7 @@ eval_pipe(struct task **next, struct code **code, struct pipe_state *ps)
 #dup will close the ones which need closing */
 /* TODO: put these fds somewhere for #run to pick up */
 
-	if (!task_add(next, *code)) {
+	if (!task_add(next, frame, *code)) {
 		goto error;
 	}
 
@@ -323,11 +324,10 @@ error:
 /* note will need to be able to re-enter here after EINTR */
 static int
 eval_tick(struct code **next, struct data **data,
-	struct frame *frame, struct pipe_state *ps, struct tick_state *ts)
+	struct pipe_state *ps, struct tick_state *ts)
 {
 	assert(next != NULL);
 	assert(data != NULL);
-	assert(frame != NULL);
 	assert(ps != NULL);
 	assert(ts = NULL);
 
@@ -441,7 +441,7 @@ yield:
 	 * wait() to reap the exited child. So we return -1 with EINTR here.
 	 */
 
-	if (!code_push(next, frame, CODE_TICK)) {
+	if (!code_push(next, CODE_TICK)) {
 		goto error;
 	}
 
@@ -542,6 +542,22 @@ op_join(struct data **node, struct frame *frame, struct data *a, struct data *b)
 }
 
 static int
+eval_frame(struct frame **frame,
+	struct frame *(*op)(struct frame **head))
+{
+	assert(frame != NULL && *frame != NULL);
+	assert(op != NULL);
+
+	/* TODO: detect unbalanced #push/#pop here */
+
+	if (!op(frame)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
 eval_binop(struct data **data,
 	struct frame *frame,
 	int (*op)(struct data **, struct frame *, struct data *a, struct data *b))
@@ -608,14 +624,16 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(data);                                          break;
 		case CODE_DATA: r = eval_data(data, node->u.s);                               break;
-		case CODE_PIPE: r = eval_pipe(&task->next, &node->u.code, ps);                break;
+		case CODE_PIPE: r = eval_pipe(&task->next, task->frame, &node->u.code, ps);   break;
 		case CODE_NOT:  r = eval_not ();                                              break;
 		case CODE_IF:   r = eval_if  (&task->code, data, &node->u.code);              break;
-		case CODE_RUN:  r = eval_run (&task->code, data, node->frame, ps, task);      break;
-		case CODE_CALL: r = eval_call(&task->code, data, node->frame);                break;
-		case CODE_TICK: r = eval_tick(&task->code, data, node->frame, ps, &task->ts); break;
-		case CODE_SET:  r = eval_set (data, node->frame, &node->u.code);              break;
-		case CODE_JOIN: r = eval_binop(data, node->frame, op_join);                   break;
+		case CODE_RUN:  r = eval_run (&task->code, data, task->frame, ps, task);      break;
+		case CODE_CALL: r = eval_call(&task->code, data, task->frame);                break;
+		case CODE_TICK: r = eval_tick(&task->code, data, ps, &task->ts);              break;
+		case CODE_SET:  r = eval_set (data, task->frame, &node->u.code);              break;
+		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                     break;
+		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                      break;
+		case CODE_JOIN: r = eval_binop(data, task->frame, op_join);                   break;
 
 		default:
 			code_free(node);
@@ -638,17 +656,18 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 }
 
 static int
-eval_main(struct code *code, struct data **data)
+eval_main(struct frame *top, struct code *code, struct data **data)
 {
 	struct task *tasks, *t;
 	struct pipe_state ps;
 	int r;
 
+	assert(top != NULL);
 	assert(data != NULL);
 
 	tasks = NULL;
 
-	if (!task_add(&tasks, code)) {
+	if (!task_add(&tasks, top, code)) {
 		goto error;
 	}
 
@@ -784,11 +803,13 @@ error:
 }
 
 int
-eval(struct code *code, struct data **data)
+eval(struct frame *top, struct code *code, struct data **data)
 {
 	struct sigaction sa, sa_old;
 	sigset_t ss_old;
 	int r;
+
+	assert(top != NULL);
 
 	if (-1 == pipe(self)) {
 		perror ("pipe");
@@ -818,7 +839,7 @@ eval(struct code *code, struct data **data)
 		goto fail;
 	}
 
-	r = eval_main(code, data);
+	r = eval_main(top, code, data);
 
 	if (sigaction(SIGCHLD, &sa_old, NULL)) {
 		perror ("sigaction");
