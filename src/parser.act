@@ -147,9 +147,9 @@
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
 
-	<prepend-anon>: (c :code &, t :type, ci :code) -> () = @{
+	<code-anon>: (c :code &, t :type, ci :code) -> () = @{
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<prepend-anon>\n");
+			fprintf(stderr, "<code-anon>\n");
 		}
 
 		/* XXX: leak */
@@ -158,12 +158,12 @@
 		}
 	@};
 
-	<prepend-data>: (c :code &, s :string) -> () = @{
+	<code-data>: (c :code &, s :string) -> () = @{
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e >= @s.s);
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<prepend-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
+			fprintf(stderr, "<code-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
 		}
 
 		if (!code_data(@&c, act_state->frame, @s.e - @s.s, @s.s)) {
@@ -171,11 +171,11 @@
 		}
 	@};
 
-	<prepend-code>: (c :code &, t :type) -> () = @{
+	<code-push>: (c :code &, t :type) -> () = @{
 		assert(act_state->frame != NULL);
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<prepend-code>: %s\n", code_name(@t));
+			fprintf(stderr, "<code-push>: %s\n", code_name(@t));
 		}
 
 		if (!code_push(@&c, act_state->frame, @t)) {
@@ -183,11 +183,11 @@
 		}
 	@};
 
-	<prepend-cat>: (c :code &, ci :code) -> () = @{
+	<code-wind>: (c :code &, ci :code) -> () = @{
 		struct code **tail;
 
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<prepend-cat>\n");
+			fprintf(stderr, "<code-wind>\n");
 		}
 
 		for (tail = @&ci; *tail != NULL; tail = &(*tail)->next)

@@ -54,10 +54,10 @@
 	<type-set>:  () -> (:type);
 	<type-tick>: () -> (:type);
 
-	<prepend-anon>: (:code &, :type, :code) -> ();
-	<prepend-data>: (:code &, :string)      -> ();
-	<prepend-code>: (:code &, :type)        -> ();
-	<prepend-cat>:  (:code &, :code)        -> ();
+	<code-anon>: (:code &, :type, :code) -> ();
+	<code-data>: (:code &, :string)      -> ();
+	<code-push>: (:code &, :type)        -> ();
+	<code-wind>: (:code &, :code)        -> ();
 
 	<frame-push>;
 	<frame-pop>;
@@ -75,14 +75,14 @@
 			s = word;
 
 			c = <empty-code>;
-			<prepend-data>(&c, s);
+			<code-data>(&c, s);
 		||
 			s = var;
 
 			c = <empty-code>;
 			t = <type-call>;
-			<prepend-code>(&c, t);
-			<prepend-data>(&c, s);
+			<code-push>(&c, t);
+			<code-data>(&c, s);
 		||
 			tick;
 
@@ -92,12 +92,12 @@
 				c = <empty-code>;
 
 				t5 = <type-run>;
-				<prepend-code>(&c, t5);
+				<code-push>(&c, t5);
 
-				<prepend-cat>(&c, cx);
+				<code-wind>(&c, cx);
 
 				t0 = <type-null>;
-				<prepend-code>(&c, t0);
+				<code-push>(&c, t0);
 			||
 				c = block;
 			};
@@ -107,11 +107,11 @@
 				ci = <empty-code>;
 
 				t3 = <type-tick>;
-				<prepend-code>(&ci, t3);
+				<code-push>(&ci, t3);
 			};
 
 			t2 = <type-pipe>;
-			<prepend-anon>(&c, t2, ci);
+			<code-anon>(&c, t2, ci);
 		};
 
 	] = {
@@ -119,7 +119,7 @@
 
 		{
 			ci = list;
-			<prepend-cat>(&c, ci);
+			<code-wind>(&c, ci);
 		||
 			$;
 		};
@@ -145,11 +145,11 @@
 		c = <empty-code>;
 
 		t1 = <type-set>;
-		<prepend-anon>(&c, t1, ci);
+		<code-anon>(&c, t1, ci);
 
 		/* TODO: need a #null here? */
 
-		<prepend-data>(&c, s);
+		<code-data>(&c, s);
 	};
 
 	block-expr: () -> (c :code) [
@@ -172,12 +172,12 @@
 		c = <empty-code>;
 
 		t0 = <type-run>;
-		<prepend-code>(&c, t0);
+		<code-push>(&c, t0);
 
-		<prepend-cat>(&c, cx);
+		<code-wind>(&c, cx);
 
 		t1 = <type-null>;
-		<prepend-code>(&c, t1);
+		<code-push>(&c, t1);
 	||
 		c = block;
 	};
@@ -191,21 +191,21 @@
 			equ;
 			r = word;
 
-			<prepend-data>(&c, r);
-			<prepend-data>(&c, l);
+			<code-data>(&c, r);
+			<code-data>(&c, l);
 		||
 			l = word;
 			equ;
 
 			t = <type-null>;
-			<prepend-code>(&c, t);
-			<prepend-data>(&c, l);
+			<code-push>(&c, t);
+			<code-data>(&c, l);
 		||
 			l = word;
 			r = <stdin>;
 
-			<prepend-data>(&c, r);
-			<prepend-data>(&c, l);
+			<code-data>(&c, r);
+			<code-data>(&c, l);
 		};
 
 		dup-list: (c :code &) -> () = {
@@ -228,7 +228,7 @@
 			csquare;
 
 			t0 = <type-dup>;
-			<prepend-code>(&c, t0);
+			<code-push>(&c, t0);
 		||
 			$;
 		};
@@ -243,7 +243,7 @@
 			ci = pipe-expr;
 
 			t2 = <type-pipe>;
-			<prepend-anon>(&c, t2, ci);
+			<code-anon>(&c, t2, ci);
 		||
 			$;
 		};
@@ -264,9 +264,9 @@
 			c = <empty-code>;
 
 			t2 = <type-if>;
-			<prepend-anon>(&c, t2, ci);
+			<code-anon>(&c, t2, ci);
 
-			<prepend-cat>(&c, cx);
+			<code-wind>(&c, cx);
 		||
 			c = cx;
 		};
@@ -283,12 +283,12 @@
 			c = <empty-code>;
 
 			t1 = <type-not>;
-			<prepend-code>(&c, t1);
+			<code-push>(&c, t1);
 
 			t2 = <type-if>;
-			<prepend-anon>(&c, t2, ci);
+			<code-anon>(&c, t2, ci);
 
-			<prepend-cat>(&c, cx);
+			<code-wind>(&c, cx);
 		||
 			c = cx;
 		};
@@ -319,7 +319,7 @@
 
 			c = expr-list;
 
-			<prepend-cat>(&c, cx);
+			<code-wind>(&c, cx);
 		||
 			sep;
 			c = cx;
