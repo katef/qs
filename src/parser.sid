@@ -151,29 +151,17 @@
 		<code-push>(&c, t2);
 	};
 
-	block-expr: () -> (c :code) [
-
-		::block: () -> (c :code) = {
-			obrace;
-			{
-				cx = expr-list;
-			||
-				cx = <empty-code>;
-			};
-			cbrace;
-
+	block: () -> (c :code) = {
+		obrace;
+		{
+			c = expr-list;
+		||
 			c = <empty-code>;
-
-			t0 = <type-pop>;
-			<code-push>(&c, t0);
-
-			<code-wind>(&c, cx);
-
-			t1 = <type-push>;
-			<code-push>(&c, t1);
 		};
+		cbrace;
+	};
 
-	] = {
+	command: () -> (c :code) = {
 		cx = list;
 
 		c = <empty-code>;
@@ -185,8 +173,6 @@
 
 		t1 = <type-null>;
 		<code-push>(&c, t1);
-	||
-		c = block;
 	};
 
 	dup-expr: () -> (c :code) [
@@ -226,18 +212,60 @@
 			};
 		};
 
-	] = {
-		c = block-expr;
+		frame: (dx :code, cx :code) -> (c :code) = {
+			c = <empty-code>;
 
+			t0 = <type-pop>;
+			<code-push>(&c, t0);
+
+			<code-wind>(&c, cx);
+			<code-wind>(&c, dx);
+
+			t1 = <type-push>;
+			<code-push>(&c, t1);
+		};
+
+	] = {
+		cx = block;
+		dx = <empty-code>;
+
+		/*
+		 * Here we need a frame for the block regardless of whether
+		 * there is a dup list present. If there is a dup list then
+		 * the block's frame is used to hold it. Otherwise, a frame
+		 * is pushed anyway for scoping (with an empty dup list).
+		 */
 		{
 			osquare;
-			dup-list(&c);
+			dup-list(&dx);
 			csquare;
 
 			t0 = <type-dup>;
-			<code-push>(&c, t0);
+			<code-push>(&dx, t0);
+
+			c = frame(dx, cx);
 		||
-			$;
+			c = frame(dx, cx);
+		};
+	||
+		cx = command;
+		dx = <empty-code>;
+
+		/*
+		 * Here we only push a frame if there is a dup list to hold.
+		 */
+		{
+			osquare;
+			dup-list(&dx);
+			csquare;
+
+			t0 = <type-dup>;
+			<code-push>(&dx, t0);
+
+			c = frame(dx, cx);
+		||
+			c = cx;
+			! = dx;
 		};
 	};
 
