@@ -23,6 +23,7 @@ task_add(struct task **head, struct frame *frame, struct code *code)
 
 	new->frame = frame;
 	new->code  = code;
+	new->data  = NULL;
 	new->pid   = -1;
 
 	new->ts.s = NULL;

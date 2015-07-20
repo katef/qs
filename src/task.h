@@ -2,6 +2,7 @@
 #define TASK_H
 
 struct code;
+struct data;
 struct task;
 struct frame;
 
@@ -24,8 +25,12 @@ struct task {
 	 *
 	 * Some instructions are considered re-entrant, for which this remains
 	 * pointing to the same node so that it may be evaluated again.
+	 *
+	 * Executing code maintains its own data stack, which ought to be
+	 * empty when execution is complete.
 	 */
 	struct code *code;
+	struct data *data;
 
 	/*
 	 * PID of child when waiting on a process; -1 otherwise.

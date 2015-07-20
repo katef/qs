@@ -51,10 +51,6 @@ debug_flags(const char *s)
 static int
 dispatch(FILE *f, struct frame *top, char *args[], struct code *code)
 {
-	const struct data *p;
-	struct data *out;
-	struct code *ci;
-
 	assert(f != NULL);
 	assert(args != NULL);
 
@@ -62,36 +58,11 @@ dispatch(FILE *f, struct frame *top, char *args[], struct code *code)
 		return -1;
 	}
 
-	out  = NULL;
-
-	if (-1 == eval(top, code, &out)) {
+	if (-1 == eval(top, code)) {
 		return -1;
 	}
-
-	ci = NULL;
-
-	for (p = out; p != NULL; p = p->next) {
-		assert(p->s != NULL);
-
-		if (!code_data(&ci, strlen(p->s), p->s)) {
-			goto error;
-		}
-	}
-
-	if (!frame_set(top, 1, "_", ci)) {
-		return -1;
-	}
-
-	data_free(out);
 
 	return 0;
-
-error:
-
-	code_free(ci);
-	data_free(out);
-
-	return -1;
 }
 
 int
