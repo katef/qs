@@ -178,31 +178,37 @@
 	dup-expr: () -> (c :code) [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		/* TODO: permit [$x=$y] here */
 		dup-item: (c :code &) -> () = {
-			l = word;
-			equ;
-			r = word;
+			s = word;
 
-			<code-data>(&c, r);
-			<code-data>(&c, l);
+			<code-data>(&c, s);
 		||
-			l = word;
+			s = var;
+
+			t = <type-call>;
+			<code-push>(&c, t);
+			<code-data>(&c, s);
+		};
+
+		dup-pair: (c :code &) -> () = {
+			dup-item(&c);
+			equ;
+			dup-item(&c);
+		||
+			dup-item(&c);
 			equ;
 
 			t = <type-null>;
 			<code-push>(&c, t);
-			<code-data>(&c, l);
 		||
-			l = word;
+			dup-item(&c);
 			r = <stdin>;
 
 			<code-data>(&c, r);
-			<code-data>(&c, l);
 		};
 
 		dup-list: (c :code &) -> () = {
-			dup-item(&c);
+			dup-pair(&c);
 
 			{
 				comma;
