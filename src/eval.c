@@ -812,7 +812,7 @@ eval(struct frame *top, struct code *code, struct data **data)
 	assert(top != NULL);
 
 	if (-1 == pipe(self)) {
-		perror ("pipe");
+		perror("pipe");
 		return -1;
 	}
 
@@ -842,7 +842,7 @@ eval(struct frame *top, struct code *code, struct data **data)
 	r = eval_main(top, code, data);
 
 	if (sigaction(SIGCHLD, &sa_old, NULL)) {
-		perror ("sigaction");
+		perror("sigaction");
 		goto fail;
 	}
 
