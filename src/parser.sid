@@ -212,6 +212,17 @@
 			};
 		};
 
+		dup: () -> (c :code) = {
+			c = <empty-code>;
+
+			osquare;
+			dup-list(&c);
+			csquare;
+
+			t = <type-dup>;
+			<code-push>(&c, t);
+		};
+
 		frame: (dx :code, cx :code) -> (c :code) = {
 			c = <empty-code>;
 
@@ -227,7 +238,6 @@
 
 	] = {
 		cx = block;
-		dx = <empty-code>;
 
 		/*
 		 * Here we need a frame for the block regardless of whether
@@ -236,36 +246,23 @@
 		 * is pushed anyway for scoping (with an empty dup list).
 		 */
 		{
-			osquare;
-			dup-list(&dx);
-			csquare;
-
-			t0 = <type-dup>;
-			<code-push>(&dx, t0);
-
-			c = frame(dx, cx);
+			d = dup;
+			c = frame(d, cx);
 		||
-			c = frame(dx, cx);
+			d = <empty-code>;
+			c = frame(d, cx);
 		};
 	||
 		cx = command;
-		dx = <empty-code>;
 
 		/*
 		 * Here we only push a frame if there is a dup list to hold.
 		 */
 		{
-			osquare;
-			dup-list(&dx);
-			csquare;
-
-			t0 = <type-dup>;
-			<code-push>(&dx, t0);
-
-			c = frame(dx, cx);
+			d = dup;
+			c = frame(d, cx);
 		||
 			c = cx;
-			! = dx;
 		};
 	};
 
