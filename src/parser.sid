@@ -178,51 +178,67 @@
 	dup-expr: () -> (c :code) [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		dup-fd: (c :code &) -> () = {
+		fd: () -> (c :code) = {
 			s = word;
 
+			c = <empty-code>;
 			<code-data>(&c, s);
 		||
 			s = var;
 
+			c = <empty-code>;
 			t = <type-call>;
 			<code-push>(&c, t);
 			<code-data>(&c, s);
 		};
 
-		dup-pair: (c :code &) -> () = {
-			dup-fd(&c);
-			equ;
-			dup-fd(&c);
-		||
-			dup-fd(&c);
-			equ;
-
+		close: () -> (c :code) = {
+			c = <empty-code>;
 			t = <type-null>;
 			<code-push>(&c, t);
-		||
-			dup-fd(&c);
+		};
 
+		default: () -> (c :code) = {
+			c = <empty-code>;
 			s = <stdin>;
 			<code-data>(&c, s);
 		};
 
-		dup-list: (c :code &) -> () = {
-			dup-pair(&c);
+		dup-pair: () -> (old :code, new :code) = {
+			old = fd;
+			equ;
+			new = fd;
+		||
+			old = fd;
+			equ;
+			new = close;
+		||
+			old = fd;
+			new = default;
+		};
+
+		dup-list: () -> (c :code) = {
+			(old, new) = dup-pair;
 
 			{
 				comma;
-				dup-list(&c);
+				c = dup-list;
 			||
-				$;
+				c = <empty-code>;
 			};
+
+			/*
+			 * Because we recurr leftmost, the dup list is pushed after parse,
+			 * so that latter pairs may evaluate to overwrite previous pairs.
+			 */
+
+			<code-wind>(&c, old);
+			<code-wind>(&c, new);
 		};
 
 		dup: () -> (c :code) = {
-			cx = <empty-code>;
-
 			osquare;
-			dup-list(&cx);
+			dx = dup-list;
 			csquare;
 
 			c = <empty-code>;
@@ -230,7 +246,7 @@
 			t1 = <type-dup>;
 			<code-push>(&c, t1);
 
-			<code-wind>(&c, cx);
+			<code-wind>(&c, dx);
 
 			t0 = <type-null>;
 			<code-push>(&c, t0);
