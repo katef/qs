@@ -120,6 +120,8 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pi
 	ps->in     = ps->fd[0];
 
 /* TODO: the pipe endpoint might need to overwrite either .old or .new in the dup list */
+/* #pipe has the knowledge of maping fd[0] to fd[1].
+we search the dup list for oldfd=fd[1] and replace it with oldfd=fd[0] (or the other way around) */
 
 	ps->useout = ps->fd[1];
 
@@ -218,6 +220,8 @@ eval_run(struct code **next, struct data **data,
 		return -1;
 	}
 
+/* TODO: don't allow dup lists for variables */
+
 	/* variable */
 	v = frame_get(frame, strlen(args[0]), args[0]);
 	if (v != NULL) {
@@ -239,6 +243,8 @@ eval_run(struct code **next, struct data **data,
 		goto done;
 	}
 
+/* TODO: don't allow dup lists for builtins */
+
 	/* builtin */
 	switch (builtin(task, frame, argc, args)) {
 	case -1: goto error;
@@ -256,29 +262,8 @@ eval_run(struct code **next, struct data **data,
 		assert(argc >= 1);
 		assert(args != NULL);
 
-		/* TODO: dup(2) here for each pair in the frame.dup list */
-
-		/* XXX: i don't like hardcoded knowledge of STDIN_FILENO and STDOUT_FILENO here */
-		/* TODO: error handling for dup2, here and elsewhere */
-
-		if (ps->usein != STDIN_FILENO) {
-			dup2(ps->usein, STDIN_FILENO);
-
-			if (debug & DEBUG_FD) {
-				fprintf(stderr, "child: dup2(%d, %d)\n", ps->usein, STDIN_FILENO);
-			}
-
-			close(ps->usein);
-		}
-
-		if (ps->useout != STDOUT_FILENO) {
-			dup2(ps->useout, STDOUT_FILENO);
-
-			if (debug & DEBUG_FD) {
-				fprintf(stderr, "child: dup2(%d, %d)\n", ps->useout, STDOUT_FILENO);
-			}
-
-			close(ps->useout);
+		if (-1 == dup_apply(frame)) {
+			abort();
 		}
 
 		(void) proc_exec(args[0], args);
@@ -297,6 +282,7 @@ eval_run(struct code **next, struct data **data,
 done:
 
 	/* TODO: maybe have make_args output p, cut off the arg list, and data_free() it */
+	/* TODO: maybe centralise this as data_cut() */
 	for (p = *data; p->s != NULL; p = pnext) {
 		assert(p != NULL);
 

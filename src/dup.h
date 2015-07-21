@@ -1,6 +1,8 @@
 #ifndef DUP_H
 #define DUP_H
 
+struct frame;
+
 struct dup {
 	int oldfd; /* never -1 */
 	int newfd; /* -1 means to close oldfd rather than dup(2) over it */
@@ -16,6 +18,9 @@ dup_push(struct dup **head, int oldfd, int newfd);
 
 void
 dup_free(struct dup *d);
+
+int
+dup_apply(const struct frame *frame);
 
 #endif
 
