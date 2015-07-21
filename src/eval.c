@@ -82,10 +82,6 @@ eval_data(struct data **data, const char *s)
 	assert(data != NULL);
 	assert(s != NULL);
 
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %s \"%s\"\n", code_name(CODE_DATA), s);
-	}
-
 	if (!data_push(data, strlen(s), s)) {
 		return -1;
 	}
@@ -164,9 +160,6 @@ eval_call(struct code **next, struct data **data,
 	}
 
 	a = data_pop(data);
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
-	}
 
 	v = frame_get(frame, strlen(a->s), a->s);
 	if (v == NULL) {
@@ -590,10 +583,6 @@ eval_binop(struct data **data,
 
 	a = data_pop(data);
 	b = data_pop(data);
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "data <- %s\n", a->s);
-		fprintf(stderr, "data <- %s\n", b->s);
-	}
 
 	if (-1 == op(data, frame, a, b)) {
 		return -1;
@@ -647,12 +636,7 @@ eval_dup(struct data **data, struct frame *frame)
 	}
 
 	a = data_pop(data);
-	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
-	}
-
 	assert(a->s == NULL);
-
 	free(a);
 
 	return 0;
