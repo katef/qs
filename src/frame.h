@@ -3,6 +3,7 @@
 
 struct frame {
 	struct var *var;
+	struct dup *dup;
 	struct frame *parent;
 };
 

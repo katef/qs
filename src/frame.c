@@ -28,6 +28,7 @@ frame_push(struct frame **f)
 	}
 
 	new->var = NULL;
+	new->dup = NULL;
 
 	new->parent = *f;
 	*f = new;

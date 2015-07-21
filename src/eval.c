@@ -14,6 +14,7 @@
 
 #include "debug.h"
 #include "var.h"
+#include "dup.h"
 #include "data.h"
 #include "code.h"
 #include "args.h"
@@ -121,6 +122,8 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pi
 
 	ps->usein  = ps->in;
 	ps->in     = ps->fd[0];
+
+/* TODO: the pipe endpoint might need to overwrite either .rfd or .lfd in the dup list */
 
 	ps->useout = ps->fd[1];
 
@@ -259,6 +262,8 @@ eval_run(struct code **next, struct data **data,
 	case 0:
 		assert(argc >= 1);
 		assert(args != NULL);
+
+		/* TODO: dup(2) here for each pair in the frame.dup list */
 
 		/* XXX: i don't like hardcoded knowledge of STDIN_FILENO and STDOUT_FILENO here */
 		/* TODO: error handling for dup2, here and elsewhere */
@@ -559,6 +564,7 @@ eval_frame(struct frame **frame,
 
 	if (op == frame_pop) {
 		var_free(q->var);
+		dup_free(q->dup);
 		free(q);
 	}
 
@@ -578,7 +584,7 @@ eval_binop(struct data **data,
 	assert(op != NULL);
 
 	if (*data == NULL || (*data)->next == NULL) {
-		errno = 0;
+		errno = EINVAL; /* TODO: arity error */
 		return -1;
 	}
 
@@ -595,6 +601,59 @@ eval_binop(struct data **data,
 
 	free(a);
 	free(b);
+
+	return 0;
+}
+
+static int
+op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
+{
+	int lfd, rfd;
+
+	assert(data != NULL);
+	assert(frame != NULL);
+	assert(a != NULL);
+	assert(b != NULL);
+
+	(void) data;
+
+	if (-1 == dup_fd(b->s, &rfd)) { return -1; }
+	if (-1 == dup_fd(a->s, &lfd)) { return -1; }
+
+	if (debug & DEBUG_EXEC) {
+		fprintf(stderr, "dup [%d=%d]\n", lfd, rfd);
+	}
+
+	if (!dup_push(&frame->dup, lfd, rfd)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+/* eat whole data stack upto .s=NULL, set dup list for this frame */
+static int
+eval_dup(struct data **data, struct frame *frame)
+{
+	struct data *a;
+
+	assert(data != NULL);
+	assert(frame != NULL);
+
+	while ((*data)->s != NULL) {
+		if (-1 == eval_binop(data, frame, op_dup)) {
+			return -1;
+		}
+	}
+
+	a = data_pop(data);
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "data <- %s\n", a->s ? a->s : "NULL");
+	}
+
+	assert(a->s == NULL);
+
+	free(a);
 
 	return 0;
 }
@@ -640,6 +699,7 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                       break;
 		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                        break;
 		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);              break;
+		case CODE_DUP:  r = eval_dup(&task->data, task->frame);                         break;
 
 		default:
 			code_free(node);
