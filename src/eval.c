@@ -123,7 +123,7 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pi
 	ps->usein  = ps->in;
 	ps->in     = ps->fd[0];
 
-/* TODO: the pipe endpoint might need to overwrite either .rfd or .lfd in the dup list */
+/* TODO: the pipe endpoint might need to overwrite either .old or .new in the dup list */
 
 	ps->useout = ps->fd[1];
 
@@ -608,7 +608,7 @@ eval_binop(struct data **data,
 static int
 op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 {
-	int lfd, rfd;
+	int oldfd, newfd;
 
 	assert(data != NULL);
 	assert(frame != NULL);
@@ -617,14 +617,14 @@ op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 
 	(void) data;
 
-	if (-1 == dup_fd(b->s, &rfd)) { return -1; }
-	if (-1 == dup_fd(a->s, &lfd)) { return -1; }
+	if (-1 == dup_fd(b->s, &newfd)) { return -1; }
+	if (-1 == dup_fd(a->s, &oldfd)) { return -1; }
 
 	if (debug & DEBUG_EXEC) {
-		fprintf(stderr, "dup [%d=%d]\n", lfd, rfd);
+		fprintf(stderr, "dup [%d=%d]\n", oldfd, newfd);
 	}
 
-	if (!dup_push(&frame->dup, lfd, rfd)) {
+	if (!dup_push(&frame->dup, oldfd, newfd)) {
 		return -1;
 	}
 

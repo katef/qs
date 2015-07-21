@@ -43,12 +43,12 @@ dup_fd(const char *s, int *fd)
 }
 
 struct dup *
-dup_push(struct dup **head, int lfd, int rfd)
+dup_push(struct dup **head, int oldfd, int newfd)
 {
 	struct dup *new;
 
 	assert(head != NULL);
-	assert(lfd != -1);
+	assert(oldfd != -1);
 
 	/* TODO: rework this to reassign existing fds */
 
@@ -57,8 +57,8 @@ dup_push(struct dup **head, int lfd, int rfd)
 		return NULL;
 	}
 
-	new->lfd = lfd;
-	new->rfd = rfd;
+	new->oldfd = oldfd;
+	new->newfd = newfd;
 
 	new->next = *head;
 	*head = new;
