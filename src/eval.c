@@ -121,7 +121,8 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pi
 
 /* TODO: the pipe endpoint might need to overwrite either .old or .new in the dup list */
 /* #pipe has the knowledge of maping fd[0] to fd[1].
-we search the dup list for oldfd=fd[1] and replace it with oldfd=fd[0] (or the other way around) */
+we search the dup list for oldfd=fd[1] and replace it with oldfd=fd[0] (or the other way around)
+or it's just that #pipe adds its own items to the dup list */
 
 	ps->useout = ps->fd[1];
 
@@ -261,6 +262,10 @@ eval_run(struct code **next, struct data **data,
 	case 0:
 		assert(argc >= 1);
 		assert(args != NULL);
+
+		if (debug & DEBUG_FD) {
+			dup_dump(stderr, frame);
+		}
 
 		if (-1 == dup_apply(frame)) {
 			abort();

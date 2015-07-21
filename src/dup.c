@@ -89,40 +89,55 @@ dup_free(struct dup *d)
 int
 dup_apply(const struct frame *frame)
 {
-	const struct frame *f;
 	const struct dup *p;
 
-	if (debug & DEBUG_FD) {
-		for (f = frame; f != NULL; f = frame->parent) {
-			for (p = f->dup; p != NULL; p = p->next) {
-				if (p->newfd == -1) {
-					fprintf(stderr, "child: close(%d)\n", p->oldfd);
-				} else {
-					fprintf(stderr, "child: dup2(%d, %d)\n", p->oldfd, p->newfd);
-				}
-			}
-		}
+	/*
+	 * Order matters here; innermost frames must take precedence over
+	 * their parents, so it's simplest to recurr rather than iterating.
+	 */
+
+	if (frame->parent != NULL) {
+		dup_apply(frame->parent);
 	}
 
 	/* XXX: perror() here from the child might be piped elsewhere */
-	for (f = frame; f != NULL; f = frame->parent) {
-		for (p = f->dup; p != NULL; p = p->next) {
-			assert(p->oldfd != -1);
+	for (p = frame->dup; p != NULL; p = p->next) {
+		assert(p->oldfd != -1);
 
-			if (p->newfd == -1) {
-				if (-1 == close(p->oldfd)) {
-					perror("close");
-					return -1;
-				}
-			} else {
-				if (-1 == dup2(p->oldfd, p->newfd)) {
-					perror("dup2");
-					return -1;
-				}
+		if (p->newfd == -1) {
+			if (-1 == close(p->oldfd)) {
+				perror("close");
+				return -1;
+			}
+		} else {
+			if (-1 == dup2(p->oldfd, p->newfd)) {
+				perror("dup2");
+				return -1;
 			}
 		}
 	}
 
 	return 0;
+}
+
+void
+dup_dump(FILE *f, const struct frame *frame)
+{
+	const struct dup *p;
+
+	assert(f != NULL);
+	assert(frame != NULL);
+
+	if (frame->parent != NULL) {
+		dup_dump(f, frame->parent);
+	}
+
+	for (p = frame->dup; p != NULL; p = p->next) {
+		if (p->newfd == -1) {
+			fprintf(stderr, "child: close(%d)\n", p->oldfd);
+		} else {
+			fprintf(stderr, "child: dup2(%d, %d)\n", p->oldfd, p->newfd);
+		}
+	}
 }
 

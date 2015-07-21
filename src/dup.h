@@ -22,5 +22,8 @@ dup_free(struct dup *d);
 int
 dup_apply(const struct frame *frame);
 
+void
+dup_dump(FILE *f, const struct frame *frame);
+
 #endif
 
