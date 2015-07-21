@@ -8,6 +8,9 @@ struct dup {
 	struct dup *next;
 };
 
+int
+dup_fd(const char *s, int *fd);
+
 struct dup *
 dup_push(struct dup **head, int lfd, int rfd);
 
