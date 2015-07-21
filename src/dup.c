@@ -37,6 +37,11 @@ dup_fd(const char *s, int *fd)
 		return -1;
 	}
 
+	if (l < 0) {
+		errno = EBADF;
+		return -1;
+	}
+
 	*fd = l;
 
 	return 0;
