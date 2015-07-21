@@ -79,7 +79,7 @@ error:
 	return -1;
 }
 
-int
+void
 dump_args(const char *name, char *const args[])
 {
 	int i;
@@ -94,7 +94,5 @@ dump_args(const char *name, char *const args[])
 	}
 
 	fprintf(stderr, " ]\n");
-
-	return 0;
 }
 

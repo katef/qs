@@ -59,7 +59,7 @@ code_pop(struct code **head);
 void
 code_free(struct code *code);
 
-int
+void
 code_dump(FILE *f, const struct code *code);
 
 #endif

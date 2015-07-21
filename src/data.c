@@ -67,7 +67,7 @@ data_free(struct data *data)
 	}
 }
 
-int
+void
 data_dump(FILE *f, const struct data *data)
 {
 	const struct data *p;
@@ -83,7 +83,5 @@ data_dump(FILE *f, const struct data *data)
 	}
 
 	fprintf(stderr, "\n");
-
-	return 0;
 }
 

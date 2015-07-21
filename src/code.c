@@ -182,7 +182,7 @@ code_free(struct code *code)
 	}
 }
 
-static int
+static void
 code_dumpinline(FILE *f, const struct code *code)
 {
 	const struct code *p;
@@ -213,11 +213,9 @@ code_dumpinline(FILE *f, const struct code *code)
 			fprintf(f, " ");
 		}
 	}
-
-	return 0;
 }
 
-int
+void
 code_dump(FILE *f, const struct code *code)
 {
 	assert(f != NULL);
@@ -225,7 +223,5 @@ code_dump(FILE *f, const struct code *code)
 	code_dumpinline(f, code);
 
 	fprintf(f, "\n");
-
-	return 0;
 }
 

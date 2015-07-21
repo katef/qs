@@ -15,7 +15,7 @@ data_pop(struct data **head);
 void
 data_free(struct data *data);
 
-int
+void
 data_dump(FILE *f, const struct data *data);
 
 #endif
