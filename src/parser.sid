@@ -202,9 +202,9 @@
 			<code-push>(&c, t);
 		||
 			dup-fd(&c);
-			r = <stdin>;
 
-			<code-data>(&c, r);
+			s = <stdin>;
+			<code-data>(&c, s);
 		};
 
 		dup-list: (c :code &) -> () = {
