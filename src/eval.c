@@ -545,13 +545,21 @@ static int
 eval_frame(struct frame **frame,
 	struct frame *(*op)(struct frame **head))
 {
+	struct frame *q;
+
 	assert(frame != NULL && *frame != NULL);
 	assert(op != NULL);
 
 	/* TODO: detect unbalanced #push/#pop here */
 
-	if (!op(frame)) {
+	q = op(frame);
+	if (q == NULL) {
 		return -1;
+	}
+
+	if (op == frame_pop) {
+		var_free(q->var);
+		free(q);
 	}
 
 	return 0;
