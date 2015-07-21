@@ -8,6 +8,7 @@ CFLAGS += -O2 -g -ggdb
 
 SID_CFLAGS += -s no-numeric-terminals -s no-terminals
 
+OBJS += dup.o
 OBJS += lex.o
 OBJS += parser.o
 OBJS += main.o
