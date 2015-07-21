@@ -2,8 +2,8 @@
 #define DUP_H
 
 struct dup {
-	int oldfd;
-	int newfd;
+	int oldfd; /* never -1 */
+	int newfd; /* -1 means to close oldfd rather than dup(2) over it */
 
 	struct dup *next;
 };
