@@ -609,6 +609,11 @@ op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 	if (-1 == dup_fd(b->s, &newfd)) { return -1; }
 	if (-1 == dup_fd(a->s, &oldfd)) { return -1; }
 
+	if (oldfd == -1) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	if (debug & DEBUG_EXEC) {
 		fprintf(stderr, "dup [%d=%d]\n", oldfd, newfd);
 	}
