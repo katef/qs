@@ -178,7 +178,7 @@
 	dup-expr: () -> (c :code) [
 
 		/* here I would use zones if the lexer supported it, and emit tok_fd */
-		dup-item: (c :code &) -> () = {
+		dup-fd: (c :code &) -> () = {
 			s = word;
 
 			<code-data>(&c, s);
@@ -191,17 +191,17 @@
 		};
 
 		dup-pair: (c :code &) -> () = {
-			dup-item(&c);
+			dup-fd(&c);
 			equ;
-			dup-item(&c);
+			dup-fd(&c);
 		||
-			dup-item(&c);
+			dup-fd(&c);
 			equ;
 
 			t = <type-null>;
 			<code-push>(&c, t);
 		||
-			dup-item(&c);
+			dup-fd(&c);
 			r = <stdin>;
 
 			<code-data>(&c, r);
