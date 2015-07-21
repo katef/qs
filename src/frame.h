@@ -1,6 +1,10 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+struct var;
+struct dup;
+struct code;
+
 struct frame {
 	struct var *var;
 	struct dup *dup;
