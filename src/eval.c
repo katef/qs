@@ -268,10 +268,11 @@ eval_run(struct code **next, struct data **data,
 		}
 
 		if (-1 == dup_apply(frame)) {
-			abort();
+			goto fail;
 		}
 
 		(void) proc_exec(args[0], args);
+		perror(args[0]); /* XXX: may not be visible if stderr is redirected */
 		abort();
 
 	default:
@@ -307,6 +308,15 @@ error:
 	free(args);
 
 	return -1;
+
+fail:
+
+	/*
+	 * Failures which would leave the child unable to execute as requested.
+	 * We abort rather than continuing to execute in a different manner.
+	 */
+
+	abort();
 }
 
 /* read from the pipe and push to *data */
