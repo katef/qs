@@ -219,14 +219,21 @@
 		};
 
 		dup: () -> (c :code) = {
-			c = <empty-code>;
+			cx = <empty-code>;
 
 			osquare;
-			dup-list(&c);
+			dup-list(&cx);
 			csquare;
 
-			t = <type-dup>;
-			<code-push>(&c, t);
+			c = <empty-code>;
+
+			t1 = <type-dup>;
+			<code-push>(&c, t1);
+
+			<code-wind>(&c, cx);
+
+			t0 = <type-null>;
+			<code-push>(&c, t0);
 		};
 
 		frame: (dx :code, cx :code) -> (c :code) = {
