@@ -121,7 +121,7 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pi
 
 /* TODO: the pipe endpoint might need to overwrite either .old or .new in the dup list */
 /* #pipe has the knowledge of maping fd[0] to fd[1].
-we search the dup list for oldfd=fd[1] and replace it with oldfd=fd[0] (or the other way around)
+we search the dup list for newfd=fd[1] and replace it with newfd=fd[0] (or the other way around)
 or it's just that #pipe adds its own items to the dup list */
 
 	ps->useout = ps->fd[1];
@@ -335,7 +335,7 @@ eval_tick(struct code **next, struct data **data,
 	/*
 	 * #tick reads from a pipe (set up by the parser), which would be
 	 * dup2()'d to stdin if this were a #run child. Here we find the pipe's
-	 * read end by searching for its dup2 oldfd.
+	 * read end by searching for its dup2 newfd.
 	 */
 /* XXX: i would prefer that this were done outside of #tick, and just the fd passed in */
 	in = dup_find(frame, STDIN_FILENO);
@@ -621,10 +621,10 @@ op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 
 	(void) data;
 
-	if (-1 == dup_fd(b->s, &newfd)) { return -1; }
 	if (-1 == dup_fd(a->s, &oldfd)) { return -1; }
+	if (-1 == dup_fd(b->s, &newfd)) { return -1; }
 
-	if (oldfd == -1) {
+	if (newfd == -1) {
 		errno = EINVAL;
 		return -1;
 	}

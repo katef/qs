@@ -56,7 +56,7 @@ dup_push(struct dup **head, int oldfd, int newfd)
 	struct dup *new;
 
 	assert(head != NULL);
-	assert(oldfd != -1);
+	assert(newfd != -1);
 
 	/* TODO: rework this to reassign existing fds */
 
@@ -87,25 +87,25 @@ dup_free(struct dup *d)
 }
 
 int
-dup_find(const struct frame *frame, int oldfd)
+dup_find(const struct frame *frame, int newfd)
 {
 	const struct dup *p;
 
 	assert(frame != NULL);
-	assert(oldfd != -1);
+	assert(newfd != -1);
 
 	if (frame->parent != NULL) {
-		int newfd;
+		int oldfd;
 
-		newfd = dup_find(frame->parent, oldfd);
-		if (newfd != -1) {
-			return newfd;
+		oldfd = dup_find(frame->parent, newfd);
+		if (oldfd != -1) {
+			return oldfd;
 		}
 	}
 
 	for (p = frame->dup; p != NULL; p = p->next) {
-		if (p->oldfd == oldfd) {
-			return p->newfd;
+		if (p->newfd == newfd) {
+			return p->oldfd;
 		}
 	}
 
@@ -130,10 +130,10 @@ dup_apply(const struct frame *frame)
 
 	/* XXX: perror() here from the child might be piped elsewhere */
 	for (p = frame->dup; p != NULL; p = p->next) {
-		assert(p->oldfd != -1);
+		assert(p->newfd != -1);
 
-		if (p->newfd == -1) {
-			if (-1 == close(p->oldfd)) {
+		if (p->oldfd == -1) {
+			if (-1 == close(p->newfd)) {
 				perror("close");
 				return -1;
 			}
@@ -161,8 +161,8 @@ dup_dump(FILE *f, const struct frame *frame)
 	}
 
 	for (p = frame->dup; p != NULL; p = p->next) {
-		if (p->newfd == -1) {
-			fprintf(stderr, "child: close(%d)\n", p->oldfd);
+		if (p->oldfd == -1) {
+			fprintf(stderr, "child: close(%d)\n", p->newfd);
 		} else {
 			fprintf(stderr, "child: dup2(%d, %d)\n", p->oldfd, p->newfd);
 		}

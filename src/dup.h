@@ -4,8 +4,8 @@
 struct frame;
 
 struct dup {
-	int oldfd; /* never -1 */
-	int newfd; /* -1 means to close oldfd rather than dup(2) over it */
+	int oldfd; /* -1 means to close newfd rather than dup(2) over it */
+	int newfd; /* never -1 */
 
 	struct dup *next;
 };
@@ -20,7 +20,7 @@ void
 dup_free(struct dup *d);
 
 int
-dup_find(const struct frame *frame, int oldfd);
+dup_find(const struct frame *frame, int newfd);
 
 int
 dup_apply(const struct frame *frame);
