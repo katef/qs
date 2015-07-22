@@ -20,6 +20,8 @@ code_name(enum code_type type)
 	case CODE_DUP:  return "dup";
 	case CODE_PUSH: return "push";
 	case CODE_POP:  return "pop";
+	case CODE_LHS:  return "lhs";
+	case CODE_RHS:  return "rhs";
 
 	case CODE_DATA: return "data";
 	case CODE_IF:   return "if";

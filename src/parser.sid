@@ -1,7 +1,6 @@
 %types%
 
 	string;
-	!frame;
 	type;
 	code;
 
@@ -48,6 +47,8 @@
 	<type-run>:  () -> (:type);
 	<type-push>: () -> (:type);
 	<type-pop>:  () -> (:type);
+	<type-lhs>:  () -> (:type);
+	<type-rhs>:  () -> (:type);
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
@@ -67,6 +68,33 @@
 	block:     () -> (:code);
 	expr-list: () -> (:code);
 
+	concat: (a :code, b :code) -> (q :code) = {
+		q = <empty-code>;
+
+		<code-wind>(&q, b);
+		<code-wind>(&q, a);
+	};
+
+	frame: (ci :code) -> (c :code) = {
+		c = <empty-code>;
+
+		t0 = <type-pop>;
+		<code-push>(&c, t0);
+
+		<code-wind>(&c, ci);
+
+		t1 = <type-push>;
+		<code-push>(&c, t1);
+	};
+
+	pipe: (lhs :code, rhs :code) -> (c :code) = {
+		c = frame(lhs);
+		r = frame(rhs);
+
+		t = <type-pipe>;
+		<code-anon>(&c, t, r);
+	};
+
 	list: () -> (c :code) [
 
 		::item: () -> (c :code) = {
@@ -84,32 +112,40 @@
 		||
 			tick;
 
+			/* tick command */
 			{
 				cx = item;
 
-				c = <empty-code>;
-
-				t5 = <type-run>;
-				<code-push>(&c, t5);
-
-				<code-wind>(&c, cx);
-
-				t0 = <type-null>;
-				<code-push>(&c, t0);
-			||
-				c = block;
-			};
-
-			/* tick rhs */
-			{
 				ci = <empty-code>;
 
-				t3 = <type-tick>;
-				<code-push>(&ci, t3);
+				t1 = <type-run>;
+				<code-push>(&ci, t1);
+
+				<code-wind>(&ci, cx);
+
+				t0 = <type-null>;
+				<code-push>(&ci, t0);
+			||
+				ci = block;
 			};
 
-			t2 = <type-pipe>;
-			<code-anon>(&c, t2, ci);
+			/* pipe rhs */
+			{
+				rhs = <empty-code>;
+
+				t3 = <type-tick>;
+				<code-push>(&rhs, t3);
+			};
+
+			/* pipe lhs */
+			{
+				lhs = ci;
+
+				t2 = <type-lhs>;
+				<code-push>(&lhs, t2);
+			};
+
+			c = pipe(lhs, rhs);
 		};
 
 	] = {
@@ -252,19 +288,6 @@
 			<code-push>(&c, t0);
 		};
 
-		frame: (dx :code, cx :code) -> (c :code) = {
-			c = <empty-code>;
-
-			t0 = <type-pop>;
-			<code-push>(&c, t0);
-
-			<code-wind>(&c, cx);
-			<code-wind>(&c, dx);
-
-			t1 = <type-push>;
-			<code-push>(&c, t1);
-		};
-
 	] = {
 		cx = block;
 
@@ -276,10 +299,12 @@
 		 */
 		{
 			d = dup;
-			c = frame(d, cx);
+			q = concat(d, cx);
+			c = frame(q);
 		||
 			d = <empty-code>;
-			c = frame(d, cx);
+			q = concat(d, cx);
+			c = frame(q);
 		};
 	||
 		cx = command;
@@ -289,24 +314,38 @@
 		 */
 		{
 			d = dup;
-			c = frame(d, cx);
+			q = concat(d, cx);
+			c = frame(q);
 		||
 			c = cx;
 		};
 	};
 
 	pipe-expr: () -> (c :code) = {
-		c = dup-expr;
+		cx = dup-expr;
 
 		{
 			bar;
 
-			ci = pipe-expr;
+			/* pipe rhs */
+			{
+				rhs = pipe-expr;
 
-			t2 = <type-pipe>;
-			<code-anon>(&c, t2, ci);
+				t3 = <type-rhs>;
+				<code-push>(&rhs, t3);
+			};
+
+			/* pipe lhs */
+			{
+				lhs = cx;
+
+				t2 = <type-lhs>;
+				<code-push>(&lhs, t2);
+			};
+
+			c = pipe(lhs, rhs);
 		||
-			$;
+			c = cx;
 		};
 	};
 

@@ -38,10 +38,9 @@ struct eval {
 	struct eval *next;
 };
 
-struct pipe_state {
-	int fd[2];
-	int usein, useout;
-	int in, out;
+enum {
+	SIDE_LHS,
+	SIDE_RHS
 };
 
 static void
@@ -90,50 +89,106 @@ eval_data(struct data **data, const char *s)
 }
 
 static int
-eval_pipe(struct task **next, struct frame *frame, struct code **code, struct pipe_state *ps)
+eval_pipe(struct task **next, struct frame *frame, struct code **code)
 {
-	assert(ps->in != -1);
-	assert(frame != NULL);
 	assert(next != NULL);
+	assert(frame != NULL);
 	assert(code != NULL);
-	assert(ps != NULL);
 
-	if (-1 == pipe(ps->fd)) {
-		return -1;
+	/* TODO: this will eventually be a loop */
+	/* for each fd in the ancestry: */ {
+		int fd[2];
+
+		if (-1 == pipe(fd)) {
+			goto error;
+		}
+
+		if (debug & DEBUG_FD) {
+			fprintf(stderr, "pipe [%d,%d]\n", fd[0], fd[1]);
+		}
+
+		/* TODO: add to pipe list for this frame */
+		frame->fd[0] = fd[0];
+		frame->fd[1] = fd[1];
 	}
 
-/* TODO: pipe(2) for every fd in the ancestry.
-#dup will close the ones which need closing */
-/* TODO: put these fds somewhere for #run to pick up */
+	/* lhs is what remains in the current task after this #pipe */
 
+	/* rhs */
 	if (!task_add(next, frame, *code)) {
 		goto error;
 	}
 
 	*code = NULL;
 
-	if (debug & DEBUG_FD) {
-		fprintf(stderr, "pipe [%d,%d]\n", ps->fd[0], ps->fd[1]);
-	}
-
-	ps->usein  = ps->in;
-	ps->in     = ps->fd[0];
-
-/* TODO: the pipe endpoint might need to overwrite either .old or .new in the dup list */
-/* #pipe has the knowledge of maping fd[0] to fd[1].
-we search the dup list for newfd=fd[1] and replace it with newfd=fd[0] (or the other way around)
-or it's just that #pipe adds its own items to the dup list */
-
-	ps->useout = ps->fd[1];
-
 	return 0;
 
 error:
 
-	close(ps->fd[0]);
-	close(ps->fd[1]);
+	/* TODO: pipe list */
+	close(frame->fd[0]);
+	close(frame->fd[1]);
 
 	return -1;
+}
+
+static int
+eval_side(struct task **next, struct frame *frame, int side)
+{
+	assert(next != NULL);
+	assert(frame != NULL);
+	assert(side == SIDE_LHS || side == SIDE_RHS);
+
+	if (side != SIDE_LHS && side != SIDE_RHS) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (frame->parent == NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (frame->parent->fd[0] == -1 || frame->parent->fd[1] == -1) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	/* TODO: this should eventually become a list for multiple pipes */
+	/* for each pipe: */ {
+		int oldfd, newfd;
+		int other; /* other end of the pipe, to close() in a child */
+
+		switch (side) {
+		case SIDE_LHS:
+			oldfd = frame->parent->fd[1]; /* write end */
+			other = frame->parent->fd[0];
+			break;
+
+		case SIDE_RHS:
+			oldfd = frame->parent->fd[0]; /* read end */
+			other = frame->parent->fd[1];
+			break;
+		}
+
+		/* TODO: the association between the lhs and rhs goes here */
+		switch (side) {
+		case SIDE_LHS: newfd = STDOUT_FILENO; break;
+		case SIDE_RHS: newfd = STDIN_FILENO;  break;
+		}
+
+		if (!dup_push(&frame->dup, oldfd, newfd)) {
+			return -1;
+		}
+
+		/* close the opposing side */
+/* XXX: who does this? only when we #run. for #tick we're in the same process and do not want to close() */
+		if (!dup_push(&frame->dup, -1, other)) {
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 /* pop $?, push !$? to *data */
@@ -187,8 +242,7 @@ eval_call(struct code **next, struct data **data,
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
 eval_run(struct code **next, struct data **data,
-	struct frame *frame, struct pipe_state *ps,
-	struct task *task)
+	struct frame *frame, struct task *task)
 {
 	struct data *p, *pnext;
 	struct var *v;
@@ -199,7 +253,6 @@ eval_run(struct code **next, struct data **data,
 	assert(next != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
-	assert(ps != NULL);
 	assert(task != NULL);
 	assert(task->pid == -1);
 
@@ -663,7 +716,7 @@ eval_dup(struct data **data, struct frame *frame)
 }
 
 static int
-eval_task(struct task *task, struct pipe_state *ps)
+eval_task(struct task *task)
 {
 	struct code *node;
 	int r;
@@ -693,10 +746,12 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(&task->data);                                      break;
 		case CODE_DATA: r = eval_data(&task->data, node->u.s);                           break;
-		case CODE_PIPE: r = eval_pipe(&task->next, task->frame, &node->u.code, ps);      break;
+		case CODE_PIPE: r = eval_pipe(&task->next, task->frame, &node->u.code);          break;
+		case CODE_LHS:  r = eval_side(&task->next, task->frame, SIDE_LHS);               break;
+		case CODE_RHS:  r = eval_side(&task->next, task->frame, SIDE_RHS);               break;
 		case CODE_NOT:  r = eval_not ();                                                 break;
 		case CODE_IF:   r = eval_if  (&task->code, &task->data, &node->u.code);          break;
-		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, ps, task);  break;
+		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, task);      break;
 		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);            break;
 		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &task->ts); break;
 		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);          break;
@@ -739,7 +794,6 @@ static int
 eval_main(struct frame *top, struct code *code)
 {
 	struct task *tasks, *t;
-	struct pipe_state ps;
 	int r;
 
 	assert(top != NULL);
@@ -749,11 +803,6 @@ eval_main(struct frame *top, struct code *code)
 	if (!task_add(&tasks, top, code)) {
 		goto error;
 	}
-
-	/* XXX: this should be the only place where STDIN_FILENO and STDOUT_FILENO are set */
-	/* XXX: setting all of these is not neccessary. some should be -1 */
-	ps.in  = ps.usein  = STDIN_FILENO;
-	ps.out = ps.useout = STDOUT_FILENO;
 
 	/*
 	 * Terminology: What blocking (and sleeping) mean
@@ -793,7 +842,7 @@ eval_main(struct frame *top, struct code *code)
 	t = tasks;
 
 	for (;;) {
-		r = eval_task(t, &ps);
+		r = eval_task(t);
 
 		if (r == -1 && errno != EINTR) {
 			goto error;
@@ -827,7 +876,9 @@ eval_main(struct frame *top, struct code *code)
 			 * Subsequent read() in #tick will now give EOF.
 			 */
 			if (n == 0) {
+/* TODO: iterate over pipe list to close all
 				close(ps.out);
+*/
 			}
 		}
 

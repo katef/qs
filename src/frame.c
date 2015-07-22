@@ -30,6 +30,9 @@ frame_push(struct frame **f)
 	new->var = NULL;
 	new->dup = NULL;
 
+	new->fd[0] = -1;
+	new->fd[1] = -1;
+
 	new->parent = *f;
 	*f = new;
 
