@@ -87,9 +87,37 @@ dup_free(struct dup *d)
 }
 
 int
+dup_find(const struct frame *frame, int oldfd)
+{
+	const struct dup *p;
+
+	assert(frame != NULL);
+	assert(oldfd != -1);
+
+	if (frame->parent != NULL) {
+		int newfd;
+
+		newfd = dup_find(frame->parent, oldfd);
+		if (newfd != -1) {
+			return newfd;
+		}
+	}
+
+	for (p = frame->dup; p != NULL; p = p->next) {
+		if (p->oldfd == oldfd) {
+			return p->newfd;
+		}
+	}
+
+	return -1;
+}
+
+int
 dup_apply(const struct frame *frame)
 {
 	const struct dup *p;
+
+	assert(frame != NULL);
 
 	/*
 	 * Order matters here; innermost frames must take precedence over

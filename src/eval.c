@@ -323,12 +323,26 @@ fail:
 /* note will need to be able to re-enter here after EINTR */
 static int
 eval_tick(struct code **next, struct data **data,
-	struct pipe_state *ps, struct tick_state *ts)
+	struct frame *frame, struct tick_state *ts)
 {
+	int in;
+
 	assert(next != NULL);
 	assert(data != NULL);
-	assert(ps != NULL);
+	assert(frame != NULL);
 	assert(ts = NULL);
+
+	/*
+	 * #tick reads from a pipe (set up by the parser), which would be
+	 * dup2()'d to stdin if this were a #run child. Here we find the pipe's
+	 * read end by searching for its dup2 oldfd.
+	 */
+/* XXX: i would prefer that this were done outside of #tick, and just the fd passed in */
+	in = dup_find(frame, STDIN_FILENO);
+	if (in == -1) {
+		errno = EBADF;
+		return -1;
+	}
 
 	/*
 	 * There are two reasons to select here:
@@ -350,9 +364,9 @@ eval_tick(struct code **next, struct data **data,
 
 		FD_ZERO(&fds);
 		FD_SET(self[0], &fds);
-		FD_SET(ps->in,  &fds);
+		FD_SET(in,  &fds);
 
-		max = MAX(self[0], ps->in);
+		max = MAX(self[0], in);
 
 		r = select(max + 1, &fds, NULL, NULL, NULL);
 		if (r == -1) {
@@ -377,18 +391,18 @@ eval_tick(struct code **next, struct data **data,
 
 			assert(dummy == 'x');
 
-			/* If ps->in is also ready, we'll deal with that on re-entry. */
+			/* If in is also ready, we'll deal with that on re-entry. */
 
 			goto yield;
 		}
 
-		if (FD_ISSET(ps->in, &fds)) {
+		if (FD_ISSET(in, &fds)) {
 			if (-1 == sigprocmask(SIG_UNBLOCK, &ss_chld, NULL)) {
 				perror("sigprocmask SIG_UNBLOCK");
 				goto fail;
 			}
 
-			r = readfd(ps->in, &ts->s, &ts->l);
+			r = readfd(in, &ts->s, &ts->l);
 
 			if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, NULL)) {
 				perror("sigprocmask SIG_BLOCK");
@@ -677,19 +691,19 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		assert(node != NULL);
 
 		switch (node->type) {
-		case CODE_NULL: r = eval_null(&task->data);                                     break;
-		case CODE_DATA: r = eval_data(&task->data, node->u.s);                          break;
-		case CODE_PIPE: r = eval_pipe(&task->next, task->frame, &node->u.code, ps);     break;
-		case CODE_NOT:  r = eval_not ();                                                break;
-		case CODE_IF:   r = eval_if  (&task->code, &task->data, &node->u.code);         break;
-		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, ps, task); break;
-		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);           break;
-		case CODE_TICK: r = eval_tick(&task->code, &task->data, ps, &task->ts);         break;
-		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);         break;
-		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                       break;
-		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                        break;
-		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);              break;
-		case CODE_DUP:  r = eval_dup(&task->data, task->frame);                         break;
+		case CODE_NULL: r = eval_null(&task->data);                                      break;
+		case CODE_DATA: r = eval_data(&task->data, node->u.s);                           break;
+		case CODE_PIPE: r = eval_pipe(&task->next, task->frame, &node->u.code, ps);      break;
+		case CODE_NOT:  r = eval_not ();                                                 break;
+		case CODE_IF:   r = eval_if  (&task->code, &task->data, &node->u.code);          break;
+		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, ps, task);  break;
+		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);            break;
+		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &task->ts); break;
+		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);          break;
+		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                        break;
+		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                         break;
+		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);               break;
+		case CODE_DUP:  r = eval_dup(&task->data, task->frame);                          break;
 
 		default:
 			code_free(node);

@@ -20,6 +20,9 @@ void
 dup_free(struct dup *d);
 
 int
+dup_find(const struct frame *frame, int oldfd);
+
+int
 dup_apply(const struct frame *frame);
 
 void
