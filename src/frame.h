@@ -8,7 +8,7 @@ struct code;
 struct frame {
 	struct var *var;
 	struct dup *dup;
-	int fd[2]; /* TODO: pipe list */
+	struct pipe *pipe;
 	struct frame *parent;
 };
 

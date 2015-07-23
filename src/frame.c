@@ -14,6 +14,7 @@
 #include "var.h"
 #include "frame.h"
 #include "eval.h"
+#include "pipe.h"
 
 struct frame *
 frame_push(struct frame **f)
@@ -27,11 +28,9 @@ frame_push(struct frame **f)
 		return NULL;
 	}
 
-	new->var = NULL;
-	new->dup = NULL;
-
-	new->fd[0] = -1;
-	new->fd[1] = -1;
+	new->var  = NULL;
+	new->dup  = NULL;
+	new->pipe = NULL;
 
 	new->parent = *f;
 	*f = new;

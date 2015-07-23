@@ -25,6 +25,7 @@
 #include "status.h"
 #include "builtin.h"
 #include "task.h"
+#include "pipe.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -91,25 +92,28 @@ eval_data(struct data **data, const char *s)
 static int
 eval_pipe(struct task **next, struct frame *frame, struct code **code)
 {
+	struct pipe **tail;
+
 	assert(next != NULL);
 	assert(frame != NULL);
 	assert(code != NULL);
 
+	for (tail = &frame->pipe; *tail != NULL; tail = &(*tail)->next)
+		;
+
 	/* TODO: this will eventually be a loop */
 	/* for each fd in the ancestry: */ {
-		int fd[2];
+		struct pipe *new;
 
-		if (-1 == pipe(fd)) {
+		new = pipe_push(tail);
+		if (new == NULL) {
+			perror("pipe_push");
 			goto error;
 		}
 
 		if (debug & DEBUG_FD) {
-			fprintf(stderr, "pipe [%d,%d]\n", fd[0], fd[1]);
+			fprintf(stderr, "pipe [%d,%d]\n", new->fd[0], new->fd[1]);
 		}
-
-		/* TODO: add to pipe list for this frame */
-		frame->fd[0] = fd[0];
-		frame->fd[1] = fd[1];
 	}
 
 	/* lhs is what remains in the current task after this #pipe */
@@ -125,9 +129,9 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code)
 
 error:
 
-	/* TODO: pipe list */
-	close(frame->fd[0]);
-	close(frame->fd[1]);
+	pipe_free(*tail);
+
+	*tail = NULL;
 
 	return -1;
 }
@@ -135,6 +139,8 @@ error:
 static int
 eval_side(struct task **next, struct frame *frame, int side)
 {
+	const struct pipe *p;
+
 	assert(next != NULL);
 	assert(frame != NULL);
 	assert(side == SIDE_LHS || side == SIDE_RHS);
@@ -149,25 +155,19 @@ eval_side(struct task **next, struct frame *frame, int side)
 		return -1;
 	}
 
-	if (frame->parent->fd[0] == -1 || frame->parent->fd[1] == -1) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	/* TODO: this should eventually become a list for multiple pipes */
-	/* for each pipe: */ {
+	for (p = frame->parent->pipe; p != NULL; p = p->next) {
 		int oldfd, newfd;
 		int other; /* other end of the pipe, to close() in a child */
 
 		switch (side) {
 		case SIDE_LHS:
-			oldfd = frame->parent->fd[1]; /* write end */
-			other = frame->parent->fd[0];
+			oldfd = p->fd[1]; /* write end */
+			other = p->fd[0];
 			break;
 
 		case SIDE_RHS:
-			oldfd = frame->parent->fd[0]; /* read end */
-			other = frame->parent->fd[1];
+			oldfd = p->fd[0]; /* read end */
+			other = p->fd[1];
 			break;
 		}
 
@@ -626,6 +626,7 @@ eval_frame(struct frame **frame,
 	if (op == frame_pop) {
 		var_free(q->var);
 		dup_free(q->dup);
+		pipe_free(q->pipe);
 		free(q);
 	}
 
@@ -876,9 +877,13 @@ eval_main(struct frame *top, struct code *code)
 			 * Subsequent read() in #tick will now give EOF.
 			 */
 			if (n == 0) {
-/* TODO: iterate over pipe list to close all
-				close(ps.out);
-*/
+				struct pipe *p;
+
+/* TODO: how to find which pipe to close? can it be anything other than t->frame->pipe? */
+				for (p = t->frame->pipe; p != NULL; p = p->next) {
+					close(p->fd[1]);
+					p->fd[1] = -1;
+				}
 			}
 		}
 
@@ -939,6 +944,10 @@ eval(struct frame *top, struct code *code)
 	if (-1 == pipe(self)) {
 		perror("pipe");
 		return -1;
+	}
+
+	if (debug & DEBUG_FD) {
+		fprintf(stderr, "self pipe [%d,%d]\n", self[0], self[1]);
 	}
 
 	if (-1 == sigemptyset(&ss_chld)) {
