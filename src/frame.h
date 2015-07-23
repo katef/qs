@@ -8,11 +8,19 @@ struct code;
 struct frame {
 	struct var *var;
 
-	/* .m is oldfd; .n is newfd.
-	 * .m = -1 means to close .n, rather than dup2 over .n; .n is never -1 */
+	/*
+TODO: explain
+	 * dup: [m=n] to dup2()
+	 * .m is oldfd; .n is newfd.
+	 * .m = -1 means to close .n, rather than dup2 over .n; .n is never -1
+	 *
+	 * asc: [m|n] to dup() over pipe endpoints
+	 *
+	 * pipe: pipe endpoints for xyz | abc
+	 * .m is fd[0]; .n is fd[1]
+	 */
 	struct pair *dup;
-
-	/* .m is fd[0]; .n is fd[1] */
+	struct pair *asc; 
 	struct pair *pipe;
 
 	struct frame *parent;

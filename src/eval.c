@@ -609,20 +609,6 @@ eval_set(struct data **data,
 	return 0;
 }
 
-/* TODO: explain what happens here */
-static int
-op_join(struct data **node, struct frame *frame, struct data *a, struct data *b)
-{
-	(void) node;
-	(void) frame;
-	(void) a;
-	(void) b;
-
-	/* TODO */
-	errno = ENOSYS;
-	return -1;
-}
-
 static int
 eval_frame(struct frame **frame,
 	struct frame *(*op)(struct frame **head))
@@ -649,36 +635,21 @@ eval_frame(struct frame **frame,
 	return 0;
 }
 
+/* TODO: explain what happens here */
 static int
-eval_binop(struct data **data,
-	struct frame *frame,
-	int (*op)(struct data **, struct frame *, struct data *a, struct data *b))
+op_join(struct data **data, struct frame *frame, struct data *a, struct data *b)
 {
-	struct data *a;
-	struct data *b;
+	(void) data;
+	(void) frame;
+	(void) a;
+	(void) b;
 
-	assert(data != NULL);
-	assert(frame != NULL);
-	assert(op != NULL);
-
-	if (*data == NULL || (*data)->next == NULL) {
-		errno = EINVAL; /* TODO: arity error */
-		return -1;
-	}
-
-	a = data_pop(data);
-	b = data_pop(data);
-
-	if (-1 == op(data, frame, a, b)) {
-		return -1;
-	}
-
-	free(a);
-	free(b);
-
-	return 0;
+	/* TODO */
+	errno = ENOSYS;
+	return -1;
 }
 
+/* TODO: explain what happens here */
 static int
 op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 {
@@ -710,24 +681,59 @@ op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 	return 0;
 }
 
-/* eat whole data stack upto .s=NULL, set dup list for this frame */
+/* TODO: explain what happens here */
 static int
-eval_dup(struct data **data, struct frame *frame)
+op_asc(struct data **data, struct frame *frame, struct data *a, struct data *b)
 {
-	struct data *a;
+	int lhs, rhs;
 
 	assert(data != NULL);
 	assert(frame != NULL);
+	assert(a != NULL);
+	assert(b != NULL);
 
-	while ((*data)->s != NULL) {
-		if (-1 == eval_binop(data, frame, op_dup)) {
-			return -1;
-		}
+	(void) data;
+
+	if (-1 == pair_fd(a->s, &lhs)) { return -1; }
+	if (-1 == pair_fd(b->s, &rhs)) { return -1; }
+
+	if (debug & DEBUG_EXEC) {
+		fprintf(stderr, "asc [%d|%d]\n", lhs, rhs);
+	}
+
+	if (!pair_push(&frame->asc, lhs, rhs)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+eval_binop(struct data **data,
+	struct frame *frame,
+	int (*op)(struct data **, struct frame *, struct data *a, struct data *b))
+{
+	struct data *a;
+	struct data *b;
+
+	assert(data != NULL);
+	assert(frame != NULL);
+	assert(op != NULL);
+
+	if (*data == NULL || (*data)->next == NULL) {
+		errno = EINVAL; /* TODO: arity error */
+		return -1;
 	}
 
 	a = data_pop(data);
-	assert(a->s == NULL);
+	b = data_pop(data);
+
+	if (-1 == op(data, frame, a, b)) {
+		return -1;
+	}
+
 	free(a);
+	free(b);
 
 	return 0;
 }
@@ -775,7 +781,8 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                        break;
 		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                         break;
 		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);               break;
-		case CODE_DUP:  r = eval_dup(&task->data, task->frame);                          break;
+		case CODE_DUP:  r = eval_binop(&task->data, task->frame, op_dup);                break;
+		case CODE_ASC:  r = eval_binop(&task->data, task->frame, op_asc);                break;
 
 		default:
 			code_free(node);

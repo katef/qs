@@ -18,6 +18,7 @@ code_name(enum code_type type)
 	case CODE_RUN:  return "run";
 	case CODE_TICK: return "tick";
 	case CODE_DUP:  return "dup";
+	case CODE_ASC:  return "asc";
 	case CODE_PUSH: return "push";
 	case CODE_POP:  return "pop";
 	case CODE_LHS:  return "lhs";

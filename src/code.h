@@ -13,10 +13,11 @@ enum code_type {
 	CODE_RUN  =  4 | CODE_NONE,
 	CODE_TICK =  5 | CODE_NONE,
 	CODE_DUP  =  7 | CODE_NONE,
-	CODE_PUSH =  8 | CODE_NONE,
-	CODE_POP  =  9 | CODE_NONE,
-	CODE_LHS  = 10 | CODE_NONE,
-	CODE_RHS  = 11 | CODE_NONE,
+	CODE_ASC  =  8 | CODE_NONE,
+	CODE_PUSH =  9 | CODE_NONE,
+	CODE_POP  = 10 | CODE_NONE,
+	CODE_LHS  = 11 | CODE_NONE,
+	CODE_RHS  = 12 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
 	CODE_IF   = 1, /* u.code */

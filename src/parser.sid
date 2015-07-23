@@ -52,6 +52,7 @@
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
+	<type-asc>:  () -> (:type);
 	<type-if>:   () -> (:type);
 	<type-pipe>: () -> (:type);
 	<type-set>:  () -> (:type);
@@ -253,12 +254,32 @@
 			new = default;
 		};
 
-		dup-list: () -> (c :code) = {
-			(old, new) = dup-pair;
+		asc-pair: () -> (lhs :code, rhs :code) = {
+			lhs = fd;
+			bar;
+			rhs = fd;
+		||
+			lhs = fd;
+			bar;
+			rhs = close;
+		||
+			lhs = close;
+			bar;
+			rhs = fd;
+		};
+
+		pair-list: () -> (c :code) = {
+			{
+				(a, b) = dup-pair;
+				t = <type-dup>;
+			||
+				(a, b) = asc-pair;
+				t = <type-asc>;
+			};
 
 			{
 				comma;
-				c = dup-list;
+				c = pair-list;
 			||
 				c = <empty-code>;
 			};
@@ -268,24 +289,20 @@
 			 * so that latter pairs may evaluate to overwrite previous pairs.
 			 */
 
-			<code-wind>(&c, old);
-			<code-wind>(&c, new);
+			<code-push>(&c, t);
+
+			<code-wind>(&c, a);
+			<code-wind>(&c, b);
 		};
 
-		dup: () -> (c :code) = {
+		pair-box: () -> (c :code) = {
 			osquare;
-			dx = dup-list;
+			dx = pair-list;
 			csquare;
 
 			c = <empty-code>;
 
-			t1 = <type-dup>;
-			<code-push>(&c, t1);
-
 			<code-wind>(&c, dx);
-
-			t0 = <type-null>;
-			<code-push>(&c, t0);
 		};
 
 	] = {
@@ -293,12 +310,12 @@
 
 		/*
 		 * Here we need a frame for the block regardless of whether
-		 * there is a dup list present. If there is a dup list then
+		 * there is a redir list present. If there is a redir list then
 		 * the block's frame is used to hold it. Otherwise, a frame
-		 * is pushed anyway for scoping (with an empty dup list).
+		 * is pushed anyway for scoping (with an empty dup and asc list).
 		 */
 		{
-			d = dup;
+			d = pair-box;
 			q = concat(d, cx);
 			c = frame(q);
 		||
@@ -313,7 +330,7 @@
 		 * Here we only push a frame if there is a dup list to hold.
 		 */
 		{
-			d = dup;
+			d = pair-box;
 			q = concat(d, cx);
 			c = frame(q);
 		||

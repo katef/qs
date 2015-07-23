@@ -146,6 +146,7 @@
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};
+	<type-asc>:  () -> (t :type) = @{ @t = CODE_ASC;  @};
 	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
 	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
 	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
