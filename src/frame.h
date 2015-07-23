@@ -9,15 +9,19 @@ struct frame {
 	struct var *var;
 
 	/*
-TODO: explain
+	 * Lists of fd pairs.
+	 *
 	 * dup: [m=n] to dup2()
-	 * .m is oldfd; .n is newfd.
-	 * .m = -1 means to close .n, rather than dup2 over .n; .n is never -1
+	 *   .m is oldfd. .m = -1 means to close .n, rather than dup2 over .n
+	 *   .n is newfd. never -1
 	 *
 	 * asc: [m|n] to dup() over pipe endpoints
+	 *   .m is fd[1] of the lhs
+	 *   .n is fd[0] of the rhs
 	 *
 	 * pipe: pipe endpoints for xyz | abc
-	 * .m is fd[0]; .n is fd[1]
+	 *   .m is fd[0]
+	 *   .n is fd[1]
 	 */
 	struct pair *dup;
 	struct pair *asc; 
