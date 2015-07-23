@@ -20,12 +20,12 @@
 #include "args.h"
 #include "eval.h"
 #include "proc.h"
+#include "pair.h"
 #include "frame.h"
 #include "readfd.h"
 #include "status.h"
 #include "builtin.h"
 #include "task.h"
-#include "pipe.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -92,7 +92,7 @@ eval_data(struct data **data, const char *s)
 static int
 eval_pipe(struct task **next, struct frame *frame, struct code **code)
 {
-	struct pipe **tail;
+	struct pair **tail;
 
 	assert(next != NULL);
 	assert(frame != NULL);
@@ -103,16 +103,22 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code)
 
 	/* TODO: this will eventually be a loop */
 	/* for each fd in the ancestry: */ {
-		struct pipe *new;
+		struct pair *new;
+		int fd[2];
 
-		new = pipe_push(tail);
+		if (-1 == pipe(fd)) {
+			perror("pipe");
+			goto error;
+		}
+
+		new = pair_push(tail, fd[0], fd[1]);
 		if (new == NULL) {
-			perror("pipe_push");
+			perror("pair_push");
 			goto error;
 		}
 
 		if (debug & DEBUG_FD) {
-			fprintf(stderr, "pipe [%d,%d]\n", new->fd[0], new->fd[1]);
+			fprintf(stderr, "pipe [%d,%d]\n", fd[0], fd[1]);
 		}
 	}
 
@@ -129,7 +135,16 @@ eval_pipe(struct task **next, struct frame *frame, struct code **code)
 
 error:
 
-	pipe_free(*tail);
+	{
+		const struct pair *p;
+
+		for (p = *tail; p != NULL; p = p->next) {
+			(void) close(p->m);
+			(void) close(p->n);
+		}
+	}
+
+	pair_free(*tail);
 
 	*tail = NULL;
 
@@ -139,7 +154,7 @@ error:
 static int
 eval_side(struct task **next, struct frame *frame, int side)
 {
-	const struct pipe *p;
+	const struct pair *p;
 
 	assert(next != NULL);
 	assert(frame != NULL);
@@ -161,13 +176,13 @@ eval_side(struct task **next, struct frame *frame, int side)
 
 		switch (side) {
 		case SIDE_LHS:
-			oldfd = p->fd[1]; /* write end */
-			other = p->fd[0];
+			oldfd = p->n; /* write end */
+			other = p->m;
 			break;
 
 		case SIDE_RHS:
-			oldfd = p->fd[0]; /* read end */
-			other = p->fd[1];
+			oldfd = p->m; /* read end */
+			other = p->n;
 			break;
 		}
 
@@ -177,13 +192,14 @@ eval_side(struct task **next, struct frame *frame, int side)
 		case SIDE_RHS: newfd = STDIN_FILENO;  break;
 		}
 
-		if (!dup_push(&frame->dup, oldfd, newfd)) {
+		if (!pair_push(&frame->dup, oldfd, newfd)) {
+			perror("pair_push");
 			return -1;
 		}
 
 		/* close the opposing side */
 /* XXX: who does this? only when we #run. for #tick we're in the same process and do not want to close() */
-		if (!dup_push(&frame->dup, -1, other)) {
+		if (!pair_push(&frame->dup, -1, other)) {
 			return -1;
 		}
 	}
@@ -625,8 +641,8 @@ eval_frame(struct frame **frame,
 
 	if (op == frame_pop) {
 		var_free(q->var);
-		dup_free(q->dup);
-		pipe_free(q->pipe);
+		pair_free(q->dup);
+		pair_free(q->pipe); /* TODO: close fds */
 		free(q);
 	}
 
@@ -675,8 +691,8 @@ op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 
 	(void) data;
 
-	if (-1 == dup_fd(a->s, &oldfd)) { return -1; }
-	if (-1 == dup_fd(b->s, &newfd)) { return -1; }
+	if (-1 == pair_fd(a->s, &oldfd)) { return -1; }
+	if (-1 == pair_fd(b->s, &newfd)) { return -1; }
 
 	if (newfd == -1) {
 		errno = EINVAL;
@@ -687,7 +703,7 @@ op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
 		fprintf(stderr, "dup [%d=%d]\n", oldfd, newfd);
 	}
 
-	if (!dup_push(&frame->dup, oldfd, newfd)) {
+	if (!pair_push(&frame->dup, oldfd, newfd)) {
 		return -1;
 	}
 
@@ -877,12 +893,12 @@ eval_main(struct frame *top, struct code *code)
 			 * Subsequent read() in #tick will now give EOF.
 			 */
 			if (n == 0) {
-				struct pipe *p;
+				struct pair *p;
 
 /* TODO: how to find which pipe to close? can it be anything other than t->frame->pipe? */
 				for (p = t->frame->pipe; p != NULL; p = p->next) {
-					close(p->fd[1]);
-					p->fd[1] = -1;
+					close(p->n);
+					p->n = -1;
 				}
 			}
 		}

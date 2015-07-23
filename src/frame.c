@@ -14,7 +14,6 @@
 #include "var.h"
 #include "frame.h"
 #include "eval.h"
-#include "pipe.h"
 
 struct frame *
 frame_push(struct frame **f)
