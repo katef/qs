@@ -16,7 +16,6 @@ enum code_type {
 	CODE_ASC  =  8 | CODE_NONE,
 	CODE_PUSH =  9 | CODE_NONE,
 	CODE_POP  = 10 | CODE_NONE,
-	CODE_SIDE = 11 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
 	CODE_IF   = 1, /* u.code */

@@ -47,7 +47,6 @@
 	<type-run>:  () -> (:type);
 	<type-push>: () -> (:type);
 	<type-pop>:  () -> (:type);
-	<type-side>: () -> (:type);
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
@@ -88,7 +87,7 @@
 	};
 
 	pipe: (lhs :code, rhs :code) -> (c :code) = {
-		t0 = <type-side>;
+		t0 = <type-dup>;
 
 		<code-push>(&lhs, t0);
 		<code-push>(&rhs, t0);
@@ -266,10 +265,10 @@
 		pair-list: () -> (c :code) = {
 			{
 				(m, n) = dup-pair;
-				t = <type-dup>;
+				t0 = <type-dup>;
 			||
 				(m, n) = asc-pair;
-				t = <type-asc>;
+				t0 = <type-asc>;
 			};
 
 			{
@@ -280,14 +279,17 @@
 			};
 
 			/*
-			 * Because we recurr leftmost, the dup list is pushed after parse,
+			 * Because we recurr leftmost, the pair list is pushed after parse,
 			 * so that latter pairs may evaluate to overwrite previous pairs.
 			 */
 
-			<code-push>(&c, t);
+			<code-push>(&c, t0);
 
 			<code-wind>(&c, m);
 			<code-wind>(&c, n);
+
+			t1 = <type-null>;
+			<code-push>(&c, t1);
 		};
 
 		pair-box: () -> (c :code) = {

@@ -87,7 +87,7 @@ eval_data(struct data **data, const char *s)
 static int
 eval_pipe(struct task **next, struct task *task, struct frame *frame, struct code **code)
 {
-	struct pair *lhs, *rhs;
+	struct data *lhs, *rhs;
 	const struct frame *f;
 	const struct pair *a;
 
@@ -97,6 +97,9 @@ eval_pipe(struct task **next, struct task *task, struct frame *frame, struct cod
 
 	lhs = NULL;
 	rhs = NULL;
+
+	if (!data_push(&lhs, 0, NULL)) { goto error; }
+	if (!data_push(&rhs, 0, NULL)) { goto error; }
 
 	for (f = frame; f != NULL; f = f->parent) {
 		for (a = f->asc; a != NULL; a = a->next) {
@@ -124,39 +127,35 @@ only when we #run. for #tick we're in the same process and do not want to close(
 
 			/* lhs: dup a->m to write end */
 			{
-				if (!pair_push(&lhs, fd[1], a->m)) {
-					perror("pair_push");
-					goto error;
-				}
+				if (!data_int(&lhs, a->m )) { goto error; }
+				if (!data_int(&lhs, fd[1])) { goto error; }
 
 				/* close the opposing side */
-				if (!pair_push(&lhs, -1, fd[0])) {
-					perror("pair_push");
-					goto error;
-				}
+				if (!data_int(&lhs, fd[0])) { goto error; }
+				if (!data_int(&lhs,    -1)) { goto error; }
 			}
 
 			/* rhs: dup a->n from read end */
 			{
-				if (!pair_push(&rhs, fd[0], a->n)) {
-					perror("pair_push");
-					goto error;
-				}
+				if (!data_int(&rhs, a->n )) { goto error; }
+				if (!data_int(&rhs, fd[0])) { goto error; }
 
 				/* close the opposing side */
-				if (!pair_push(&rhs, -1, fd[1])) {
-					perror("pair_push");
-					goto error;
-				}
+				if (!data_int(&rhs, fd[1])) { goto error; }
+				if (!data_int(&rhs,    -1)) { goto error; }
 			}
 		}
 	}
 
 	/* lhs is what remains in the current task after this #pipe */
 	{
-		*code = NULL;
+		struct data **tail;
 
-		task->side = lhs;
+		for (tail = &lhs; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		*tail = task->data;
+		task->data = lhs;
 	}
 
 	/* rhs */
@@ -168,7 +167,9 @@ only when we #run. for #tick we're in the same process and do not want to close(
 			goto error;
 		}
 
-		new->side = rhs;
+		*code = NULL;
+
+		new->data = rhs;
 	}
 
 	return 0;
@@ -176,37 +177,10 @@ only when we #run. for #tick we're in the same process and do not want to close(
 error:
 
 	/* TODO: close pipe fds! maybe pair_close()? */
-	pair_free(lhs);
-	pair_free(rhs);
+	data_free(lhs);
+	data_free(rhs);
 
 	return -1;
-}
-
-static int
-eval_side(struct frame *frame, struct pair *side)
-{
-	assert(frame != NULL);
-
-	if (side == NULL) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (frame->dup != NULL) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	frame->dup = side;
-
-	/*
-	 * TODO: Instead of #side, could have #pipe push strings to the
-	 * data stacks for each task, and use #dup to pick them up.
-	 * How many #dups, though? Would make #dup (and #asc) pop
-	 * #null-terminated pairs again, which seems overkill.
-	 */
-
-	return 0;
 }
 
 /* pop $?, push !$? to *data */
@@ -651,65 +625,6 @@ op_join(struct data **data, struct frame *frame, struct data *a, struct data *b)
 	return -1;
 }
 
-/* TODO: explain what happens here */
-static int
-op_dup(struct data **data, struct frame *frame, struct data *a, struct data *b)
-{
-	int oldfd, newfd;
-
-	assert(data != NULL);
-	assert(frame != NULL);
-	assert(a != NULL);
-	assert(b != NULL);
-
-	(void) data;
-
-	if (-1 == pair_fd(a->s, &oldfd)) { return -1; }
-	if (-1 == pair_fd(b->s, &newfd)) { return -1; }
-
-	if (newfd == -1) {
-		errno = EINVAL;
-		return -1;
-	}
-
-	if (debug & DEBUG_EXEC) {
-		fprintf(stderr, "dup [%d=%d]\n", oldfd, newfd);
-	}
-
-	if (!pair_push(&frame->dup, oldfd, newfd)) {
-		return -1;
-	}
-
-	return 0;
-}
-
-/* TODO: explain what happens here */
-static int
-op_asc(struct data **data, struct frame *frame, struct data *a, struct data *b)
-{
-	int lhs, rhs;
-
-	assert(data != NULL);
-	assert(frame != NULL);
-	assert(a != NULL);
-	assert(b != NULL);
-
-	(void) data;
-
-	if (-1 == pair_fd(a->s, &lhs)) { return -1; }
-	if (-1 == pair_fd(b->s, &rhs)) { return -1; }
-
-	if (debug & DEBUG_EXEC) {
-		fprintf(stderr, "asc [%d|%d]\n", lhs, rhs);
-	}
-
-	if (!pair_push(&frame->asc, lhs, rhs)) {
-		return -1;
-	}
-
-	return 0;
-}
-
 static int
 eval_binop(struct data **data,
 	struct frame *frame,
@@ -736,6 +651,55 @@ eval_binop(struct data **data,
 
 	free(a);
 	free(b);
+
+	return 0;
+}
+
+static int
+eval_pair(struct data **data, struct pair **pair)
+{
+	assert(data != NULL);
+	assert(pair != NULL);
+
+	while (*data != NULL && (*data)->s != NULL) {
+		struct data *a, *b;
+		int m, n;
+
+		if ((*data)->s == NULL || (*data)->next->s == NULL) {
+			errno = EINVAL; /* TODO: arity error */
+			return -1;
+		}
+
+		a = data_pop(data);
+		b = data_pop(data);
+
+		if (-1 == pair_fd(a->s, &m)) { free(a); return -1; }
+		if (-1 == pair_fd(b->s, &n)) { free(b); return -1; } /* XXX: also free a! */
+
+		free(a);
+		free(b);
+
+		if (debug & DEBUG_EXEC) {
+			fprintf(stderr, "pair [%d, %d]\n", m, n);
+		}
+
+		if (!pair_push(pair, m, n)) {
+			return -1;
+		}
+	}
+
+	if (*data == NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	{
+		struct data *q;
+
+		q = data_pop(data);
+		assert(q->s == NULL);
+		free(q);
+	}
 
 	return 0;
 }
@@ -772,7 +736,6 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_NULL: r = eval_null(&task->data);                                      break;
 		case CODE_DATA: r = eval_data(&task->data, node->u.s);                           break;
 		case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->u.code);    break;
-		case CODE_SIDE: r = eval_side(task->frame, task->side);                          break;
 		case CODE_NOT:  r = eval_not ();                                                 break;
 		case CODE_IF:   r = eval_if  (&task->code, &task->data, &node->u.code);          break;
 		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, task);      break;
@@ -782,8 +745,8 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                        break;
 		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                         break;
 		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);               break;
-		case CODE_DUP:  r = eval_binop(&task->data, task->frame, op_dup);                break;
-		case CODE_ASC:  r = eval_binop(&task->data, task->frame, op_asc);                break;
+		case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                   break;
+		case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                   break;
 
 		default:
 			code_free(node);

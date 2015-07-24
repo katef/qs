@@ -37,6 +37,22 @@ data_push(struct data **head, size_t n, const char *s)
 }
 
 struct data *
+data_int(struct data **head, int n)
+{
+	char s[32]; /* XXX */
+	int r;
+
+	assert(head != NULL);
+
+	r = sprintf(s, "%d", n);
+	if (r == -1) {
+		return NULL;
+	}
+
+	return data_push(head, r, s);
+}
+
+struct data *
 data_pop(struct data **head)
 {
 	struct data *node;

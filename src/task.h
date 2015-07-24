@@ -43,7 +43,6 @@ struct task {
 	 * from one instruction to the next.
 	 */
 	struct tick_state ts;
-	struct pair *side;
 
 	struct task *next;
 };
