@@ -114,7 +114,6 @@
 		}
 
 		if (-1 == act_state->dispatch(act_state->top, @c)) {
-			code_free(@c);
 			@!;
 		}
 	@};
