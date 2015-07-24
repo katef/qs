@@ -265,10 +265,10 @@
 
 		pair-list: () -> (c :code) = {
 			{
-				(a, b) = dup-pair;
+				(m, n) = dup-pair;
 				t = <type-dup>;
 			||
-				(a, b) = asc-pair;
+				(m, n) = asc-pair;
 				t = <type-asc>;
 			};
 
@@ -286,8 +286,8 @@
 
 			<code-push>(&c, t);
 
-			<code-wind>(&c, a);
-			<code-wind>(&c, b);
+			<code-wind>(&c, m);
+			<code-wind>(&c, n);
 		};
 
 		pair-box: () -> (c :code) = {
