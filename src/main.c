@@ -15,7 +15,6 @@
 #include "parser.h"
 #include "status.h"
 #include "eval.h"
-#include "args.h"
 
 unsigned debug;
 
@@ -43,23 +42,6 @@ debug_flags(const char *s)
 			fprintf(stderr, "-d: unrecognised flag '%c'\n", *s);
 			return -1;
 		}
-	}
-
-	return 0;
-}
-
-static int
-dispatch(FILE *f, struct frame *top, char *args[], struct code *code)
-{
-	assert(f != NULL);
-	assert(args != NULL);
-
-	if (-1 == set_args(top, args)) {
-		return -1;
-	}
-
-	if (-1 == eval(top, code)) {
-		return -1;
 	}
 
 	return 0;
@@ -95,7 +77,7 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (-1 == parse(&l, dispatch, argv)) {
+	if (-1 == parse(&l, eval, argv)) {
 		perror("parse");
 		goto error;
 	}

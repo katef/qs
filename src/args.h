@@ -1,6 +1,8 @@
 #ifndef ARGS_H
 #define ARGS_H
 
+struct data;
+
 int
 count_args(const struct data *data);
 

@@ -30,6 +30,7 @@
 	#include "code.h"
 	#include "frame.h"
 	#include "parser.h"
+	#include "args.h"
 
 	struct act_string {
 		const char *s;
@@ -40,7 +41,7 @@
 		struct lex_tok t;
 		enum lex_type type, save;
 		struct frame *top;
-		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *);
+		int (*dispatch)(struct frame *, struct code *);
 		char **args;
 	};
 
@@ -64,7 +65,7 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *),
+		int (*dispatch)(struct frame *, struct code *),
 		char *args[]);
 
 @};
@@ -106,7 +107,12 @@
 			code_dump(stderr, @c);
 		}
 
-		if (-1 == act_state->dispatch(stdout, act_state->top, act_state->args, @c)) {
+		if (-1 == set_args(act_state->top, act_state->args)) {
+			code_free(@c);
+			@!;
+		}
+
+		if (-1 == act_state->dispatch(act_state->top, @c)) {
 			code_free(@c);
 			@!;
 		}
@@ -217,7 +223,7 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*dispatch)(FILE *, struct frame *, char *args[], struct code *),
+		int (*dispatch)(struct frame *, struct code *),
 		char *args[])
 	{
 		struct act_state a, *act_state = &a;
