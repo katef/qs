@@ -35,12 +35,10 @@ pair_fd(const char *s, int *fd)
 		return -1;
 	}
 
-/* XXX: need to push -1 to distinguish from NULL for end of pair list
 	if (l < 0) {
 		errno = EBADF;
 		return -1;
 	}
-*/
 
 	*fd = l;
 

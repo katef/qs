@@ -127,22 +127,22 @@ only when we #run. for #tick we're in the same process and do not want to close(
 
 			/* lhs: dup a->m to write end */
 			{
-				if (!data_int(&lhs, a->m )) { goto error; }
 				if (!data_int(&lhs, fd[1])) { goto error; }
+				if (!data_int(&lhs, a->m )) { goto error; }
 
 				/* close the opposing side */
-				if (!data_int(&lhs, fd[0])) { goto error; }
-				if (!data_int(&lhs,    -1)) { goto error; }
+				if (!data_push(&lhs, 0, NULL)) { goto error; }
+				if (!data_int (&lhs,   fd[0])) { goto error; }
 			}
 
 			/* rhs: dup a->n from read end */
 			{
-				if (!data_int(&rhs, a->n )) { goto error; }
 				if (!data_int(&rhs, fd[0])) { goto error; }
+				if (!data_int(&rhs, a->n )) { goto error; }
 
 				/* close the opposing side */
-				if (!data_int(&rhs, fd[1])) { goto error; }
-				if (!data_int(&rhs,    -1)) { goto error; }
+				if (!data_push(&rhs, 0, NULL)) { goto error; }
+				if (!data_int (&rhs,   fd[1])) { goto error; }
 			}
 		}
 	}
@@ -630,8 +630,7 @@ eval_binop(struct data **data,
 	struct frame *frame,
 	int (*op)(struct data **, struct frame *, struct data *a, struct data *b))
 {
-	struct data *a;
-	struct data *b;
+	struct data *a, *b;
 
 	assert(data != NULL);
 	assert(frame != NULL);
@@ -642,8 +641,8 @@ eval_binop(struct data **data,
 		return -1;
 	}
 
-	a = data_pop(data);
 	b = data_pop(data);
+	a = data_pop(data);
 
 	if (-1 == op(data, frame, a, b)) {
 		return -1;
@@ -661,23 +660,29 @@ eval_pair(struct data **data, struct pair **pair)
 	assert(data != NULL);
 	assert(pair != NULL);
 
+	/*
+	 * Pairs are ordered on the stack such that n is popped first, m second.
+	 * The list of pairs is NULL-terminated. m may be NULL (indicating for
+	 * the dup list to close n), but n is never NULL.
+	 */
+
 	while (*data != NULL && (*data)->s != NULL) {
 		struct data *a, *b;
 		int m, n;
 
-		if ((*data)->s == NULL || (*data)->next->s == NULL) {
+		if ((*data)->next == NULL) {
 			errno = EINVAL; /* TODO: arity error */
 			return -1;
 		}
 
-		a = data_pop(data);
 		b = data_pop(data);
+		a = data_pop(data);
 
-		if (-1 == pair_fd(a->s, &m)) { free(a); return -1; }
-		if (-1 == pair_fd(b->s, &n)) { free(b); return -1; } /* XXX: also free a! */
+		if (-1 == pair_fd(b->s, &n)) { free(b); return -1; }
+		if (-1 == pair_fd(a->s, &m)) { free(a); return -1; } /* XXX: also free b! */
 
-		free(a);
 		free(b);
+		free(a);
 
 		if (debug & DEBUG_EXEC) {
 			fprintf(stderr, "pair [%d, %d]\n", m, n);
@@ -689,7 +694,7 @@ eval_pair(struct data **data, struct pair **pair)
 	}
 
 	if (*data == NULL) {
-		errno = EINVAL;
+		errno = EINVAL; /* TODO: arity error */
 		return -1;
 	}
 
