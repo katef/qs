@@ -252,14 +252,6 @@
 			lhs = fd;
 			bar;
 			rhs = fd;
-		||
-			lhs = fd;
-			bar;
-			rhs = close;
-		||
-			lhs = close;
-			bar;
-			rhs = fd;
 		};
 
 		pair-list: () -> (c :code) = {
