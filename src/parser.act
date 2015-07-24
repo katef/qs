@@ -30,6 +30,7 @@
 	#include "code.h"
 	#include "frame.h"
 	#include "parser.h"
+	#include "pair.h"
 	#include "args.h"
 
 	struct act_string {
