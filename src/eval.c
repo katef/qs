@@ -39,11 +39,6 @@ struct eval {
 	struct eval *next;
 };
 
-enum {
-	SIDE_LHS,
-	SIDE_RHS
-};
-
 static void
 sigchld(int s)
 {
@@ -90,119 +85,126 @@ eval_data(struct data **data, const char *s)
 }
 
 static int
-eval_pipe(struct task **next, struct frame *frame, struct code **code)
+eval_pipe(struct task **next, struct task *task, struct frame *frame, struct code **code)
 {
-	struct pair **tail;
+	struct pair *lhs, *rhs;
+	const struct frame *f;
+	const struct pair *a;
 
 	assert(next != NULL);
 	assert(frame != NULL);
 	assert(code != NULL);
 
-	for (tail = &frame->pipe; *tail != NULL; tail = &(*tail)->next)
-		;
+	lhs = NULL;
+	rhs = NULL;
 
-	/* TODO: this will eventually be a loop */
-	/* for each fd in the ancestry: */ {
-		struct pair *new;
-		int fd[2];
+	for (f = frame; f != NULL; f = f->parent) {
+		for (a = f->asc; a != NULL; a = a->next) {
+			int fd[2];
 
-		if (-1 == pipe(fd)) {
-			perror("pipe");
-			goto error;
-		}
+/*
+TODO: heed asc's which indicate -1 meaning to not use that association henceforth for child frames.
+XXX: what does it mean to have either m or n -1? i presume not both
+			if (pair_find(something, a->m, -1) || pair_find(something, -1, a->n)) {
+				continue;
+			}
+*/
 
-		new = pair_push(tail, fd[0], fd[1]);
-		if (new == NULL) {
-			perror("pair_push");
-			goto error;
-		}
+			if (-1 == pipe(fd)) {
+				perror("pipe");
+				goto error;
+			}
 
-		if (debug & DEBUG_FD) {
-			fprintf(stderr, "pipe [%d,%d]\n", fd[0], fd[1]);
+			if (debug & DEBUG_FD) {
+				fprintf(stderr, "pipe [%d,%d]\n", fd[0], fd[1]);
+			}
+
+/* XXX: for #dup -1 to close here, who does this?
+only when we #run. for #tick we're in the same process and do not want to close() */
+
+			/* lhs: dup a->m to write end */
+			{
+				if (!pair_push(&lhs, fd[1], a->m)) {
+					perror("pair_push");
+					goto error;
+				}
+
+				/* close the opposing side */
+				if (!pair_push(&lhs, -1, fd[0])) {
+					perror("pair_push");
+					goto error;
+				}
+			}
+
+			/* rhs: dup a->n from read end */
+			{
+				if (!pair_push(&rhs, fd[0], a->n)) {
+					perror("pair_push");
+					goto error;
+				}
+
+				/* close the opposing side */
+				if (!pair_push(&rhs, -1, fd[1])) {
+					perror("pair_push");
+					goto error;
+				}
+			}
 		}
 	}
 
 	/* lhs is what remains in the current task after this #pipe */
+	{
+		*code = NULL;
 
-	/* rhs */
-	if (!task_add(next, frame, *code)) {
-		goto error;
+		task->side = lhs;
 	}
 
-	*code = NULL;
+	/* rhs */
+	{
+		struct task *new;
+
+		new = task_add(next, frame, *code);
+		if (new == NULL) {
+			goto error;
+		}
+
+		new->side = rhs;
+	}
 
 	return 0;
 
 error:
 
-	{
-		const struct pair *p;
-
-		for (p = *tail; p != NULL; p = p->next) {
-			(void) close(p->m);
-			(void) close(p->n);
-		}
-	}
-
-	pair_free(*tail);
-
-	*tail = NULL;
+	/* TODO: close pipe fds! maybe pair_close()? */
+	pair_free(lhs);
+	pair_free(rhs);
 
 	return -1;
 }
 
 static int
-eval_side(struct task **next, struct frame *frame, int side)
+eval_side(struct frame *frame, struct pair *side)
 {
-	const struct pair *p;
-
-	assert(next != NULL);
 	assert(frame != NULL);
-	assert(side == SIDE_LHS || side == SIDE_RHS);
 
-	if (side != SIDE_LHS && side != SIDE_RHS) {
+	if (side == NULL) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (frame->parent == NULL) {
+	if (frame->dup != NULL) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	for (p = frame->parent->pipe; p != NULL; p = p->next) {
-		int oldfd, newfd;
-		int other; /* other end of the pipe, to close() in a child */
+	frame->dup = side;
 
-		switch (side) {
-		case SIDE_LHS:
-			oldfd = p->n; /* write end */
-			other = p->m;
-			break;
-
-		case SIDE_RHS:
-			oldfd = p->m; /* read end */
-			other = p->n;
-			break;
-		}
-
-		/* TODO: the association between the lhs and rhs goes here */
-		switch (side) {
-		case SIDE_LHS: newfd = STDOUT_FILENO; break;
-		case SIDE_RHS: newfd = STDIN_FILENO;  break;
-		}
-
-		if (!pair_push(&frame->dup, oldfd, newfd)) {
-			perror("pair_push");
-			return -1;
-		}
-
-		/* close the opposing side */
-/* XXX: who does this? only when we #run. for #tick we're in the same process and do not want to close() */
-		if (!pair_push(&frame->dup, -1, other)) {
-			return -1;
-		}
-	}
+	/*
+	 * TODO: Instead of #side, could have #pipe push strings to the
+	 * data stacks for each task, and use #dup to pick them up.
+	 * How many #dups, though? Would make #dup (and #asc) pop
+	 * #null-terminated pairs again, which seems overkill.
+	 */
 
 	return 0;
 }
@@ -627,8 +629,8 @@ eval_frame(struct frame **frame,
 
 	if (op == frame_pop) {
 		var_free(q->var);
-		pair_free(q->dup);
-		pair_free(q->pipe); /* TODO: close fds */
+		pair_free(q->dup); /* TODO: close fds */
+		pair_free(q->asc);
 		free(q);
 	}
 
@@ -769,9 +771,8 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		switch (node->type) {
 		case CODE_NULL: r = eval_null(&task->data);                                      break;
 		case CODE_DATA: r = eval_data(&task->data, node->u.s);                           break;
-		case CODE_PIPE: r = eval_pipe(&task->next, task->frame, &node->u.code);          break;
-		case CODE_LHS:  r = eval_side(&task->next, task->frame, SIDE_LHS);               break;
-		case CODE_RHS:  r = eval_side(&task->next, task->frame, SIDE_RHS);               break;
+		case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->u.code);    break;
+		case CODE_SIDE: r = eval_side(task->frame, task->side);                          break;
 		case CODE_NOT:  r = eval_not ();                                                 break;
 		case CODE_IF:   r = eval_if  (&task->code, &task->data, &node->u.code);          break;
 		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, task);      break;
@@ -900,13 +901,18 @@ eval_main(struct frame *top, struct code *code)
 			 * Subsequent read() in #tick will now give EOF.
 			 */
 			if (n == 0) {
-				struct pair *p;
+				int in;
 
-/* TODO: how to find which pipe to close? can it be anything other than t->frame->pipe? */
-				for (p = t->frame->pipe; p != NULL; p = p->next) {
-					close(p->n);
-					p->n = -1;
+				/* TODO: no need to walk to the top? can it be anything other than t->frame->dup? */
+				in = dup_find(t->frame, STDOUT_FILENO);
+
+				if (debug & DEBUG_FD) {
+					fprintf(stderr, "tick pipe: close(%d)\n", in);
 				}
+
+				close(in);
+
+				/* TODO: remove entry from dup list */
 			}
 		}
 

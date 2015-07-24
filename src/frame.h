@@ -18,14 +18,9 @@ struct frame {
 	 * asc: [m|n] to dup() over pipe endpoints
 	 *   .m is fd[1] of the lhs
 	 *   .n is fd[0] of the rhs
-	 *
-	 * pipe: pipe endpoints for xyz | abc
-	 *   .m is fd[0]
-	 *   .n is fd[1]
 	 */
 	struct pair *dup;
 	struct pair *asc; 
-	struct pair *pipe;
 
 	struct frame *parent;
 };

@@ -147,8 +147,7 @@
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 	<type-push>: () -> (t :type) = @{ @t = CODE_PUSH; @};
 	<type-pop>:  () -> (t :type) = @{ @t = CODE_POP;  @};
-	<type-lhs>:  () -> (t :type) = @{ @t = CODE_LHS;  @};
-	<type-rhs>:  () -> (t :type) = @{ @t = CODE_RHS;  @};
+	<type-side>: () -> (t :type) = @{ @t = CODE_SIDE; @};
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};
@@ -238,6 +237,11 @@
 		act_state->top  = NULL;
 
 		if (!frame_push(&act_state->top)) {
+			return -1;
+		}
+
+		if (!pair_push(&act_state->top->asc, STDOUT_FILENO, STDIN_FILENO)) {
+			/* TODO: free frame */
 			return -1;
 		}
 

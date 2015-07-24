@@ -27,9 +27,9 @@ frame_push(struct frame **f)
 		return NULL;
 	}
 
-	new->var  = NULL;
-	new->dup  = NULL;
-	new->pipe = NULL;
+	new->var = NULL;
+	new->dup = NULL;
+	new->asc = NULL;
 
 	new->parent = *f;
 	*f = new;

@@ -37,7 +37,13 @@ struct task {
 	 */
 	pid_t pid;
 
+	/*
+	 * Instruction-specific state. These are short-lived things used by
+	 * particular instructions either for re-entrancy or to pass state
+	 * from one instruction to the next.
+	 */
 	struct tick_state ts;
+	struct pair *side;
 
 	struct task *next;
 };

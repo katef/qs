@@ -47,8 +47,7 @@
 	<type-run>:  () -> (:type);
 	<type-push>: () -> (:type);
 	<type-pop>:  () -> (:type);
-	<type-lhs>:  () -> (:type);
-	<type-rhs>:  () -> (:type);
+	<type-side>: () -> (:type);
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
@@ -89,11 +88,16 @@
 	};
 
 	pipe: (lhs :code, rhs :code) -> (c :code) = {
+		t0 = <type-side>;
+
+		<code-push>(&lhs, t0);
+		<code-push>(&rhs, t0);
+
 		c = frame(lhs);
 		r = frame(rhs);
 
-		t = <type-pipe>;
-		<code-anon>(&c, t, r);
+		t1 = <type-pipe>;
+		<code-anon>(&c, t1, r);
 	};
 
 	list: () -> (c :code) [
@@ -130,21 +134,12 @@
 				ci = block;
 			};
 
-			/* pipe rhs */
-			{
-				rhs = <empty-code>;
+			rhs = <empty-code>;
 
-				t3 = <type-tick>;
-				<code-push>(&rhs, t3);
-			};
+			t3 = <type-tick>;
+			<code-push>(&rhs, t3);
 
-			/* pipe lhs */
-			{
-				lhs = ci;
-
-				t2 = <type-lhs>;
-				<code-push>(&lhs, t2);
-			};
+			lhs = ci;
 
 			c = pipe(lhs, rhs);
 		};
@@ -344,21 +339,8 @@
 		{
 			bar;
 
-			/* pipe rhs */
-			{
-				rhs = pipe-expr;
-
-				t3 = <type-rhs>;
-				<code-push>(&rhs, t3);
-			};
-
-			/* pipe lhs */
-			{
-				lhs = cx;
-
-				t2 = <type-lhs>;
-				<code-push>(&lhs, t2);
-			};
+			rhs = pipe-expr;
+			lhs = cx;
 
 			c = pipe(lhs, rhs);
 		||
