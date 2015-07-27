@@ -7,6 +7,7 @@
 
 #include "task.h"
 #include "proc.h"
+#include "frame.h"
 
 struct task *
 task_add(struct task **head, struct frame *frame, struct code *code)
@@ -21,10 +22,11 @@ task_add(struct task **head, struct frame *frame, struct code *code)
 		return NULL;
 	}
 
-	new->frame = frame;
-	new->code  = code;
-	new->data  = NULL;
-	new->pid   = -1;
+	new->frame  = frame;
+	new->branch = frame;
+	new->code   = code;
+	new->data   = NULL;
+	new->pid    = -1;
 
 	new->ts.s = NULL;
 
@@ -41,7 +43,7 @@ task_remove(struct task **head, struct task *task)
 
 	assert(head != NULL);
 
-	/* TODO: kill our branch of the frame tree */
+	(void) frame_unwind(&task->frame, task->branch);
 
 	for (t = head; *t != NULL; t = next) {
 		next = &(*t)->next;

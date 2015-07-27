@@ -14,6 +14,7 @@
 #include "var.h"
 #include "frame.h"
 #include "eval.h"
+#include "pair.h"
 
 struct frame *
 frame_push(struct frame **f)
@@ -40,15 +41,30 @@ frame_push(struct frame **f)
 struct frame *
 frame_pop(struct frame **f)
 {
-	struct frame *tmp;
+	struct frame *q;
 
 	assert(f != NULL);
 
-	tmp = (*f)->parent;
+	q = *f;
+	*f = (*f)->parent;
 
-	*f = tmp;
+	var_free(q->var);
+	pair_free(q->dup); /* TODO: close fds? i don't like doing that here */
+	pair_free(q->asc);
 
-	return tmp;
+	free(q);
+
+	return q; /* XXX: hack */
+}
+
+void
+frame_unwind(struct frame **f, const struct frame *top)
+{
+	assert(f != NULL);
+
+	while (*f != top) {
+		(void) frame_pop(f);
+	}
 }
 
 struct var *

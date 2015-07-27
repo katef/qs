@@ -586,7 +586,7 @@ eval_set(struct data **data,
 }
 
 static int
-eval_frame(struct frame **frame,
+eval_frame(struct frame **frame, const struct frame *branch,
 	struct frame *(*op)(struct frame **head))
 {
 	struct frame *q;
@@ -594,18 +594,15 @@ eval_frame(struct frame **frame,
 	assert(frame != NULL && *frame != NULL);
 	assert(op != NULL);
 
-	/* TODO: detect unbalanced #push/#pop here */
+	if (op == frame_pop && *frame == branch) {
+		fprintf(stderr, "attempted #pop past branch point\n");
+		errno = EINVAL;
+		return -1;
+	}
 
 	q = op(frame);
 	if (q == NULL) {
 		return -1;
-	}
-
-	if (op == frame_pop) {
-		var_free(q->var);
-		pair_free(q->dup); /* TODO: close fds */
-		pair_free(q->asc);
-		free(q);
 	}
 
 	return 0;
@@ -747,8 +744,8 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);            break;
 		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &task->ts); break;
 		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);          break;
-		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                        break;
-		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                         break;
+		case CODE_PUSH: r = eval_frame(&task->frame, task->branch, frame_push);          break;
+		case CODE_POP:  r = eval_frame(&task->frame, task->branch, frame_pop);           break;
 		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);               break;
 		case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                   break;
 		case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                   break;

@@ -31,6 +31,9 @@ frame_push(struct frame **f);
 struct frame *
 frame_pop(struct frame **f);
 
+void
+frame_unwind(struct frame **f, const struct frame *top);
+
 struct var *
 frame_set(struct frame *f, size_t n, const char *name,
 	struct code *code);
