@@ -375,11 +375,11 @@
 
 			c = <empty-code>;
 
-			t1 = <type-not>;
-			<code-push>(&c, t1);
-
 			t2 = <type-if>;
 			<code-anon>(&c, t2, ci);
+
+			t1 = <type-not>;
+			<code-push>(&c, t1);
 
 			<code-wind>(&c, cx);
 		||
