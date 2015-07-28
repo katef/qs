@@ -914,8 +914,11 @@ eval_main(struct frame *top, struct code *code)
 
 error:
 
-	/* TODO: free tasks */
 	/* TODO: kill children? probably not. wait(2) for all? WNOHANG */
+
+	while (tasks != NULL) {
+		task_remove(&tasks, tasks);
+	}
 
 	return -1;
 }
