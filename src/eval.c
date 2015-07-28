@@ -33,12 +33,6 @@ int self[2]; /* SIGCHLD self pipe */
 
 sigset_t ss_chld; /* SIGCHLD */
 
-struct eval {
-	struct code *code;
-	pid_t pid; /* -1 when not waiting */
-	struct eval *next;
-};
-
 static void
 sigchld(int s)
 {
