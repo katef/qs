@@ -52,12 +52,12 @@ task_remove(struct task **head, struct task *task)
 	 * unwind until the branch point is reached (i.e. a frame which
 	 * belongs to our parent task).
 	 */
-	if (task->frame != NULL) {
+	{
 		if (-1 == frame_refcount(task->frame, -1)) {
 			perror("frame_refcount");
 		}
 
-		while (task->frame->refcount == 0) {
+		while (task->frame != NULL && task->frame->refcount > 0) {
 			struct frame *q;
 
 			q = frame_pop(&task->frame);
