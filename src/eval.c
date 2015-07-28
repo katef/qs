@@ -312,7 +312,7 @@ eval_run(struct code **next, struct data **data,
 
 		(void) proc_exec(args[0], args);
 		perror(args[0]); /* XXX: may not be visible if stderr is redirected */
-		abort();
+		exit(errno);
 
 	default:
 		break;
