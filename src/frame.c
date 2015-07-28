@@ -32,6 +32,8 @@ frame_push(struct frame **f)
 	new->dup = NULL;
 	new->asc = NULL;
 
+	new->refcount = 0;
+
 	new->parent = *f;
 	*f = new;
 
@@ -43,28 +45,62 @@ frame_pop(struct frame **f)
 {
 	struct frame *q;
 
-	assert(f != NULL);
+	assert(f != NULL && *f != NULL);
+	assert((*f)->refcount == 0);
 
 	q = *f;
-	*f = (*f)->parent;
+	*f = q->parent;
 
-	var_free(q->var);
-	pair_free(q->dup); /* TODO: close fds? i don't like doing that here */
-	pair_free(q->asc);
-
-	free(q);
-
-	return q; /* XXX: hack */
+	return q;
 }
 
 void
-frame_unwind(struct frame **f, const struct frame *top)
+frame_free(struct frame *f)
 {
 	assert(f != NULL);
 
-	while (*f != top) {
-		(void) frame_pop(f);
+	var_free(f->var);
+	pair_free(f->dup); /* TODO: close fds? i don't like doing that here */
+	pair_free(f->asc);
+
+	free(f);
+}
+
+int
+frame_refcount(struct frame *f, int delta)
+{
+	struct frame *p, *q;
+	unsigned int lim;
+
+	assert(delta == -1 || delta == +1);
+
+	switch (delta) {
+	case +1: lim = UINT_MAX; break;
+	case -1: lim =        0; break;
+
+	default:
+		errno = EINVAL;
+		return -1;
 	}
+
+	for (p = f; p != NULL; p = p->parent) {
+		if (p->refcount == lim) {
+			goto error;
+		}
+
+		p->refcount += delta;
+	}
+
+	return 0;
+
+error:
+
+	for (q = f->parent; q != p; q = q->parent) {
+		q->refcount -= delta;
+	}
+
+	errno = ENOMEM;
+	return -1;
 }
 
 struct var *

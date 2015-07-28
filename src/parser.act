@@ -225,6 +225,7 @@
 		char *args[])
 	{
 		struct act_state a, *act_state = &a;
+		struct frame *q;
 
 		assert(lex_state != NULL);
 		assert(dispatch != NULL);
@@ -251,7 +252,8 @@
 		/* TODO: handle raising an error or ## */
 		p_script(lex_state, act_state);
 
-		(void) frame_pop(&act_state->top);
+		q = frame_pop(&act_state->top);
+		frame_free(q);
 		assert(act_state->top == NULL);
 
 		return 0;

@@ -19,12 +19,10 @@ struct task {
 	 * to a common root. Both parent and child may push and pop frames.
 	 *
 	 * A task has no business popping frames above the point where its stack
-	 * branched from the parent. We keep track of the branch point here both
-	 * to prevent that, and to know when to stop when freeing frames.
-	 * Reference counting would achieve the same effect.
+	 * branched from the parent, and the parser should never generate code
+	 * which does so.
 	 */
 	struct frame *frame;
-	const struct frame *branch;
 
 	/*
 	 * The next instruction to execute, set to code->next when complete.

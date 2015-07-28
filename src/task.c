@@ -22,11 +22,15 @@ task_add(struct task **head, struct frame *frame, struct code *code)
 		return NULL;
 	}
 
-	new->frame  = frame;
-	new->branch = frame;
-	new->code   = code;
-	new->data   = NULL;
-	new->pid    = -1;
+	if (-1 == frame_refcount(frame, +1)) {
+		free(new);
+		return NULL;
+	}
+
+	new->frame = frame;
+	new->code  = code;
+	new->data  = NULL;
+	new->pid   = -1;
 
 	new->ts.s = NULL;
 
@@ -43,7 +47,23 @@ task_remove(struct task **head, struct task *task)
 
 	assert(head != NULL);
 
-	(void) frame_unwind(&task->frame, task->branch);
+	/*
+	 * On eval error we may have left-over frames still pushed here;
+	 * unwind until the branch point is reached (i.e. a frame which
+	 * belongs to our parent task).
+	 */
+	if (task->frame != NULL) {
+		if (-1 == frame_refcount(task->frame, -1)) {
+			perror("frame_refcount");
+		}
+
+		while (task->frame->refcount == 0) {
+			struct frame *q;
+
+			q = frame_pop(&task->frame);
+			frame_free(q);
+		}
+	}
 
 	for (t = head; *t != NULL; t = next) {
 		next = &(*t)->next;

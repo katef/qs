@@ -22,6 +22,16 @@ struct frame {
 	struct pair *dup;
 	struct pair *asc; 
 
+	/*
+	 * Tasks branch and share their stack of frames up to that point.
+	 * Each task may then push its own new frames.
+	 *
+	 * In general we do not know which task will exit first, and so
+	 * reference counting is used here to know when to destroy the frames
+	 * which are shared between both tasks, up to the branch point.
+	 */
+	unsigned int refcount;
+
 	struct frame *parent;
 };
 
@@ -32,7 +42,10 @@ struct frame *
 frame_pop(struct frame **f);
 
 void
-frame_unwind(struct frame **f, const struct frame *top);
+frame_free(struct frame *f);
+
+int
+frame_refcount(struct frame *f, int delta);
 
 struct var *
 frame_set(struct frame *f, size_t n, const char *name,
