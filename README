@@ -1,4 +1,23 @@
 
+Responsibilities:
+
+ - Process management
+ - Setting up pipes and redirections
+ - Signal handling (for instance interrupting a running program)
+ - Variables
+ - Control flow, with structured and procedural constructs (functions, loops, conditionals and so on)
+ - Tokenisation and operations on the one data type: lists of words
+
+Features which are purposefully excluded:
+
+ - Job control
+ - Prompting
+ - Line editor and command history
+ - Globbing
+ - Arithmetic and similar expression syntax
+ - Environment
+ - Here documents
+
 Pre-populated variables:
 
  $? command exit status  global
