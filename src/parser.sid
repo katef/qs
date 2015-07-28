@@ -173,13 +173,10 @@
 
 		c = <empty-code>;
 
-		t1 = <type-set>;
-		<code-anon>(&c, t1, ci);
+		t = <type-set>;
+		<code-anon>(&c, t, ci);
 
 		<code-data>(&c, s);
-
-		t2 = <type-null>;
-		<code-push>(&c, t2);
 	};
 
 	block: () -> (c :code) = {
@@ -427,14 +424,11 @@
 			c = expr;
 			sep;
 
-			t1 = <type-set>;
-			<code-anon>(&c, t1, c);
+			t = <type-set>;
+			<code-anon>(&c, t, c);
 
 			s = <var-top>;
 			<code-data>(&c, s);
-
-			t2 = <type-null>;
-			<code-push>(&c, t2);
 
 			<dispatch>(&c);
 
