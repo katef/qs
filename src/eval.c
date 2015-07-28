@@ -199,7 +199,7 @@ eval_call(struct code **next, struct data **data,
 	assert(frame != NULL);
 
 	if (*data == NULL) {
-		errno = 0;
+		errno = EINVAL;
 		return -1;
 	}
 
