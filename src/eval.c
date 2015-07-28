@@ -560,7 +560,7 @@ eval_set(struct data **data,
 	assert(code != NULL);
 
 	if (*data == NULL) {
-		errno = 0;
+		errno = EINVAL;
 		return -1;
 	}
 
