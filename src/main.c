@@ -90,7 +90,7 @@ error:
 
 usage:
 
-	fprintf(stderr, "usage: kcsh [-d ablpcfsvexrd]\n");
+	fprintf(stderr, "usage: qs [-d ablpcfsvexrd]\n");
 
 	return 1;
 }
