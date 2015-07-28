@@ -10,3 +10,14 @@ Pre-populated variables:
  $% job ID               per job
  $. current block        local
 
+Scope:
+
+ Variable names search the local scope first, and then up the tree of parent
+ scopes. If a variable by that name is found in any scope along the way,
+ that is the variable used for assignment or dereferencing. If no such variable
+ was found, assignment then declares the variable in the local scope, and
+ derefrencing is an error.
+
+ Variables names prefixed with a dot act on local scope only. The dot is not
+ part of the variable name.
+
