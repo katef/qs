@@ -911,10 +911,18 @@ eval_main(struct frame *top, struct code *code)
 
 error:
 
-	/* TODO: kill children? probably not. wait(2) for all? WNOHANG */
+	{
+		int e;
 
-	while (tasks != NULL) {
-		task_remove(&tasks, tasks);
+		e = errno;
+
+		/* TODO: kill children? probably not. wait(2) for all? WNOHANG */
+
+		while (tasks != NULL) {
+			task_remove(&tasks, tasks);
+		}
+
+		errno = e;
 	}
 
 	return -1;
@@ -962,6 +970,9 @@ eval(struct frame *top, struct code *code)
 	}
 
 	r = eval_main(top, code);
+	if (r == -1 && errno != 0) {
+		perror("eval");
+	}
 
 	if (sigaction(SIGCHLD, &sa_old, NULL)) {
 		perror("sigaction");
