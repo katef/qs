@@ -32,8 +32,6 @@
 
 	<dispatch>: (:code &) -> ();
 
-	<var-top>:  () -> (:string);
-
 	<empty-code>: () -> (:code);
 
 	<stdin>:  () -> (:string);
@@ -423,12 +421,6 @@
 		global-expr-list = {
 			c = expr;
 			sep;
-
-			t = <type-set>;
-			<code-anon>(&c, t, c);
-
-			s = <var-top>;
-			<code-data>(&c, s);
 
 			<dispatch>(&c);
 

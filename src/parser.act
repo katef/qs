@@ -118,15 +118,6 @@
 		}
 	@};
 
-	<var-top>:  () -> (s :string) = @{
-		@s.s = "_";
-		@s.e = @s.s + 1;
-
-		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<var-top>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
-		}
-	@};
-
 	<empty-code>: () -> (c :code) = @{
 		@c = NULL;
 
