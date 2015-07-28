@@ -515,11 +515,10 @@ fail:
 
 /* TODO: explain what happens here: status.r is the predicate, u.code is a block to call */
 static int
-eval_if(struct code **next, struct data **data,
+eval_if(struct code **next,
 	struct code **code)
 {
 	assert(next != NULL);
-	assert(data != NULL);
 	assert(code != NULL);
 
 	/*
@@ -731,7 +730,7 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_DATA: r = eval_data(&task->data, node->u.s);                           break;
 		case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->u.code);    break;
 		case CODE_NOT:  r = eval_not ();                                                 break;
-		case CODE_IF:   r = eval_if  (&task->code, &task->data, &node->u.code);          break;
+		case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                       break;
 		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, task);      break;
 		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);            break;
 		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &task->ts); break;
