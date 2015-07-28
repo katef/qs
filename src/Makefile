@@ -4,7 +4,7 @@ CC  ?= gcc
 CFLAGS += -ansi -pedantic
 CFLAGS += -Wall -W
 #CFLAGS += -Werror
-CFLAGS += -O2 -g -ggdb
+CFLAGS += -Og -g -ggdb
 
 SID_CFLAGS += -s no-numeric-terminals -s no-terminals
 
