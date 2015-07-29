@@ -35,6 +35,8 @@ struct lex_state {
 	char buf[4096];
 	const char *p;
 	FILE *f;
+	unsigned long line;
+	unsigned long col;
 };
 
 void

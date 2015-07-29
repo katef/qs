@@ -121,6 +121,9 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		l->buf[sizeof l->buf - 1] = 'x';
 		errno = 0;
 
+		l->col = 1;
+		l->line++;
+
 		if (!fgets(l->buf, sizeof l->buf, l->f)) {
 			if (errno != 0) {
 				perror("fgets");
@@ -136,7 +139,7 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		}
 
 		if (debug & DEBUG_BUF) {
-			fprintf(stderr, "[%s]\n", l->buf);
+			fprintf(stderr, "%lu:%lu [%s]\n", l->line, l->col, l->buf);
 		}
 
 		if (l->buf[sizeof l->buf - 1] == '\0' && l->buf[sizeof l->buf - 2] != '\n') {
@@ -147,6 +150,8 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 			while (c = fgetc(l->f), c != EOF && c != '\n')
 				;
 
+			l->line++;
+
 			t->type = tok_panic;
 
 			return;
@@ -156,6 +161,8 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 	}
 
 	t->type = lex_push(&l->p, &t->s, &t->e);
+
+	l->col = t->s - l->buf + 1;
 
 	if (debug & DEBUG_LEX) {
 		const char *name;
@@ -168,7 +175,8 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		default:       name = "";      break;
 		}
 
-		fprintf(stderr, "<%s\"%.*s\">\n",
+		fprintf(stderr, "%lu:%lu <%s\"%.*s\">\n",
+			l->line, l->col,
 			name, (int) (t->e - t->s), t->s);
 	}
 }
