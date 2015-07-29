@@ -171,7 +171,5 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		fprintf(stderr, "<%s\"%.*s\">\n",
 			name, (int) (t->e - t->s), t->s);
 	}
-
-	return;
 }
 
