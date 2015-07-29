@@ -10,7 +10,7 @@ char **
 make_args(const struct data *data, int n);
 
 int
-set_args(struct frame *frame, char *args[]);
+set_args(const struct pos *pos, struct frame *frame, char *args[]);
 
 void
 dump_args(const char *name, char *const args[]);

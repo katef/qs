@@ -32,18 +32,20 @@ code_name(enum code_type type)
 }
 
 struct code *
-code_anon(struct code **head,
+code_anon(struct code **head, const struct pos *pos,
 	enum code_type type, struct code *code)
 {
 	struct code *new;
 
 	assert(head != NULL);
+	assert(pos != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
+	new->pos    = *pos;
 	new->type   = type;
 	new->u.code = code;
 
@@ -59,12 +61,13 @@ code_anon(struct code **head,
 }
 
 struct code *
-code_data(struct code **head,
+code_data(struct code **head, const struct pos *pos,
 	size_t n, const char *s)
 {
 	struct code *new;
 
 	assert(head != NULL);
+	assert(pos != NULL);
 	assert(s != NULL);
 
 	new = malloc(sizeof *new + n + 1);
@@ -72,6 +75,7 @@ code_data(struct code **head,
 		return NULL;
 	}
 
+	new->pos    = *pos;
 	new->type   = CODE_DATA;
 	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
 	new->u.s[n] = '\0';
@@ -87,12 +91,13 @@ code_data(struct code **head,
 }
 
 struct code *
-code_push(struct code **head,
+code_push(struct code **head, const struct pos *pos,
 	enum code_type type)
 {
 	struct code *new;
 
 	assert(head != NULL);
+	assert(pos != NULL);
 	assert(type & CODE_NONE);
 
 	new = malloc(sizeof *new);
@@ -100,6 +105,7 @@ code_push(struct code **head,
 		return NULL;
 	}
 
+	new->pos   = *pos;
 	new->type  = type;
 
 	new->next = *head;
@@ -116,11 +122,11 @@ static struct code *
 code_clone(struct code **head, const struct code *code)
 {
 	switch (code->type) {
-	case CODE_DATA: return code_data(head, strlen(code->u.s), code->u.s);
-	case CODE_IF:   return code_anon(head, code->type, code->u.code);
-	case CODE_PIPE: return code_anon(head, code->type, code->u.code);
-	case CODE_SET:  return code_anon(head, code->type, code->u.code);
-	default:        return code_push(head, code->type);
+	case CODE_DATA: return code_data(head, &code->pos, strlen(code->u.s), code->u.s);
+	case CODE_IF:   return code_anon(head, &code->pos, code->type, code->u.code);
+	case CODE_PIPE: return code_anon(head, &code->pos, code->type, code->u.code);
+	case CODE_SET:  return code_anon(head, &code->pos, code->type, code->u.code);
+	default:        return code_push(head, &code->pos, code->type);
 	}
 
 	errno = EINVAL;
@@ -128,7 +134,8 @@ code_clone(struct code **head, const struct code *code)
 }
 
 int
-code_wind(struct code **head, const struct code *code)
+code_wind(struct code **head,
+	const struct code *code)
 {
 	const struct code *p;
 	struct code *new, **q;
@@ -191,7 +198,7 @@ code_dumpinline(FILE *f, const struct code *code)
 	assert(f != NULL);
 
 	for (p = code; p != NULL; p = p->next) {
-		fprintf(f, "#%s", code_name(p->type));
+		fprintf(f, "#%s/%lu:%lu", code_name(p->type), p->pos.line, p->pos.col);
 
 		switch (p->type) {
 		case CODE_DATA:

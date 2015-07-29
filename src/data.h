@@ -2,15 +2,18 @@
 #define DATA_H
 
 struct data {
+	struct pos pos;
 	char *s;
 	struct data *next;
 };
 
 struct data *
-data_push(struct data **head, size_t n, const char *s);
+data_push(struct data **head, const struct pos *pos,
+	size_t n, const char *s);
 
 struct data *
-data_int(struct data **head, int n);
+data_int(struct data **head, const struct pos *pos,
+	int n);
 
 struct data *
 data_pop(struct data **head);

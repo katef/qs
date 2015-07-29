@@ -7,17 +7,21 @@
 #include "data.h"
 
 struct data *
-data_push(struct data **head, size_t n, const char *s)
+data_push(struct data **head, const struct pos *pos,
+	size_t n, const char *s)
 {
 	struct data *new;
 
 	assert(head != NULL);
+	assert(pos != NULL);
 	assert(s != NULL || n == 0);
 
 	new = malloc(sizeof *new + n + !!s);
 	if (new == NULL) {
 		return NULL;
 	}
+
+	new->pos = *pos;
 
 	if (s != NULL) {
 		new->s    = memcpy((char *) new + sizeof *new, s, n);
@@ -37,7 +41,8 @@ data_push(struct data **head, size_t n, const char *s)
 }
 
 struct data *
-data_int(struct data **head, int n)
+data_int(struct data **head, const struct pos *pos,
+	int n)
 {
 	char s[32]; /* XXX */
 	int r;
@@ -49,7 +54,7 @@ data_int(struct data **head, int n)
 		return NULL;
 	}
 
-	return data_push(head, r, s);
+	return data_push(head, pos, r, s);
 }
 
 struct data *

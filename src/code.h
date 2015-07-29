@@ -24,6 +24,7 @@ enum code_type {
 };
 
 struct code {
+	struct pos pos;
 	enum code_type type;
 
 	union {
@@ -40,19 +41,20 @@ const char *
 code_name(enum code_type type);
 
 struct code *
-code_anon(struct code **head,
+code_anon(struct code **head, const struct pos *pos,
 	enum code_type type, struct code *code);
 
 struct code *
-code_data(struct code **head,
+code_data(struct code **head, const struct pos *pos,
 	size_t n, const char *s);
 
 struct code *
-code_push(struct code **head,
+code_push(struct code **head, const struct pos *pos,
 	enum code_type type);
 
 int
-code_wind(struct code **head, const struct code *code);
+code_wind(struct code **head,
+	const struct code *code);
 
 struct code *
 code_pop(struct code **head);

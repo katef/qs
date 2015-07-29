@@ -108,7 +108,7 @@
 			code_dump(stderr, @c);
 		}
 
-		if (-1 == set_args(act_state->top, act_state->args)) {
+		if (-1 == set_args(&lex_state->pos, act_state->top, act_state->args)) {
 			code_free(@c);
 			@!;
 		}
@@ -152,7 +152,7 @@
 		}
 
 		/* XXX: leak */
-		if (!code_anon(@&c, @t, @ci)) {
+		if (!code_anon(@&c, &lex_state->pos, @t, @ci)) {
 			@!;
 		}
 	@};
@@ -165,7 +165,7 @@
 			fprintf(stderr, "<code-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
 		}
 
-		if (!code_data(@&c, @s.e - @s.s, @s.s)) {
+		if (!code_data(@&c, &lex_state->pos, @s.e - @s.s, @s.s)) {
 			@!;
 		}
 	@};
@@ -175,7 +175,7 @@
 			fprintf(stderr, "<code-push>: %s\n", code_name(@t));
 		}
 
-		if (!code_push(@&c, @t)) {
+		if (!code_push(@&c, &lex_state->pos, @t)) {
 			@!;
 		}
 	@};

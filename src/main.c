@@ -56,6 +56,7 @@ main(int argc, char *argv[])
 	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
 
 	l.f = stdin;
+	l.pos.line = 0;
 
 	{
 		int c;

@@ -53,11 +53,12 @@ sigchld(int s)
 
 /* push .s=NULL to data */
 static int
-eval_null(struct data **data)
+eval_null(struct data **data, const struct pos *pos)
 {
 	assert(data != NULL);
+	assert(pos != NULL);
 
-	if (!data_push(data, 0, NULL)) {
+	if (!data_push(data, pos, 0, NULL)) {
 		return -1;
 	}
 
@@ -66,12 +67,13 @@ eval_null(struct data **data)
 
 /* push .s="xyz" to data */
 static int
-eval_data(struct data **data, const char *s)
+eval_data(struct data **data, const struct pos *pos, const char *s)
 {
 	assert(data != NULL);
+	assert(pos != NULL);
 	assert(s != NULL);
 
-	if (!data_push(data, strlen(s), s)) {
+	if (!data_push(data, pos, strlen(s), s)) {
 		return -1;
 	}
 
@@ -79,7 +81,7 @@ eval_data(struct data **data, const char *s)
 }
 
 static int
-eval_pipe(struct task **next, struct task *task, struct frame *frame, struct code **code)
+eval_pipe(struct task **next, struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
 {
 	struct data *lhs, *rhs;
 	const struct frame *f;
@@ -87,13 +89,14 @@ eval_pipe(struct task **next, struct task *task, struct frame *frame, struct cod
 
 	assert(next != NULL);
 	assert(frame != NULL);
+	assert(pos != NULL);
 	assert(code != NULL);
 
 	lhs = NULL;
 	rhs = NULL;
 
-	if (!data_push(&lhs, 0, NULL)) { goto error; }
-	if (!data_push(&rhs, 0, NULL)) { goto error; }
+	if (!data_push(&lhs, pos, 0, NULL)) { goto error; }
+	if (!data_push(&rhs, pos, 0, NULL)) { goto error; }
 
 	for (f = frame; f != NULL; f = f->parent) {
 		for (a = f->asc; a != NULL; a = a->next) {
@@ -121,22 +124,22 @@ only when we #run. for #tick we're in the same process and do not want to close(
 
 			/* lhs: dup a->m to write end */
 			{
-				if (!data_int(&lhs, fd[1])) { goto error; }
-				if (!data_int(&lhs, a->m )) { goto error; }
+				if (!data_int(&lhs, pos, fd[1])) { goto error; }
+				if (!data_int(&lhs, pos, a->m )) { goto error; }
 
 				/* close the opposing side */
-				if (!data_push(&lhs, 0, NULL)) { goto error; }
-				if (!data_int (&lhs,   fd[0])) { goto error; }
+				if (!data_push(&lhs, pos, 0, NULL)) { goto error; }
+				if (!data_int (&lhs, pos,   fd[0])) { goto error; }
 			}
 
 			/* rhs: dup a->n from read end */
 			{
-				if (!data_int(&rhs, fd[0])) { goto error; }
-				if (!data_int(&rhs, a->n )) { goto error; }
+				if (!data_int(&rhs, pos, fd[0])) { goto error; }
+				if (!data_int(&rhs, pos, a->n )) { goto error; }
 
 				/* close the opposing side */
-				if (!data_push(&rhs, 0, NULL)) { goto error; }
-				if (!data_int (&rhs,   fd[1])) { goto error; }
+				if (!data_push(&rhs, pos, 0, NULL)) { goto error; }
+				if (!data_int (&rhs, pos,   fd[1])) { goto error; }
 			}
 		}
 	}
@@ -228,7 +231,7 @@ eval_call(struct code **next, struct data **data,
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
 eval_run(struct code **next, struct data **data,
-	struct frame *frame, struct task *task)
+	struct frame *frame, const struct pos *pos, struct task *task)
 {
 	struct data *p, *pnext;
 	struct var *v;
@@ -239,6 +242,7 @@ eval_run(struct code **next, struct data **data,
 	assert(next != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
+	assert(pos != NULL);
 	assert(task != NULL);
 	assert(task->pid == -1);
 
@@ -275,7 +279,7 @@ eval_run(struct code **next, struct data **data,
 			return -1;
 		}
 
-		if (-1 == set_args(frame, args + 1)) {
+		if (-1 == set_args(pos, frame, args + 1)) {
 			free(args);
 			return -1;
 		}
@@ -362,13 +366,14 @@ fail:
 /* note will need to be able to re-enter here after EINTR */
 static int
 eval_tick(struct code **next, struct data **data,
-	struct frame *frame, struct tick_state *ts)
+	struct frame *frame, const struct pos *pos, struct tick_state *ts)
 {
 	int in;
 
 	assert(next != NULL);
 	assert(data != NULL);
 	assert(frame != NULL);
+	assert(pos != NULL);
 	assert(ts = NULL);
 
 	/*
@@ -469,7 +474,7 @@ eval_tick(struct code **next, struct data **data,
 	/* TODO: after reading, always split by '\0'. dealing with $^ is just s//ing more '\0' in situ */
 	/* TODO: push each token as a separate item to the data stack */
 
-	if (!data_push(data, ts->l, ts->s)) {
+	if (!data_push(data, pos, ts->l, ts->s)) {
 		goto error;
 	}
 
@@ -493,7 +498,7 @@ yield:
 	 * wait() to reap the exited child. So we return -1 with EINTR here.
 	 */
 
-	if (!code_push(next, CODE_TICK)) {
+	if (!code_push(next, pos, CODE_TICK)) {
 		goto error;
 	}
 
@@ -726,20 +731,20 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		assert(node != NULL);
 
 		switch (node->type) {
-		case CODE_NULL: r = eval_null(&task->data);                                      break;
-		case CODE_DATA: r = eval_data(&task->data, node->u.s);                           break;
-		case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->u.code);    break;
-		case CODE_NOT:  r = eval_not ();                                                 break;
-		case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                       break;
-		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, task);      break;
-		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);            break;
-		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &task->ts); break;
-		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);          break;
-		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                        break;
-		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                         break;
-		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);               break;
-		case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                   break;
-		case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                   break;
+		case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
+		case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
+		case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->pos, &node->u.code);    break;
+		case CODE_NOT:  r = eval_not ();                                                             break;
+		case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
+		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
+		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);                        break;
+		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &node->pos, &task->ts); break;
+		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);                      break;
+		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                                    break;
+		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                                     break;
+		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);                           break;
+		case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                               break;
+		case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
 
 		default:
 			code_free(node);
