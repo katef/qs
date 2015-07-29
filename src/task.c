@@ -57,7 +57,7 @@ task_remove(struct task **head, struct task *task)
 			perror("frame_refcount");
 		}
 
-		while (task->frame != NULL && task->frame->refcount > 0) {
+		while (task->frame != NULL && task->frame->refcount == 0) {
 			struct frame *q;
 
 			q = frame_pop(&task->frame);
