@@ -26,7 +26,6 @@ Pre-populated variables:
  $# argc                 per call
  $* argv                 per call
  $^ field separator      local
- $% job ID               per job
  $. current block        local
 
 Scope:
