@@ -153,8 +153,8 @@ code_wind(struct code **head,
 		}
 	}
 
-	assert((*q)->next == NULL);
-	(*q)->next = *head;
+	assert(*q == NULL);
+	*q = *head;
 
 	*head = new;
 
