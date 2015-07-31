@@ -138,6 +138,8 @@
 	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
 	<type-push>: () -> (t :type) = @{ @t = CODE_PUSH; @};
 	<type-pop>:  () -> (t :type) = @{ @t = CODE_POP;  @};
+	<type-clhs>: () -> (t :type) = @{ @t = CODE_CLHS; @};
+	<type-crhs>: () -> (t :type) = @{ @t = CODE_CRHS; @};
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};

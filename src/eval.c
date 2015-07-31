@@ -114,9 +114,13 @@ XXX: what does it mean to have either m or n -1? i presume not both
 				perror("pipe");
 				goto error;
 			}
+/* XXX: must close pipe in parent process. but when? maybe keep a list, and #close
+this should probably be the same as for #tick
+*/
 
 			if (debug & DEBUG_FD) {
-				fprintf(stderr, "pipe [%d,%d]\n", fd[0], fd[1]);
+				fprintf(stderr, "pipe [%d,%d] for asc [%d|%d]\n",
+					fd[0], fd[1], a->m, a->n);
 			}
 
 /* XXX: for #dup -1 to close here, who does this?
@@ -178,6 +182,85 @@ error:
 	data_free(rhs);
 
 	return -1;
+}
+
+static int
+close_lhs(const struct pair *a, struct pair *d) {
+	assert(a != NULL);
+	assert(d != NULL);
+	assert(d->m != -1);
+
+	if (d->n != a->m) {
+		return 0;
+	}
+
+	if (debug & DEBUG_FD) {
+		fprintf(stderr, "close(%d)\n", d->m);
+	}
+
+	if (-1 == close(d->m)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+close_rhs(const struct pair *a, struct pair *d) {
+	assert(a != NULL);
+	assert(d != NULL);
+	assert(d->m != -1);
+
+	if (d->n != a->n) {
+		return 0;
+	}
+
+	if (debug & DEBUG_FD) {
+		fprintf(stderr, "close(%d)\n", d->m);
+	}
+
+	if (-1 == close(d->m)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+eval_close(struct frame *frame,
+	int (*cs)(const struct pair *, struct pair *))
+{
+	const struct frame *f;
+	const struct pair *a;
+	struct pair *d;
+
+	assert(frame != NULL);
+	assert(cs != NULL);
+
+	/*
+	 * The list of associated fds is collected from the parent frame upwards,
+	 * the same as for #pipe creating pipes for each of those pairs.
+	 *
+	 * The set of open fds for dup2() calls for #run to dup_apply() are
+	 * stored (by #dup) in this frame only. So #clhs/#crhs must be in
+	 * the same frame as #dup populated the .dup list.
+	 */
+
+	for (f = frame->parent; f != NULL; f = f->parent) {
+		for (a = f->asc; a != NULL; a = a->next) {
+			for (d = frame->dup; d != NULL; d = d->next) {
+				if (d->m == -1) {
+					continue;
+				}
+
+				if (-1 == cs(a, d)) {
+					perror("close");
+				}
+			}
+		}
+	}
+
+	return 0;
 }
 
 /* pop $?, push !$? to *data */
@@ -745,6 +828,8 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);                           break;
 		case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                               break;
 		case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
+		case CODE_CLHS: r = eval_close(task->frame, close_lhs);                                      break;
+		case CODE_CRHS: r = eval_close(task->frame, close_rhs);                                      break;
 
 		default:
 			code_free(node);

@@ -21,6 +21,8 @@ code_name(enum code_type type)
 	case CODE_ASC:  return "asc";
 	case CODE_PUSH: return "push";
 	case CODE_POP:  return "pop";
+	case CODE_CLHS: return "clhs";
+	case CODE_CRHS: return "crhs";
 
 	case CODE_DATA: return "data";
 	case CODE_IF:   return "if";

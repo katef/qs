@@ -45,6 +45,8 @@
 	<type-run>:  () -> (:type);
 	<type-push>: () -> (:type);
 	<type-pop>:  () -> (:type);
+	<type-clhs>: () -> (:type);
+	<type-crhs>: () -> (:type);
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
@@ -84,17 +86,30 @@
 		<code-push>(&c, t1);
 	};
 
-	pipe: (lhs :code, rhs :code) -> (c :code) = {
-		t0 = <type-dup>;
+	pipe: (lhs :code, rhs :code) -> (c :code) [
 
-		<code-push>(&lhs, t0);
-		<code-push>(&rhs, t0);
+		side: (t :type, ci :code) -> (c :code) = {
+			t0 = <type-dup>;
 
-		c = frame(lhs);
-		r = frame(rhs);
+			<code-push>(&ci, t0);
 
-		t1 = <type-pipe>;
-		<code-anon>(&c, t1, r);
+			cx = <empty-code>;
+
+			<code-push>(&cx, t);
+			<code-wind>(&cx, ci);
+
+			c = frame(cx);
+		};
+
+	] = {
+		t1 = <type-clhs>;
+		t2 = <type-crhs>;
+
+		c = side(t1, lhs);
+		r = side(t2, rhs);
+
+		t0 = <type-pipe>;
+		<code-anon>(&c, t0, r);
 	};
 
 	list: () -> (c :code) [
