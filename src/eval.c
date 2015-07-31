@@ -457,7 +457,7 @@ eval_tick(struct code **next, struct data **data,
 	assert(data != NULL);
 	assert(frame != NULL);
 	assert(pos != NULL);
-	assert(ts = NULL);
+	assert(ts != NULL);
 
 	/*
 	 * #tick reads from a pipe (set up by the parser), which would be
