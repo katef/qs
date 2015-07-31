@@ -233,6 +233,12 @@
 			return -1;
 		}
 
+		/*
+		 * The top frame is kept around even when the last task exits,
+		 * so that it can persist across multiple dispatches.
+		 */
+		(void) frame_refcount(act_state->top, +1);
+
 		if (!pair_push(&act_state->top->asc, STDOUT_FILENO, STDIN_FILENO)) {
 			/* TODO: free frame */
 			return -1;
@@ -244,6 +250,8 @@
 
 		/* TODO: handle raising an error or ## */
 		p_script(lex_state, act_state);
+
+		(void) frame_refcount(act_state->top, -1);
 
 		q = frame_pop(&act_state->top);
 		frame_free(q);
