@@ -12,11 +12,6 @@
 
 #include "readfd.h"
 
-#ifdef TEST
-#undef PIPE_BUF
-#define PIPE_BUF 4
-#endif
-
 int
 readfd(int fd, char **s, size_t *n)
 {
