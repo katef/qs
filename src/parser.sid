@@ -105,11 +105,11 @@
 		t1 = <type-clhs>;
 		t2 = <type-crhs>;
 
-		c = side(t1, lhs);
-		r = side(t2, rhs);
+		l = side(t1, lhs);
+		c = side(t2, rhs);
 
 		t0 = <type-pipe>;
-		<code-anon>(&c, t0, r);
+		<code-anon>(&c, t0, l);
 	};
 
 	list: () -> (c :code) [
