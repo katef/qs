@@ -148,18 +148,7 @@ only when we #run. for #tick we're in the same process and do not want to close(
 		}
 	}
 
-	/* lhs is what remains in the current task after this #pipe */
-	{
-		struct data **tail;
-
-		for (tail = &lhs; *tail != NULL; tail = &(*tail)->next)
-			;
-
-		*tail = task->data;
-		task->data = lhs;
-	}
-
-	/* rhs */
+	/* lhs */
 	{
 		struct task *new;
 
@@ -170,7 +159,18 @@ only when we #run. for #tick we're in the same process and do not want to close(
 
 		*code = NULL;
 
-		new->data = rhs;
+		new->data = lhs;
+	}
+
+	/* rhs is what remains in the current task after this #pipe */
+	{
+		struct data **tail;
+
+		for (tail = &rhs; *tail != NULL; tail = &(*tail)->next)
+			;
+
+		*tail = task->data;
+		task->data = rhs;
 	}
 
 	return 0;
