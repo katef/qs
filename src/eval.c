@@ -811,68 +811,64 @@ eval_task(struct task *task)
 	assert(task != NULL);
 
 	/*
-	 * There's no need for this loop; we could just take a single instruction
-	 * at a time, and round-robin across all tasks. But while we're here,
-	 * it's no trouble to evaulate as much as we can before needing to sleep.
-	 *
 	 * The code list may be NULL if this task is waiting for a child, but has
 	 * nothing to execute after that.
 TODO: in which case, would it be okay to remove the task and consider the child a stray?
 	 */
 
-	while (task->code != NULL) {
+	if (debug & DEBUG_EVAL) {
+		fprintf(stderr, "code: "); code_dump(stderr, task->code);
+		fprintf(stderr, "data: "); data_dump(stderr, task->data);
+	}
+
+	node = code_pop(&task->code);
+
+	assert(node != NULL);
+
+	switch (node->type) {
+	case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
+	case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
+	case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->pos, &node->u.code);    break;
+	case CODE_NOT:  r = eval_not ();                                                             break;
+	case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
+	case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
+	case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);                        break;
+	case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &node->pos, &task->ts); break;
+	case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);                      break;
+	case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                                    break;
+	case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                                     break;
+	case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);                           break;
+	case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                               break;
+	case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
+	case CODE_CLHS: r = eval_close(task->frame, close_lhs);                                      break;
+	case CODE_CRHS: r = eval_close(task->frame, close_rhs);                                      break;
+
+	default:
+		code_free(node);
+		errno = EINVAL;
+		return -1;
+	}
+
+	code_free(node);
+
+	if (r == -1) {
+		return -1;
+	}
+
+	if (task->pid != -1) {
+		return 0;
+	}
+
+	if (task->code == NULL) {
 		if (debug & DEBUG_EVAL) {
-			fprintf(stderr, "code: "); code_dump(stderr, task->code);
-			fprintf(stderr, "data: "); data_dump(stderr, task->data);
+			fprintf(stderr, "eval out: ");
+			data_dump(stderr, task->data);
 		}
 
-		node = code_pop(&task->code);
-
-		assert(node != NULL);
-
-		switch (node->type) {
-		case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
-		case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
-		case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->pos, &node->u.code);    break;
-		case CODE_NOT:  r = eval_not ();                                                             break;
-		case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
-		case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
-		case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);                        break;
-		case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &node->pos, &task->ts); break;
-		case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);                      break;
-		case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                                    break;
-		case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                                     break;
-		case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);                           break;
-		case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                               break;
-		case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
-		case CODE_CLHS: r = eval_close(task->frame, close_lhs);                                      break;
-		case CODE_CRHS: r = eval_close(task->frame, close_rhs);                                      break;
-
-		default:
-			code_free(node);
+		if (task->data != NULL) {
 			errno = EINVAL;
 			return -1;
 		}
-
-		code_free(node);
-
-		if (r == -1) {
-			return -1;
-		}
-
-		if (task->pid != -1) {
-			return 0;
-		}
-	}
-
-	if (debug & DEBUG_EVAL) {
-		fprintf(stderr, "eval out: ");
-		data_dump(stderr, task->data);
-	}
-
-	if (task->data != NULL) {
-		errno = EINVAL;
-		return -1;
 	}
 
 	return 0;
