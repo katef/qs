@@ -536,6 +536,19 @@ eval_tick(struct code **next, struct data **data,
 				goto fail;
 			}
 
+			/*
+			 * read(2) could be interrupted either before reading (i.e. EINTR)
+			 * or after reading (i.e. returning r > 0). select(2) on the self-
+			 * pipe is the only way to distinguish the second situation from
+			 * an uninterrupted read to EOF, which also returns r > 0, and so
+			 * we treat r > 0 as a potential interrupt, and yield in both cases
+			 * in order to re-select(2) for the self-pipe.
+			 *
+			 * It's harmless to yield unneccessarily here (i.e. without a signal
+			 * pending on the self-pipe) because the eval loop will find the
+			 * #run task is still waiting, skip it, and re-enter this #tick.
+			 */
+
 			if (r == -1 && errno == EINTR) {
 				goto yield;
 			}
@@ -547,23 +560,27 @@ eval_tick(struct code **next, struct data **data,
 			if (debug & DEBUG_VAR) {
 				fprintf(stderr, "` read: %.*s\n", (int) ts->l, ts->s);
 			}
-		}
-	}
 
-	/* TODO: tokenise by $^ here, e.g. { echo `date | wc } */
-	/* TODO: can tokenisation be shared with the lexer's guts exposed? */
-	/* TODO: the lexer should use $^ */
-	/* TODO: \0 should implicitly always be in the $^ set */
-	/* TODO: after reading, always split by '\0'. dealing with $^ is just s//ing more '\0' in situ */
-	/* TODO: push each token as a separate item to the data stack */
+			/* TODO: tokenise by $^ here, e.g. { echo `date | wc } */
+			/* TODO: can tokenisation be shared with the lexer's guts exposed? */
+			/* TODO: the lexer should use $^ */
+			/* TODO: \0 should implicitly always be in the $^ set */
+			/* TODO: after reading, always split by '\0'. dealing with $^ is just s//ing more '\0' in situ */
+			/* TODO: push each token as a separate item to the data stack */
 
-	if (!data_push(data, pos, ts->l, ts->s)) {
-		goto error;
-	}
+			if (!data_push(data, pos, ts->l, ts->s)) {
+				goto error;
+			}
 
-	free(ts->s);
+			free(ts->s);
 
 ts->s = NULL; /* XXX: doesn't belong here */
+
+			if (r > 0) {
+				goto yield;
+			}
+		}
+	}
 
 	return 0;
 
