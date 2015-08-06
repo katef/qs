@@ -140,6 +140,7 @@
 	<type-pop>:  () -> (t :type) = @{ @t = CODE_POP;  @};
 	<type-clhs>: () -> (t :type) = @{ @t = CODE_CLHS; @};
 	<type-crhs>: () -> (t :type) = @{ @t = CODE_CRHS; @};
+	<type-ctck>: () -> (t :type) = @{ @t = CODE_CTCK; @};
 
 	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
 	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};

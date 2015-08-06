@@ -47,6 +47,7 @@
 	<type-pop>:  () -> (:type);
 	<type-clhs>: () -> (:type);
 	<type-crhs>: () -> (:type);
+	<type-ctck>: () -> (:type);
 
 	!<type-data>:() -> (:type);
 	<type-dup>:  () -> (:type);
@@ -146,12 +147,21 @@
 				ci = block;
 			};
 
-			rhs = <empty-code>;
+			{
+				lhs = <empty-code>;
 
-			t3 = <type-tick>;
-			<code-push>(&rhs, t3);
+				t4 = <type-ctck>;
+				<code-push>(&lhs, t4);
 
-			lhs = ci;
+				<code-wind>(&lhs, ci);
+			};
+
+			{
+				rhs = <empty-code>;
+
+				t3 = <type-tick>;
+				<code-push>(&rhs, t3);
+			};
 
 			c = pipe(lhs, rhs);
 		};

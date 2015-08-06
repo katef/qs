@@ -18,6 +18,7 @@ enum code_type {
 	CODE_POP  = 10 | CODE_NONE,
 	CODE_CLHS = 11 | CODE_NONE,
 	CODE_CRHS = 12 | CODE_NONE,
+	CODE_CTCK = 13 | CODE_NONE,
 
 	CODE_DATA = 0, /* u.s */
 	CODE_IF   = 1, /* u.code */

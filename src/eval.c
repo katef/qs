@@ -812,6 +812,52 @@ eval_pair(struct data **data, struct pair **pair)
 }
 
 static int
+eval_ctck(struct frame *frame)
+{
+	int out;
+
+	assert(frame != NULL);
+
+	/*
+	 * Find the write end of the tick pipe, to close it. We know this to be
+	 * present because the lhs has the write end in its dup list, put there
+	 * by #dup inside the pipe side so that #run can dup2() it to stdout.
+	 *
+	 * This is inside a frame created for the pipe side, so a user's duping
+	 * cannot stop that from being present.
+	 *
+	 * There's no need to walk frames to the topmost frame, because
+	 * #dup inside the pipe side populates this frame's dup list only.
+	 * So dup_find() here is overkill, but harmless.
+	 */
+	out = dup_find(frame, STDOUT_FILENO); /* because #tick reads from [1|0] */
+	if (out == -1) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (debug & DEBUG_FD) {
+		fprintf(stderr, "tick pipe: close(%d)\n", out);
+	}
+
+	if (-1 == close(out)) {
+		perror("close");
+	}
+
+	/* XXX: but #crhs will close() it after this */
+	/* TODO: remove entry from dup list. or hackishly open a dummy */
+	/* XXX: hack */
+	{
+		int fd[2];
+		(void) pipe(fd); /* just to make an fd without assuming anything on the filesystem */
+		(void) dup2(fd[1], out);
+		(void) close(fd[0]);
+	}
+
+	return 0;
+}
+
+static int
 eval_task(struct task **tasks, struct task *task)
 {
 	struct code *node;
@@ -852,6 +898,7 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 	case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
 	case CODE_CLHS: r = eval_close(task->frame, close_lhs);                                      break;
 	case CODE_CRHS: r = eval_close(task->frame, close_rhs);                                      break;
+	case CODE_CTCK: r = eval_ctck (task->frame);                                                 break;
 
 	default:
 		code_free(node);
@@ -967,21 +1014,22 @@ eval_main(struct frame *top, struct code *code)
 			 * If this is zero, then there are no more children to #run;
 			 * We can close our copy of the write end of the #tick pipe,
 			 * since we don't need to hold open the pipe any more.
-			 * Subsequent read() in #tick will now give EOF.
+			 *
+			 * We need waitpid() to prioritise the #run task, which only
+			 * happens on SIGCHLD. When the last child for that task signals,
+			 * #ctck in that task will close our end of the tick pipe.
+			 *
+			 * So here we expect #ctck to be the next instruction for the
+			 * (already highest priority) lhs task(s), or to have already
+			 * evaulated #ctck when reaching here after #tick has finished.
+			 *
+			 * Subsequent read() in #tick will then give EOF, causing the
+			 * #tick task to no longer re-enter the same #tick instruction.
 			 */
 			if (n == 0) {
-				int in;
-
-				/* TODO: no need to walk to the top? can it be anything other than t->frame->dup? */
-				in = dup_find(t->frame, STDOUT_FILENO);
-
-				if (debug & DEBUG_FD) {
-					fprintf(stderr, "tick pipe: close(%d)\n", in);
+				if (debug & DEBUG_EVAL) {
+					fprintf(stderr, "eval: no tasks prioritised\n");
 				}
-
-				close(in);
-
-				/* TODO: remove entry from dup list */
 			}
 		}
 
