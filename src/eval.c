@@ -81,13 +81,13 @@ eval_data(struct data **data, const struct pos *pos, const char *s)
 }
 
 static int
-eval_pipe(struct task **next, struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
+eval_pipe(struct task **tasks, struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
 {
 	struct data *lhs, *rhs;
 	const struct frame *f;
 	const struct pair *a;
 
-	assert(next != NULL);
+	assert(tasks != NULL);
 	assert(frame != NULL);
 	assert(pos != NULL);
 	assert(code != NULL);
@@ -140,11 +140,25 @@ only when we #run. for #tick we're in the same process and do not want to close(
 		}
 	}
 
+	/*
+	 * Although #pipe is used for pipes in general, it is implemented taking
+	 * special care for tick's pipe. Specifically:
+	 *
+	 * The newly-created lhs task is prioritised to the head of the tasks list,
+	 * which for the tick pipe must be evaulated before #tick (in the rhs)
+	 * is reached, otherwise #tick would block waiting to read from programs
+	 * which have not yet been #run.
+	 *
+	 * The #tick instruction is executed from the same task as #pipe, so that
+	 * it shares the data stack used by previous (and subsequent) instructions.
+	 * If this were in its own task, its data would be effectively isolated.
+	 */
+
 	/* lhs */
 	{
 		struct task *new;
 
-		new = task_add(next, frame, *code);
+		new = task_add(tasks, frame, *code);
 		if (new == NULL) {
 			goto error;
 		}
@@ -158,6 +172,7 @@ only when we #run. for #tick we're in the same process and do not want to close(
 	{
 		struct data **tail;
 
+		/* TODO: centralise as data_wind() */
 		for (tail = &rhs; *tail != NULL; tail = &(*tail)->next)
 			;
 
@@ -797,11 +812,12 @@ eval_pair(struct data **data, struct pair **pair)
 }
 
 static int
-eval_task(struct task *task)
+eval_task(struct task **tasks, struct task *task)
 {
 	struct code *node;
 	int r;
 
+	assert(tasks != NULL);
 	assert(task != NULL);
 
 	/*
@@ -822,7 +838,7 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 	switch (node->type) {
 	case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
 	case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
-	case CODE_PIPE: r = eval_pipe(&task->next, task, task->frame, &node->pos, &node->u.code);    break;
+	case CODE_PIPE: r = eval_pipe(tasks, task, task->frame, &node->pos, &node->u.code);          break;
 	case CODE_NOT:  r = eval_not ();                                                             break;
 	case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
 	case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
@@ -920,7 +936,7 @@ eval_main(struct frame *top, struct code *code)
 	t = tasks;
 
 	for (;;) {
-		r = eval_task(t);
+		r = eval_task(&tasks, t);
 
 		if (r == -1 && errno != EINTR) {
 			goto error;
