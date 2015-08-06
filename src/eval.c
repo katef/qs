@@ -102,14 +102,6 @@ eval_pipe(struct task **next, struct task *task, struct frame *frame, const stru
 		for (a = f->asc; a != NULL; a = a->next) {
 			int fd[2];
 
-/*
-TODO: heed asc's which indicate -1 meaning to not use that association henceforth for child frames.
-XXX: what does it mean to have either m or n -1? i presume not both
-			if (pair_find(something, a->m, -1) || pair_find(something, -1, a->n)) {
-				continue;
-			}
-*/
-
 			if (-1 == pipe(fd)) {
 				perror("pipe");
 				goto error;
