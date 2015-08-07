@@ -983,6 +983,10 @@ eval_main(struct frame *top, struct code *code)
 	t = tasks;
 
 	for (;;) {
+		if (debug & DEBUG_EVAL) {
+			fprintf(stderr, "== task %p ==\n", (void *) t);
+		}
+
 		r = eval_task(&tasks, t);
 
 		if (r == -1 && errno != EINTR) {
