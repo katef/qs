@@ -23,6 +23,7 @@ OBJS += pair.o
 OBJS += proc.o
 OBJS += status.o
 OBJS += builtin.o
+OBJS += signal.o
 OBJS += task.o
 
 qs: $(OBJS)

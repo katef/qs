@@ -1,9 +1,3 @@
-#define _POSIX_SOURCE
-
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/select.h>
-
 #include <unistd.h>
 
 #include <assert.h>
@@ -22,39 +16,10 @@
 #include "proc.h"
 #include "pair.h"
 #include "frame.h"
-#include "readfd.h"
 #include "status.h"
 #include "builtin.h"
+#include "signal.h"
 #include "task.h"
-
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
-int self[2]; /* SIGCHLD self pipe */
-
-sigset_t ss_chld; /* SIGCHLD */
-
-volatile sig_atomic_t sigintr;
-
-static void
-sigchld(int s)
-{
-	const char dummy = 'x';
-	int r;
-
-	assert(s == SIGCHLD);
-	assert(!sigintr);
-
-	(void) s;
-
-	sigintr = 1;
-
-	do {
-		r = write(self[1], &dummy, sizeof dummy);
-		if (r == -1 && errno != EINTR) {
-			abort();
-		}
-	} while (r != 1);
-}
 
 /* push .s=NULL to data */
 static int
@@ -464,6 +429,7 @@ eval_tick(struct code **next, struct data **data,
 	struct frame *frame, const struct pos *pos, struct tick_state *ts)
 {
 	int in;
+	int r;
 
 	assert(next != NULL);
 	assert(data != NULL);
@@ -484,141 +450,20 @@ eval_tick(struct code **next, struct data **data,
 	}
 
 	/*
-	 * There are two reasons to select here:
-	 *
-	 * Firstly, to avoid blocking on read() when a signal is delivered outside
-	 * the call to read(), and therefore read() will not EINTR.
-	 *
-	 * Secondly, if read() returns for some other reason, so that we don't block
-	 * on reading from the self-pipe when there're no signals to read.
-	 * This could be catered for by only reading from the self pipe when #tick's
-	 * read() gives EINTR, but since we need select() for the first case, I want
-	 * to use the same mechanism for both.
+	 * read some data from the tick pipe; loop to keep reading until SIGCHLD.
+	 * Then the evaluator will re-enter #tick to read EOF.
 	 */
+	do {
+		r = ss_readfd(in, &ts->s, &ts->l);
+	} while (r > 0);
 
-	for (;;) {
-		fd_set fds;
-		int max;
-		int r;
-
-		FD_ZERO(&fds);
-		FD_SET(self[0], &fds);
-		FD_SET(in,  &fds);
-
-		max = MAX(self[0], in);
-
-		if (-1 == sigprocmask(SIG_UNBLOCK, &ss_chld, NULL)) {
-			perror("sigprocmask SIG_UNBLOCK");
-			goto fail;
-		}
-
-		r = select(max + 1, &fds, NULL, NULL, NULL);
-
-		if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, NULL)) {
-			perror("sigprocmask SIG_BLOCK");
-			goto fail;
-		}
-
-		if (r == -1 && errno == EINTR) {
-			goto yield;
-		}
-
-		if (r == -1) {
-			return -1;
-		}
-
-		/*
-		 * It doesn't matter which fd we deal with first, since the parent's
-		 * self[1] will keep the pipe open, so we can't accientally read EOF
-		 * before yielding to spawn the next child.
-		 */
-
-		if (FD_ISSET(self[0], &fds)) {
-			char dummy;
-
-			do {
-				r = read(self[0], &dummy, sizeof dummy);
-			} while (r == 0);
-			if (r == -1) {
-				return -1;
-			}
-
-			assert(dummy == 'x');
-
-			/* If in is also ready, we'll deal with that on re-entry. */
-
-			goto yield;
-		}
-
-		if (FD_ISSET(in, &fds)) {
-			if (-1 == sigprocmask(SIG_UNBLOCK, &ss_chld, NULL)) {
-				perror("sigprocmask SIG_UNBLOCK");
-				goto fail;
-			}
-
-			r = readfd(in, &ts->s, &ts->l);
-
-			if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, NULL)) {
-				perror("sigprocmask SIG_BLOCK");
-				goto fail;
-			}
-
-			if (r == -1 && errno == EINTR) {
-				goto yield;
-			}
-
-			if (r == -1) {
-				return -1;
-			}
-
-			if (r == 0) {
-				goto done;
-			}
-
-			if (r > 0 && sigintr) {
-				sigintr = 0;
-				goto yield;
-			}
-
-			/*
-			 * read some data; loop to keep reading until SIGCHLD.
-			 * Then we'll re-enter #tick to read EOF.
-			 */
-			continue;
-		}
+	if (r == -1 && errno == EINTR) {
+		goto yield;
 	}
 
-yield:
-
-	/*
-	 * read(2) could be interrupted either before reading (i.e. EINTR)
-	 * or after reading (i.e. returning r > 0). The sigintr flag is used
-	 * above to distinguish the second situation from an uninterrupted
-	 * read to EOF, which also returns r > 0. So here we only yield when
-	 * a signal is known to have occured.
-	 */
-
-/* TODO: merge commentary */
-	/*
-	 * This node was popped, but reading was interrupted by SIGCHILD;
-	 * here we yield to run that child's task, but first push a replacement
-	 * #tick for re-entry to continue reading where we left off.
-	 * This means the evalulation loop does not need to have special handling
-	 * for #tick being re-entrant.
-	 *
-	 * However the evaulation loop does need to know that read() was
-	 * interrupted by SIGCHILD (and only SIGCHLD) here, so that it can
-	 * wait() to reap the exited child. So we return -1 with EINTR here.
-	 */
-
-	if (!code_push(next, pos, CODE_TICK)) {
-		goto error;
+	if (r == -1) {
+		return -1;
 	}
-
-	errno = EINTR;
-	return -1;
-
-done:
 
 	if (debug & DEBUG_VAR) {
 		fprintf(stderr, "` read: %.*s\n", (int) ts->l, ts->s);
@@ -641,6 +486,27 @@ ts->s = NULL; /* XXX: doesn't belong here */
 
 	return 0;
 
+yield:
+
+	/*
+	 * This node was popped, but reading was interrupted by SIGCHILD;
+	 * here we yield to run that child's task, but first push a replacement
+	 * #tick for re-entry to continue reading where we left off.
+	 * This means the evalulation loop does not need to have special handling
+	 * for #tick being re-entrant.
+	 *
+	 * However the evaulation loop does need to know that read() was
+	 * interrupted by SIGCHILD (and only SIGCHLD) here, so that it can
+	 * wait() to reap the exited child. So we return -1 with EINTR here.
+	 */
+
+	if (!code_push(next, pos, CODE_TICK)) {
+		goto error;
+	}
+
+	errno = EINTR;
+	return -1;
+
 error:
 
 	free(ts->s);
@@ -648,10 +514,6 @@ error:
 ts->s = NULL; /* XXX: doesn't belong here */
 
 	return -1;
-
-fail:
-
-	abort();
 }
 
 /* TODO: explain what happens here: status.r is the predicate, u.code is a block to call */
@@ -1124,71 +986,8 @@ error:
 int
 eval(struct frame *top, struct code *code)
 {
-	struct sigaction sa, sa_old;
-	sigset_t ss_old;
-	int r;
-
 	assert(top != NULL);
 
-	if (-1 == pipe(self)) {
-		perror("pipe");
-		return -1;
-	}
-
-	if (debug & DEBUG_FD) {
-		fprintf(stderr, "self pipe [%d,%d]\n", self[0], self[1]);
-	}
-
-	if (-1 == sigemptyset(&ss_chld)) {
-		perror("sigemptyset");
-		return -1;
-	}
-
-	if (-1 == sigaddset(&ss_chld, SIGCHLD)) {
-		perror("sigaddset");
-		return -1;
-	}
-
-	if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, &ss_old)) {
-		perror("sigprocmask SIG_UNBLOCK");
-		goto fail;
-	}
-
-	sa.sa_handler = sigchld;
-	sa.sa_flags   = SA_NOCLDSTOP;
-
-	if (sigaction(SIGCHLD, &sa, &sa_old)) {
-		perror("sigaction");
-		goto fail;
-	}
-
-	r = eval_main(top, code);
-	if (r == -1 && errno != 0) {
-		perror("eval");
-	}
-
-	if (sigaction(SIGCHLD, &sa_old, NULL)) {
-		perror("sigaction");
-		goto fail;
-	}
-
-	if (-1 == sigprocmask(SIG_SETMASK, &ss_old, NULL)) {
-		perror("sigprocmask SIG_SETMASK");
-		goto fail;
-	}
-
-	close(self[0]);
-	close(self[1]);
-
-	return r;
-
-fail:
-
-	/*
-	 * Failures which would leave the process in an altered state;
-	 * I don't see how we could expect to recover here.
-	 */
-
-	abort();
+	return ss_eval(eval_main, top, code);
 }
 
