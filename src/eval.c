@@ -33,6 +33,8 @@ int self[2]; /* SIGCHLD self pipe */
 
 sigset_t ss_chld; /* SIGCHLD */
 
+volatile sig_atomic_t sigintr;
+
 static void
 sigchld(int s)
 {
@@ -40,8 +42,11 @@ sigchld(int s)
 	int r;
 
 	assert(s == SIGCHLD);
+	assert(!sigintr);
 
 	(void) s;
+
+	sigintr = 1;
 
 	do {
 		r = write(self[1], &dummy, sizeof dummy);
@@ -491,7 +496,7 @@ eval_tick(struct code **next, struct data **data,
 	 * to use the same mechanism for both.
 	 */
 
-	{
+	for (;;) {
 		fd_set fds;
 		int max;
 		int r;
@@ -502,7 +507,22 @@ eval_tick(struct code **next, struct data **data,
 
 		max = MAX(self[0], in);
 
+		if (-1 == sigprocmask(SIG_UNBLOCK, &ss_chld, NULL)) {
+			perror("sigprocmask SIG_UNBLOCK");
+			goto fail;
+		}
+
 		r = select(max + 1, &fds, NULL, NULL, NULL);
+
+		if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, NULL)) {
+			perror("sigprocmask SIG_BLOCK");
+			goto fail;
+		}
+
+		if (r == -1 && errno == EINTR) {
+			goto yield;
+		}
+
 		if (r == -1) {
 			return -1;
 		}
@@ -554,6 +574,17 @@ eval_tick(struct code **next, struct data **data,
 			if (r == 0) {
 				goto done;
 			}
+
+			if (r > 0 && sigintr) {
+				sigintr = 0;
+				goto yield;
+			}
+
+			/*
+			 * read some data; loop to keep reading until SIGCHLD.
+			 * Then we'll re-enter #tick to read EOF.
+			 */
+			continue;
 		}
 	}
 
@@ -561,17 +592,13 @@ yield:
 
 	/*
 	 * read(2) could be interrupted either before reading (i.e. EINTR)
-	 * or after reading (i.e. returning r > 0). select(2) on the self-
-	 * pipe is the only way to distinguish the second situation from
-	 * an uninterrupted read to EOF, which also returns r > 0, and so
-	 * we treat r > 0 as a potential interrupt, and yield in both cases
-	 * in order to re-select(2) for the self-pipe.
-	 *
-	 * It's harmless to yield unneccessarily here (i.e. without a signal
-	 * pending on the self-pipe) because the eval loop will find the
-	 * #run task is still waiting, skip it, and re-enter this #tick.
+	 * or after reading (i.e. returning r > 0). The sigintr flag is used
+	 * above to distinguish the second situation from an uninterrupted
+	 * read to EOF, which also returns r > 0. So here we only yield when
+	 * a signal is known to have occured.
 	 */
 
+/* TODO: merge commentary */
 	/*
 	 * This node was popped, but reading was interrupted by SIGCHILD;
 	 * here we yield to run that child's task, but first push a replacement
@@ -1018,6 +1045,7 @@ eval_main(struct frame *top, struct code *code)
 			 * If this is zero, then there are no more children to #run;
 			 * We can close our copy of the write end of the #tick pipe,
 			 * since we don't need to hold open the pipe any more.
+TODO: stale comment
 			 *
 			 * We need waitpid() to prioritise the #run task, which only
 			 * happens on SIGCHLD. When the last child for that task signals,
