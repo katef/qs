@@ -21,6 +21,8 @@
 #include "signal.h"
 #include "task.h"
 
+static struct task *tasks;
+
 /* push .s=NULL to data */
 static int
 eval_null(struct data **data, const struct pos *pos)
@@ -51,13 +53,12 @@ eval_data(struct data **data, const struct pos *pos, const char *s)
 }
 
 static int
-eval_pipe(struct task **tasks, struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
+eval_pipe(struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
 {
 	struct data *lhs, *rhs;
 	const struct frame *f;
 	const struct pair *a;
 
-	assert(tasks != NULL);
 	assert(frame != NULL);
 	assert(pos != NULL);
 	assert(code != NULL);
@@ -128,7 +129,7 @@ only when we #run. for #tick we're in the same process and do not want to close(
 	{
 		struct task *new;
 
-		new = task_add(tasks, frame, *code);
+		new = task_add(&tasks, frame, *code);
 		if (new == NULL) {
 			goto error;
 		}
@@ -747,12 +748,11 @@ eval_ctck(struct frame *frame)
 }
 
 static int
-eval_task(struct task **tasks, struct task *task)
+eval_task(struct task *task)
 {
 	struct code *node;
 	int r;
 
-	assert(tasks != NULL);
 	assert(task != NULL);
 
 	/*
@@ -773,7 +773,7 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 	switch (node->type) {
 	case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
 	case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
-	case CODE_PIPE: r = eval_pipe(tasks, task, task->frame, &node->pos, &node->u.code);          break;
+	case CODE_PIPE: r = eval_pipe(task, task->frame, &node->pos, &node->u.code);                 break;
 	case CODE_NOT:  r = eval_not ();                                                             break;
 	case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
 	case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
@@ -823,12 +823,10 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 static int
 eval_main(struct frame *top, struct code *code)
 {
-	struct task *tasks, *t;
+	struct task *t;
 	int r;
 
 	assert(top != NULL);
-
-	tasks = NULL;
 
 	if (!task_add(&tasks, top, code)) {
 		goto error;
@@ -876,7 +874,7 @@ eval_main(struct frame *top, struct code *code)
 			fprintf(stderr, "== task %p ==\n", (void *) t);
 		}
 
-		r = eval_task(&tasks, t);
+		r = eval_task(t);
 
 		if (r == -1 && errno != EINTR) {
 			goto error;
