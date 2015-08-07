@@ -18,7 +18,7 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-int self[2]; /* SIGCHLD self pipe */
+static int self[2]; /* SIGCHLD self pipe */
 
 static sigset_t ss_chld; /* SIGCHLD */
 
