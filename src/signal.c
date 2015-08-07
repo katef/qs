@@ -20,9 +20,9 @@
 
 int self[2]; /* SIGCHLD self pipe */
 
-sigset_t ss_chld; /* SIGCHLD */
+static sigset_t ss_chld; /* SIGCHLD */
 
-volatile sig_atomic_t sigintr;
+static volatile sig_atomic_t sigintr;
 
 static void
 sigchld(int s)
