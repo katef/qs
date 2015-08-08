@@ -32,6 +32,7 @@ sigchld(int s)
 
 	assert(s == SIGCHLD);
 	assert(!sigintr);
+fprintf(stderr, "SIGCHLD!\n");
 
 	(void) s;
 
@@ -112,6 +113,10 @@ ss_readfd(int fd, char **s, size_t *n)
 		}
 
 		assert(dummy == 'x');
+
+		if (-1 == hook("sigchld")) {
+			return -1;
+		}
 
 		/* If in is also ready, we'll deal with that on re-entry. */
 
