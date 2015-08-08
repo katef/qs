@@ -17,6 +17,7 @@
 #include "status.h"
 #include "args.h"
 #include "eval.h"
+#include "hook.h"
 #include "pair.h"
 #include "task.h"
 
@@ -82,6 +83,26 @@ dispatch(struct code *code)
 	}
 
 	return r;
+}
+
+int
+hook(struct code *code)
+{
+	struct frame *f;
+	struct task *new;
+
+	f = top;
+
+	if (!frame_push(&f)) {
+		return 1;
+	}
+
+	new = task_add(&tasks, f, code);
+	if (new == NULL) {
+		return -1;
+	}
+
+	return 0;
 }
 
 int
