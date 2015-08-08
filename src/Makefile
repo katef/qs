@@ -40,9 +40,9 @@ parser.c: parser.sid parser.act
 	$(SID) -l test parser.sid
 	$(SID) $(SID_CFLAGS) parser.sid parser.act parser.c parser.h
 
-signal.o: signum.h
-signum.h:
-	echo 'static const struct signum signum[] = {' > $@
+signal.o: siglist.h
+siglist.h:
+	echo 'static const struct siglist siglist[] = {' > $@
 	kill -l                                \
 	| grep -v '^[0-9]'                     \
 	| grep -v '^RT'                        \

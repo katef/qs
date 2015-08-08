@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <signal.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -17,12 +18,12 @@
 #include "signal.h"
 #include "hook.h"
 
-struct signum {
+struct siglist {
 	const char *name;
-	int n;
+	int s;
 };
 
-#include "signum.h"
+#include "siglist.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -31,6 +32,34 @@ static int self[2]; /* SIGCHLD self pipe */
 static sigset_t ss_chld; /* SIGCHLD */
 
 static volatile sig_atomic_t sigintr;
+
+const char *
+signame(int s)
+{
+	size_t i;
+
+	for (i = 0; i < sizeof siglist; i++) {
+		if (siglist[i].s == s) {
+			return siglist[i].name;
+		}
+	}
+
+	return "?";
+}
+
+int
+signum(const char *name)
+{
+	size_t i;
+
+	for (i = 0; i < sizeof siglist; i++) {
+		if (0 == strcmp(siglist[i].name, name)) {
+			return siglist[i].s;
+		}
+	}
+
+	return 0;
+}
 
 static void
 sigchld(int s)

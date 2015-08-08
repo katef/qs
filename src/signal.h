@@ -3,6 +3,12 @@
 
 struct task;
 
+const char *
+signame(int s);
+
+int
+signum(const char *name);
+
 int
 ss_readfd(int fd, char **s, size_t *n);
 
