@@ -70,7 +70,10 @@ sigchld(int s)
 
 	assert(s == SIGCHLD);
 	assert(!sigintr);
-fprintf(stderr, "SIGCHLD!\n");
+
+	if (debug & DEBUG_SIG) {
+		fprintf(stderr, "%s!\n", signame(s));
+	}
 
 	(void) s;
 

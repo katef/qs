@@ -12,7 +12,8 @@ enum {
 	DEBUG_EVAL  = 1 <<  7,
 	DEBUG_EXEC  = 1 <<  8,
 	DEBUG_PROC  = 1 <<  9,
-	DEBUG_FD    = 1 << 10
+	DEBUG_SIG   = 1 << 10,
+	DEBUG_FD    = 1 << 11
 };
 
 struct pos {
