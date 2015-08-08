@@ -166,15 +166,15 @@ fail:
 }
 
 int
-ss_eval(int (*eval_main)(struct frame *, struct code *),
-	struct frame *top, struct code *code)
+ss_eval(int (*eval_main)(struct task **tasks),
+	struct task **tasks)
 {
 	struct sigaction sa, sa_old;
 	sigset_t ss_old;
 	int r;
 
 	assert(eval_main != NULL);
-	assert(top != NULL);
+	assert(tasks != NULL);
 
 	if (-1 == pipe(self)) {
 		perror("pipe");
@@ -208,7 +208,7 @@ ss_eval(int (*eval_main)(struct frame *, struct code *),
 		goto fail;
 	}
 
-	r = eval_main(top, code);
+	r = eval_main(tasks);
 	if (r == -1 && errno != 0) {
 		perror("eval");
 	}

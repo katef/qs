@@ -1,8 +1,10 @@
 #ifndef EVAL_H
 #define EVAL_H
 
+struct task;
+
 int
-eval(struct frame *top, struct code *code);
+eval(struct task **tasks);
 
 #endif
 

@@ -18,9 +18,11 @@
 #include "args.h"
 #include "eval.h"
 #include "pair.h"
+#include "task.h"
 
 unsigned debug;
 
+static struct task *tasks;
 static struct frame *top;
 
 static int
@@ -58,13 +60,17 @@ dispatch(struct code *code)
 	int r;
 	int e;
 
+	if (!task_add(&tasks, top, code)) {
+		return -1;
+	}
+
 	/*
 	 * The top frame is kept around even when the last task exits,
 	 * so that it can persist across multiple dispatches.
 	 */
 	(void) frame_refcount(top, +1);
 
-	r = eval(top, code);
+	r = eval(&tasks);
 	if (r == -1) {
 		e = errno;
 	}

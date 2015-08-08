@@ -21,8 +21,6 @@
 #include "signal.h"
 #include "task.h"
 
-static struct task *tasks;
-
 /* push .s=NULL to data */
 static int
 eval_null(struct data **data, const struct pos *pos)
@@ -53,12 +51,13 @@ eval_data(struct data **data, const struct pos *pos, const char *s)
 }
 
 static int
-eval_pipe(struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
+eval_pipe(struct task **tasks, struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
 {
 	struct data *lhs, *rhs;
 	const struct frame *f;
 	const struct pair *a;
 
+	assert(tasks != NULL);
 	assert(frame != NULL);
 	assert(pos != NULL);
 	assert(code != NULL);
@@ -129,7 +128,7 @@ only when we #run. for #tick we're in the same process and do not want to close(
 	{
 		struct task *new;
 
-		new = task_add(&tasks, frame, *code);
+		new = task_add(tasks, frame, *code);
 		if (new == NULL) {
 			goto error;
 		}
@@ -748,7 +747,7 @@ eval_ctck(struct frame *frame)
 }
 
 static int
-eval_task(struct task *task)
+eval_task(struct task **tasks, struct task *task)
 {
 	struct code *node;
 	int r;
@@ -773,7 +772,7 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 	switch (node->type) {
 	case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
 	case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
-	case CODE_PIPE: r = eval_pipe(task, task->frame, &node->pos, &node->u.code);                 break;
+	case CODE_PIPE: r = eval_pipe(tasks, task, task->frame, &node->pos, &node->u.code);          break;
 	case CODE_NOT:  r = eval_not ();                                                             break;
 	case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
 	case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
@@ -821,16 +820,12 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 }
 
 static int
-eval_main(struct frame *top, struct code *code)
+eval_main(struct task **tasks)
 {
 	struct task *t;
 	int r;
 
-	assert(top != NULL);
-
-	if (!task_add(&tasks, top, code)) {
-		goto error;
-	}
+	assert(tasks != NULL);
 
 	/*
 	 * Terminology: What blocking (and sleeping) mean
@@ -867,14 +862,14 @@ eval_main(struct frame *top, struct code *code)
 	 * block forever on read(2), with no child at the write end.
 	 */
 
-	t = tasks;
+	t = *tasks;
 
 	for (;;) {
 		if (debug & DEBUG_EVAL) {
 			fprintf(stderr, "== task %p ==\n", (void *) t);
 		}
 
-		r = eval_task(t);
+		r = eval_task(tasks, t);
 
 		if (r == -1 && errno != EINTR) {
 			goto error;
@@ -895,7 +890,7 @@ eval_main(struct frame *top, struct code *code)
 			 * want to depend on POSIX.2001 additions. So instead I'm happy
 			 * to ignore "stray child" signals for this situation.
 			 */
-			n = task_wait(&tasks, -1, WNOHANG);
+			n = task_wait(tasks, -1, WNOHANG);
 			if (n == -1) {
 				goto error;
 			}
@@ -926,14 +921,14 @@ TODO: stale comment
 		}
 
 		if (t->code == NULL && t->pid == -1) {
-			task_remove(&tasks, t);
+			task_remove(tasks, t);
 		}
 
-		if (tasks == NULL) {
+		if (*tasks == NULL) {
 			break;
 		}
 
-		t = task_next(tasks);
+		t = task_next(*tasks);
 
 		/*
 		 * When task_next() returns NULL, all tasks are sleeping on children.
@@ -941,11 +936,11 @@ TODO: stale comment
 		 * nothing else to do.
 		 */
 		if (t == NULL) {
-			if (-1 == task_wait(&tasks, -1, 0)) {
+			if (-1 == task_wait(tasks, -1, 0)) {
 				goto error;
 			}
 
-			t = tasks;
+			t = *tasks;
 		}
 
 		/*
@@ -958,7 +953,7 @@ TODO: stale comment
 	 * At this point there are no remaining tasks,
 	 * and therefore no children to wait for.
 	 */
-	assert(tasks == NULL);
+	assert(*tasks == NULL);
 
 	return 0;
 
@@ -971,8 +966,8 @@ error:
 
 		/* TODO: kill children? probably not. wait(2) for all? WNOHANG */
 
-		while (tasks != NULL) {
-			task_remove(&tasks, tasks);
+		while (*tasks != NULL) {
+			task_remove(tasks, *tasks);
 		}
 
 		errno = e;
@@ -982,10 +977,10 @@ error:
 }
 
 int
-eval(struct frame *top, struct code *code)
+eval(struct task **tasks)
 {
-	assert(top != NULL);
+	assert(tasks != NULL);
 
-	return ss_eval(eval_main, top, code);
+	return ss_eval(eval_main, tasks);
 }
 
