@@ -15,6 +15,7 @@
 #include "debug.h"
 #include "readfd.h"
 #include "signal.h"
+#include "hook.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
