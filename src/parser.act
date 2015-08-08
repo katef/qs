@@ -30,8 +30,6 @@
 	#include "code.h"
 	#include "frame.h"
 	#include "parser.h"
-	#include "pair.h"
-	#include "args.h"
 
 	struct act_string {
 		const char *s;
@@ -66,7 +64,7 @@
 	int
 	parse(struct lex_state *l,
 		int (*dispatch)(struct frame *, struct code *),
-		char *args[]);
+		struct frame *top);
 
 @};
 
@@ -209,50 +207,21 @@
 	int
 	parse(struct lex_state *lex_state,
 		int (*dispatch)(struct frame *, struct code *),
-		char *args[])
+		struct frame *top)
 	{
 		struct act_state a, *act_state = &a;
-		struct frame *q;
 
 		assert(lex_state != NULL);
 		assert(dispatch != NULL);
-		assert(args != NULL);
 
 		act_state->dispatch = dispatch;
-		act_state->top      = NULL;
-
-		if (!frame_push(&act_state->top)) {
-			return -1;
-		}
-
-		/*
-		 * The top frame is kept around even when the last task exits,
-		 * so that it can persist across multiple dispatches.
-		 */
-		(void) frame_refcount(act_state->top, +1);
-
-		if (-1 == set_args(&lex_state->pos, act_state->top, args)) {
-			/* TODO: free frame */
-			return -1;
-		}
-
-		if (!pair_push(&act_state->top->asc, STDOUT_FILENO, STDIN_FILENO)) {
-			/* TODO: free frame */
-			return -1;
-		}
-
-		lex_state->p = lex_state->buf;
+		act_state->top      = top;
+		lex_state->p        = lex_state->buf;
 
 		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
 
 		/* TODO: handle raising an error or ## */
 		p_script(lex_state, act_state);
-
-		(void) frame_refcount(act_state->top, -1);
-
-		q = frame_pop(&act_state->top);
-		frame_free(q);
-		assert(act_state->top == NULL);
 
 		return 0;
 	}

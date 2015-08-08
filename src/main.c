@@ -14,7 +14,9 @@
 #include "frame.h"
 #include "parser.h"
 #include "status.h"
+#include "args.h"
 #include "eval.h"
+#include "pair.h"
 
 unsigned debug;
 
@@ -78,9 +80,41 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
-	if (-1 == parse(&l, eval, argv)) {
-		perror("parse");
-		goto error;
+	{
+		struct frame *top, *q;
+
+		if (!frame_push(&top)) {
+			return 1;
+		}
+
+		/*
+		 * The top frame is kept around even when the last task exits,
+		 * so that it can persist across multiple dispatches.
+		 */
+		(void) frame_refcount(top, +1);
+
+		/* TODO: populate $^ here */
+
+		if (!pair_push(&top->asc, STDOUT_FILENO, STDIN_FILENO)) {
+			/* TODO: free frame */
+			goto error;
+		}
+
+		if (-1 == set_args(&l.pos, top, argv)) {
+			/* TODO: free frame */
+			goto error;
+		}
+
+		if (-1 == parse(&l, eval, top)) {
+			perror("parse");
+			goto error;
+		}
+
+		(void) frame_refcount(top, -1);
+
+		q = frame_pop(&top);
+		frame_free(q);
+		assert(top == NULL);
 	}
 
 	proc_exit(status.r);
