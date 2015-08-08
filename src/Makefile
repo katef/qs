@@ -47,6 +47,7 @@ siglist.h:
 	$(KILL) -l                             \
 	| grep -v '^[0-9]'                     \
 	| grep -v '^RT'                        \
+	| tr ' ' '\n'                          \
 	| sort                                 \
 	| while read s; do                     \
 	    l=`echo $$s | tr '[A-Z]' '[a-z]'`; \
