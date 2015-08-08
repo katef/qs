@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "debug.h"
 #include "lex.h"
@@ -19,6 +20,8 @@
 #include "pair.h"
 
 unsigned debug;
+
+static struct frame *top;
 
 static int
 debug_flags(const char *s)
@@ -47,6 +50,32 @@ debug_flags(const char *s)
 	}
 
 	return 0;
+}
+
+static int
+dispatch(struct code *code)
+{
+	int r;
+	int e;
+
+	/*
+	 * The top frame is kept around even when the last task exits,
+	 * so that it can persist across multiple dispatches.
+	 */
+	(void) frame_refcount(top, +1);
+
+	r = eval(top, code);
+	if (r == -1) {
+		e = errno;
+	}
+
+	(void) frame_refcount(top, -1);
+
+	if (r == -1) {
+		errno = e;
+	}
+
+	return r;
 }
 
 int
@@ -81,17 +110,11 @@ main(int argc, char *argv[])
 	}
 
 	{
-		struct frame *top, *q;
+		struct frame *q;
 
 		if (!frame_push(&top)) {
 			return 1;
 		}
-
-		/*
-		 * The top frame is kept around even when the last task exits,
-		 * so that it can persist across multiple dispatches.
-		 */
-		(void) frame_refcount(top, +1);
 
 		/* TODO: populate $^ here */
 
@@ -105,12 +128,10 @@ main(int argc, char *argv[])
 			goto error;
 		}
 
-		if (-1 == parse(&l, eval, top)) {
+		if (-1 == parse(&l, dispatch)) {
 			perror("parse");
 			goto error;
 		}
-
-		(void) frame_refcount(top, -1);
 
 		q = frame_pop(&top);
 		frame_free(q);

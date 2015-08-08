@@ -28,7 +28,6 @@
 	#include "debug.h"
 	#include "lex.h"
 	#include "code.h"
-	#include "frame.h"
 	#include "parser.h"
 
 	struct act_string {
@@ -39,8 +38,7 @@
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type type, save;
-		struct frame *top;
-		int (*dispatch)(struct frame *, struct code *);
+		int (*dispatch)(struct code *);
 	};
 
 	typedef struct act_string string;
@@ -63,8 +61,7 @@
 
 	int
 	parse(struct lex_state *l,
-		int (*dispatch)(struct frame *, struct code *),
-		struct frame *top);
+		int (*dispatch)(struct code *));
 
 @};
 
@@ -97,14 +94,12 @@
 %actions%
 
 	<dispatch>: (c :code &) -> () = @{
-		assert(act_state->top != NULL);
-
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<dispatch>: ");
 			code_dump(stderr, @c);
 		}
 
-		if (-1 == act_state->dispatch(act_state->top, @c)) {
+		if (-1 == act_state->dispatch(@c)) {
 			@!;
 		}
 	@};
@@ -206,8 +201,7 @@
 
 	int
 	parse(struct lex_state *lex_state,
-		int (*dispatch)(struct frame *, struct code *),
-		struct frame *top)
+		int (*dispatch)(struct code *))
 	{
 		struct act_state a, *act_state = &a;
 
@@ -215,7 +209,6 @@
 		assert(dispatch != NULL);
 
 		act_state->dispatch = dispatch;
-		act_state->top      = top;
 		lex_state->p        = lex_state->buf;
 
 		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
