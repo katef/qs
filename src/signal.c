@@ -39,7 +39,7 @@ signame(int s)
 {
 	size_t i;
 
-	for (i = 0; i < sizeof siglist; i++) {
+	for (i = 0; i < sizeof siglist / sizeof *siglist; i++) {
 		if (siglist[i].s == s) {
 			return siglist[i].name;
 		}
@@ -53,7 +53,7 @@ signum(const char *name)
 {
 	size_t i;
 
-	for (i = 0; i < sizeof siglist; i++) {
+	for (i = 0; i < sizeof siglist / sizeof *siglist; i++) {
 		if (0 == strcmp(siglist[i].name, name)) {
 			return siglist[i].s;
 		}
