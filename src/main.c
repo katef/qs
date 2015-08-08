@@ -115,6 +115,7 @@ main(int argc, char *argv[])
 
 	l.f = stdin;
 	l.pos.line = 0;
+	l.pos.col  = 0;
 
 	{
 		int c;
