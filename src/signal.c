@@ -1,4 +1,5 @@
 #define _POSIX_SOURCE
+#define _BSD_SOURCE
 
 #include <sys/time.h>
 #include <sys/types.h>
