@@ -43,7 +43,6 @@
 		enum lex_type type, save;
 		struct frame *top;
 		int (*dispatch)(struct frame *, struct code *);
-		char **args;
 	};
 
 	typedef struct act_string string;
@@ -101,16 +100,10 @@
 
 	<dispatch>: (c :code &) -> () = @{
 		assert(act_state->top != NULL);
-		assert(act_state->args != NULL);
 
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<dispatch>: ");
 			code_dump(stderr, @c);
-		}
-
-		if (-1 == set_args(&lex_state->pos, act_state->top, act_state->args)) {
-			code_free(@c);
-			@!;
 		}
 
 		if (-1 == act_state->dispatch(act_state->top, @c)) {
@@ -226,9 +219,7 @@
 		assert(args != NULL);
 
 		act_state->dispatch = dispatch;
-
-		act_state->args = args;
-		act_state->top  = NULL;
+		act_state->top      = NULL;
 
 		if (!frame_push(&act_state->top)) {
 			return -1;
@@ -239,6 +230,11 @@
 		 * so that it can persist across multiple dispatches.
 		 */
 		(void) frame_refcount(act_state->top, +1);
+
+		if (-1 == set_args(&lex_state->pos, act_state->top, args)) {
+			/* TODO: free frame */
+			return -1;
+		}
 
 		if (!pair_push(&act_state->top->asc, STDOUT_FILENO, STDIN_FILENO)) {
 			/* TODO: free frame */
