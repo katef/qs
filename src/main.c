@@ -20,6 +20,7 @@
 #include "hook.h"
 #include "pair.h"
 #include "task.h"
+#include "var.h"
 
 unsigned debug;
 
@@ -86,19 +87,34 @@ dispatch(struct code *code)
 }
 
 int
-hook(struct code *code)
+hook(const char *s)
 {
-	struct frame *f;
+	struct code *code;
 	struct task *new;
+	struct var *v;
 
-	f = top;
+	assert(0 == (strncmp)(s, "on", 2) || 0 == (strncmp)(s, "sig", 3));
 
-	if (!frame_push(&f)) {
-		return 1;
+	v = frame_get(top, strlen(s), s);
+	if (v == NULL) {
+		return 0;
 	}
 
-	new = task_add(&tasks, f, code);
+	code = NULL;
+
+	/* XXX: share guts with eval_anon */
+	if (debug & DEBUG_STACK) {
+		fprintf(stderr, "wind code from hook $%s: ", s);
+		code_dump(stderr, v->code);
+	}
+
+	if (-1 == code_wind(&code, v->code)) {
+		return -1;
+	}
+
+	new = task_add(&tasks, top, code);
 	if (new == NULL) {
+		/* TODO: free code */
 		return -1;
 	}
 
