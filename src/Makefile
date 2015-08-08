@@ -40,3 +40,18 @@ parser.c: parser.sid parser.act
 	$(SID) -l test parser.sid
 	$(SID) $(SID_CFLAGS) parser.sid parser.act parser.c parser.h
 
+signal.o: signum.h
+signum.h:
+	echo 'static const struct signum signum[] = {' > $@
+	kill -l                                \
+	| grep -v '^[0-9]'                     \
+	| grep -v '^RT'                        \
+	| sort                                 \
+	| while read s; do                     \
+	    l=`echo $$s | tr '[A-Z]' '[a-z]'`; \
+	    printf "\t{ %-12s %-9s },\n"       \
+	        '"'sig$$l'"', SIG$$s;          \
+	done                                   \
+	| sed '$$s/.$$//' >> $@
+	echo '};' >> $@
+

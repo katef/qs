@@ -17,6 +17,13 @@
 #include "signal.h"
 #include "hook.h"
 
+struct signum {
+	const char *name;
+	int n;
+};
+
+#include "signum.h"
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 static int self[2]; /* SIGCHLD self pipe */
