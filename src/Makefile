@@ -1,5 +1,6 @@
-SID ?= sid
-CC  ?= gcc
+SID  ?= sid
+CC   ?= gcc
+KILL ?= /bin/kill
 
 CFLAGS += -ansi -pedantic
 CFLAGS += -Wall -W
@@ -43,7 +44,7 @@ parser.c: parser.sid parser.act
 signal.o: siglist.h
 siglist.h:
 	echo 'static const struct siglist siglist[] = {' > $@
-	kill -l                                \
+	$(KILL) -l                             \
 	| grep -v '^[0-9]'                     \
 	| grep -v '^RT'                        \
 	| sort                                 \
