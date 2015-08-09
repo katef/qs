@@ -9,7 +9,7 @@
 	!error;
 	!panic;
 
-	eof;
+	!eof;
 	nl;
 	semi;
 	!bg;
@@ -29,8 +29,6 @@
 	var:  () -> (:string);
 
 %productions%
-
-	<dispatch>: (:code &) -> ();
 
 	<empty-code>: () -> (:code);
 
@@ -441,32 +439,21 @@
 		};
 	};
 
-	script [
-
-		global-expr-list = {
-			c = expr;
-			sep;
-
-			<dispatch>(&c);
-
-			{
-				global-expr-list;
-			||
-				$;
-			};
-		};
-
-	] = {
+	global-expr-list: () -> (c :code) = {
 		{
-			global-expr-list;
+			sep;
 		||
 			$;
 		};
 
-		eof;
+		{
+			c = expr;
+		||
+			c = <empty-code>;
+		};
 	};
 
 %entry%
 
-	script;
+	global-expr-list;
 

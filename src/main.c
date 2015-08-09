@@ -173,10 +173,25 @@ main(int argc, char *argv[])
 			goto error;
 		}
 
-		if (-1 == parse(&l, dispatch)) {
-			perror("parse");
-			goto error;
-		}
+		do {
+			struct code *code;
+
+			if (-1 == parse(&l, &code)) {
+				perror("parse");
+				goto error;
+			}
+
+			if (code == NULL) {
+				continue;
+			}
+
+			if (-1 == dispatch(code)) {
+				perror("dispatch");
+				goto error;
+			}
+
+			assert(code == NULL);
+		} while (!feof(l.f));
 
 		q = frame_pop(&top);
 		frame_free(q);
@@ -186,6 +201,8 @@ main(int argc, char *argv[])
 	proc_exit(status.r);
 
 error:
+
+	/* TODO: cleanup. maybe atexit */
 
 	proc_exit(1);
 
