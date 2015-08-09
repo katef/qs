@@ -242,7 +242,7 @@ ss_eval(int (*eval_main)(struct task **tasks),
 	}
 
 	if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, &ss_old)) {
-		perror("sigprocmask SIG_UNBLOCK");
+		perror("sigprocmask SIG_BLOCK");
 		goto fail;
 	}
 
