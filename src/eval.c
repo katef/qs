@@ -759,12 +759,7 @@ eval_task(struct task **tasks, struct task *task)
 	int r;
 
 	assert(task != NULL);
-
-	/*
-	 * The code list may be NULL if this task is waiting for a child, but has
-	 * nothing to execute after that.
-TODO: in which case, would it be okay to remove the task and consider the child a stray?
-	 */
+	assert(task->code != NULL);
 
 	if (debug & DEBUG_EVAL) {
 		fprintf(stderr, "code: "); code_dump(stderr, task->code);
@@ -926,7 +921,10 @@ TODO: stale comment
 			}
 		}
 
-		if (t->code == NULL && t->pid == -1) {
+		/*
+		 * If t->pid != -1, its child will now be considered stray.
+		 */
+		if (t->code == NULL) {
 			task_remove(tasks, t);
 		}
 
