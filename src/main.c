@@ -132,6 +132,7 @@ main(int argc, char *argv[])
 	/* TODO: alternative idea: provide a function pointer to fgets, and pass stdin as void * */
 
 	l.f = stdin;
+	l.p = NULL;
 	l.pos.line = 0;
 	l.pos.col  = 0;
 

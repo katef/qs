@@ -194,9 +194,12 @@
 		assert(lex_state != NULL);
 		assert(code != NULL);
 
-		lex_state->p = lex_state->buf;
+		/* XXX: ugly to conditionally initialise */
+		if (lex_state->p == NULL) {
+			lex_state->p = lex_state->buf;
 
-		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
+			ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
+		}
 
 		/* TODO: handle raising an error or ## */
 		p_global_Hexpr_Hlist(lex_state, act_state, code);
