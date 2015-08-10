@@ -64,29 +64,61 @@ signum(const char *name)
 	return 0;
 }
 
+/* signal handler for all signals */
 static void
-sigchld(int s)
+sighandle(int s)
 {
-	const char dummy = 'x';
+	unsigned char n;
 	int r;
 
-	assert(s == SIGCHLD);
+	assert(s != 0);
 	assert(!sigintr);
 
+	/* just for debugging */
 	if (debug & DEBUG_SIG) {
 		fprintf(stderr, "%s!\n", signame(s));
 	}
 
-	(void) s;
+	n = s;
 
 	sigintr = 1;
 
 	do {
-		r = write(self[1], &dummy, sizeof dummy);
+		r = write(self[1], &n, sizeof n);
 		if (r == -1 && errno != EINTR) {
 			abort();
 		}
 	} while (r != 1);
+}
+
+int
+sig_register(const char *name)
+{
+	int s;
+
+	assert(name != NULL);
+
+	s = signum(name);
+	if (s == 0) {
+		fprintf(stderr, "unrecognised signal: %s\n", name);
+		errno = ENOSYS;
+		return -1;
+	}
+
+	if (debug & DEBUG_SIG) {
+		fprintf(stderr, "registering for %s\n", name);
+	}
+
+	if (-1 == sigaction(s, &sa, NULL)) {
+		perror("sigaction");
+		goto fail;
+	}
+
+	return 0;
+
+fail:
+
+	abort();
 }
 
 int
@@ -146,18 +178,16 @@ ss_readfd(int fd, char **s, size_t *n)
 	 */
 
 	if (FD_ISSET(self[0], &fds)) {
-		char dummy;
+		unsigned char n;
 
 		do {
-			r = read(self[0], &dummy, sizeof dummy);
+			r = read(self[0], &n, sizeof n);
 		} while (r == 0);
 		if (r == -1) {
 			return -1;
 		}
 
-		assert(dummy == 'x');
-
-		if (-1 == hook("sigchld")) {
+		if (-1 == hook(signame(n))) {
 			return -1;
 		}
 
@@ -240,13 +270,15 @@ sig_init(void)
 		goto fail;
 	}
 
-	sa.sa_handler = sigchld;
+	sa.sa_handler = sighandle;
 	sa.sa_flags   = SA_NOCLDSTOP;
 
-	if (sigaction(SIGCHLD, &sa, &sa_old)) {
+	if (-1 == sig_register("sigchld")) {
 		perror("sigaction");
 		goto fail;
 	}
+
+	/* XXX: a non-SIGCHLD signal can be delivered here */
 
 	return 0;
 
@@ -261,6 +293,7 @@ sig_fini(void)
 	assert(self[0] != -1);
 	assert(self[1] != -1);
 
+	/* XXX: not just SIGCHLD */
 	if (sigaction(SIGCHLD, &sa_old, NULL)) {
 		perror("sigaction");
 		goto fail;
@@ -270,6 +303,8 @@ sig_fini(void)
 		perror("sigprocmask SIG_SETMASK");
 		goto fail;
 	}
+
+	/* TODO: read off unhandled signals from self pipe */
 
 	close(self[0]);
 	close(self[1]);

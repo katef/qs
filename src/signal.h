@@ -8,6 +8,9 @@ int
 signum(const char *name);
 
 int
+sig_register(const char *name);
+
+int
 ss_readfd(int fd, char **s, size_t *n);
 
 int

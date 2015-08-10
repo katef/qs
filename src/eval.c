@@ -569,6 +569,12 @@ eval_set(struct data **data,
 
 	a = data_pop(data);
 
+	if (0 == strncmp(a->s, "sig", 3)) {
+		if (-1 == sig_register(a->s)) {
+			return -1;
+		}
+	}
+
 	if (!frame_set(frame, strlen(a->s), a->s, *code)) {
 		errno = EINVAL;
 		return -1;
