@@ -801,10 +801,6 @@ eval_task(struct task **tasks, struct task *task)
 		return -1;
 	}
 
-	if (task->pid != -1) {
-		return 0;
-	}
-
 	if (task->code == NULL) {
 		if (debug & DEBUG_EVAL) {
 			fprintf(stderr, "eval out: ");
@@ -815,6 +811,10 @@ eval_task(struct task **tasks, struct task *task)
 			errno = EINVAL;
 			return -1;
 		}
+	}
+
+	if (task->pid != -1) {
+		return 0;
 	}
 
 	return 0;
