@@ -15,6 +15,7 @@
 #include "frame.h"
 #include "parser.h"
 #include "status.h"
+#include "signal.h"
 #include "args.h"
 #include "eval.h"
 #include "hook.h"
@@ -154,6 +155,10 @@ main(int argc, char *argv[])
 		argv += optind;
 	}
 
+	if (-1 == sig_init()) {
+		return 1;
+	}
+
 	{
 		struct frame *q;
 
@@ -177,7 +182,6 @@ main(int argc, char *argv[])
 			struct code *code;
 
 			if (-1 == parse(&l, &code)) {
-				perror("parse");
 				goto error;
 			}
 
@@ -196,6 +200,10 @@ main(int argc, char *argv[])
 		q = frame_pop(&top);
 		frame_free(q);
 		assert(top == NULL);
+	}
+
+	if (-1 == sig_fini()) {
+		return 1;
 	}
 
 	proc_exit(status.r);

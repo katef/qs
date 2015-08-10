@@ -31,6 +31,8 @@ struct siglist {
 static int self[2]; /* SIGCHLD self pipe */
 
 static sigset_t ss_chld; /* SIGCHLD */
+static sigset_t ss_old;
+static struct sigaction sa, sa_old;
 
 static volatile sig_atomic_t sigintr;
 
@@ -212,16 +214,8 @@ fail:
 }
 
 int
-ss_eval(int (*eval_main)(struct task **tasks),
-	struct task **tasks)
+sig_init(void)
 {
-	struct sigaction sa, sa_old;
-	sigset_t ss_old;
-	int r;
-
-	assert(eval_main != NULL);
-	assert(tasks != NULL);
-
 	if (-1 == pipe(self)) {
 		perror("pipe");
 		return -1;
@@ -254,10 +248,18 @@ ss_eval(int (*eval_main)(struct task **tasks),
 		goto fail;
 	}
 
-	r = eval_main(tasks);
-	if (r == -1 && errno != 0) {
-		perror("eval");
-	}
+	return 0;
+
+fail:
+
+	abort();
+}
+
+int
+sig_fini(void)
+{
+	assert(self[0] != -1);
+	assert(self[1] != -1);
 
 	if (sigaction(SIGCHLD, &sa_old, NULL)) {
 		perror("sigaction");
@@ -272,7 +274,7 @@ ss_eval(int (*eval_main)(struct task **tasks),
 	close(self[0]);
 	close(self[1]);
 
-	return r;
+	return 0;
 
 fail:
 

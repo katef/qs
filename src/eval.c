@@ -819,8 +819,8 @@ TODO: in which case, would it be okay to remove the task and consider the child 
 	return 0;
 }
 
-static int
-eval_main(struct task **tasks)
+int
+eval(struct task **tasks)
 {
 	struct task *t;
 	int r;
@@ -974,13 +974,5 @@ error:
 	}
 
 	return -1;
-}
-
-int
-eval(struct task **tasks)
-{
-	assert(tasks != NULL);
-
-	return ss_eval(eval_main, tasks);
 }
 
