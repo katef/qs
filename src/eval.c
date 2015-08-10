@@ -759,11 +759,21 @@ eval_task(struct task **tasks, struct task *task)
 	int r;
 
 	assert(task != NULL);
-	assert(task->code != NULL);
 
 	if (debug & DEBUG_EVAL) {
 		fprintf(stderr, "code: "); code_dump(stderr, task->code);
 		fprintf(stderr, "data: "); data_dump(stderr, task->data);
+	}
+
+	/*
+	 * The code list may be NULL if this task was waiting for a child, but has
+	 * nothing to execute after that. Its data stack will already have been
+	 * checked to be NULL before sleeping, on the previous call to task_eval.
+	 */
+	if (task->code == NULL) {
+		assert(task->data == NULL);
+		assert(task->pid == -1);
+		return 0;
 	}
 
 	node = code_pop(&task->code);
@@ -921,10 +931,7 @@ TODO: stale comment
 			}
 		}
 
-		/*
-		 * If t->pid != -1, its child will now be considered stray.
-		 */
-		if (t->code == NULL) {
+		if (t->code == NULL && t->pid == -1) {
 			task_remove(tasks, t);
 		}
 
