@@ -193,8 +193,6 @@ main(int argc, char *argv[])
 				perror("dispatch");
 				goto error;
 			}
-
-			assert(code == NULL);
 		} while (!feof(l.f));
 
 		q = frame_pop(&top);
