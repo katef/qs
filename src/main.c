@@ -64,6 +64,10 @@ dispatch(struct code *code)
 	int r;
 	int e;
 
+	if (code == NULL) {
+		return 0;
+	}
+
 	if (!task_add(&tasks, top, code)) {
 		return -1;
 	}
@@ -184,10 +188,6 @@ main(int argc, char *argv[])
 
 			if (-1 == parse(&l, &code)) {
 				goto error;
-			}
-
-			if (code == NULL) {
-				continue;
 			}
 
 			if (-1 == dispatch(code)) {
