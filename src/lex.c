@@ -147,9 +147,18 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 
 			fprintf(stderr, "underflow; panic\n");
 
+			if (debug & DEBUG_LEX) {
+				fprintf(stderr, "<panic %lu:%lu .. %lu:%lu>\n",
+					l->pos.line, l->pos.col,
+					l->pos.line + 1, 1UL);
+			}
+
 			while (c = fgetc(l->f), c != EOF && c != '\n')
 				;
 
+			/* TODO: handle EOF error; lex_panic first, then lex_eof */
+
+			l->pos.col = 1;
 			l->pos.line++;
 
 			t->type = tok_panic;
