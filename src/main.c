@@ -198,18 +198,9 @@ main(int argc, char *argv[])
 			goto error;
 		}
 
-		do {
-			struct code *code;
-
-			if (-1 == parse(&l, &code)) {
-				goto error;
-			}
-
-			if (-1 == dispatch(code)) {
-				perror("dispatch");
-				goto error;
-			}
-		} while (!feof(l.f));
+		if (-1 == parse(&l, dispatch)) {
+			goto error;
+		}
 
 		q = frame_pop(&top);
 		frame_free(q);

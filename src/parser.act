@@ -38,10 +38,12 @@
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type type, save;
+		int (*dispatch)(struct code *);
 	};
 
 	typedef struct act_string string;
 	typedef enum code_type type;
+	typedef struct code *code;
 
 	#define CURRENT_TERMINAL act_state->type
 	#define ERROR_TERMINAL   tok_error
@@ -56,10 +58,10 @@
 
 	typedef struct lex_state * lex_state;
 	typedef struct act_state * act_state;
-	typedef struct code *code;
 
 	int
-	parse(struct lex_state *l, struct code **code);
+	parse(struct lex_state *l,
+		int (*dispatch)(struct code *));
 
 @};
 
@@ -90,6 +92,17 @@
 	@};
 
 %actions%
+
+	<dispatch>: (c :code &) -> () = @{
+		if (debug & DEBUG_ACT) {
+			fprintf(stderr, "<dispatch>: ");
+			code_dump(stderr, @c);
+		}
+
+		if (-1 == act_state->dispatch(@c)) {
+			@!;
+		}
+	@};
 
 	<empty-code>: () -> (c :code) = @{
 		@c = NULL;
@@ -187,22 +200,21 @@
 %trailer% @{
 
 	int
-	parse(struct lex_state *lex_state, struct code **code)
+	parse(struct lex_state *lex_state,
+		int (*dispatch)(struct code *))
 	{
 		struct act_state a, *act_state = &a;
 
 		assert(lex_state != NULL);
-		assert(code != NULL);
+		assert(dispatch != NULL);
 
-		/* XXX: ugly to conditionally initialise */
-		if (lex_state->p == NULL) {
-			lex_state->p = lex_state->buf;
+		act_state->dispatch = dispatch;
+		lex_state->p = lex_state->buf;
 
-			ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
-		}
+		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
 
 		/* TODO: handle raising an error or ## */
-		p_global_Hexpr_Hlist(lex_state, act_state, code);
+		p_script(lex_state, act_state);
 
 		return 0;
 	}
