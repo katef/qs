@@ -231,18 +231,13 @@
 		@=c = @ci;
 	@};
 
-	<err-expected-sep>: () -> () = @{
+	<err-expected-sep> = @{
 		err_syntax(lex_state, "{ '\\n' | ';' | '&' }");
 		@!;
 	@};
 
-	<err-syntax>: (c :code) -> () = @{
+	<err-syntax> = @{
 		err_syntax(lex_state, NULL);
-		fprintf(stderr, "syntax error\n");
-		/* TODO:
-		fprintf(stderr, "syntax error at: ");
-		code_dump(stderr, @c);
-		*/
 		@!;
 	@};
 

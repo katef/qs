@@ -63,7 +63,7 @@
 	<code-wind>: (:code &, :code)        -> ();
 
 	<err-expected-sep>;
-	<err-syntax>: (:code) -> ();
+	<err-syntax>;
 
 	block:     () -> (:code);
 	expr-list: () -> (:code);
@@ -421,7 +421,7 @@
 			c = or-expr;
 		##
 			c = <empty-code>;
-			<err-syntax>(c);
+			<err-syntax>;
 		};
 
 	] = {
