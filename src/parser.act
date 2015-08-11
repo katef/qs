@@ -52,6 +52,54 @@
 	#define SAVE_LEXER(tok)  act_state->save = tok;
 	#define RESTORE_LEXER    act_state->type = act_state->save;
 
+	static void
+	err_syntax(const struct lex_state *lex_state,
+		const char *expected)
+	{
+		assert(lex_state != NULL);
+
+		fprintf(stderr, "syntax error: ");
+
+		if (expected != NULL) {
+			fprintf(stderr, "expected %s", expected);
+		}
+
+		fprintf(stderr, "\n");
+
+		/*
+		 * The lexer's buffer is a line at a time. Here we assume that the
+		 * start of the buffer is always the start of a line, and so pos.col
+		 * gives the start of the unexpected token.
+		 *
+		 * For a block-at-a-time lexer, I would prefix "..." if the buffer
+		 * were not at the start of a line.
+		 */
+
+		/* TODO: conditionally on DEBUG_SRC (default to true) */
+		{
+			size_t i;
+			int r;
+
+			r = fprintf(stderr, "at %lu:%lu: ", lex_state->pos.line, lex_state->pos.col);
+			if (r < 0) {
+				perror("fprintf");
+				return;
+			}
+
+			fprintf(stderr, "%.*s\n", (int) strcspn(lex_state->buf, "\n"), lex_state->buf);
+
+			for (i = 0; (int) i < r; i++) {
+				fprintf(stderr, "-");
+			}
+
+			for (i = 1; i < lex_state->pos.col; i++) {
+				fprintf(stderr, "-");
+			}
+
+			fprintf(stderr, "^\n");
+		}
+	}
+
 @}, @{
 
 	#include <stdio.h>
@@ -184,11 +232,12 @@
 	@};
 
 	<err-expected-sep>: () -> () = @{
-		fprintf(stderr, "syntax error: expected { '\\n' | ';' | '&' }\n");
+		err_syntax(lex_state, "{ '\\n' | ';' | '&' }");
 		@!;
 	@};
 
 	<err-syntax>: (c :code) -> () = @{
+		err_syntax(lex_state, NULL);
 		fprintf(stderr, "syntax error\n");
 		/* TODO:
 		fprintf(stderr, "syntax error at: ");
