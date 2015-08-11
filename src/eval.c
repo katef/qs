@@ -454,7 +454,7 @@ eval_tick(struct code **next, struct data **data,
 	 * Then the evaluator will re-enter #tick to read EOF.
 	 */
 	do {
-		r = ss_readfd(in, &ts->s, &ts->l);
+		r = ss_readbuf(in, &ts->s, &ts->l);
 	} while (r > 0);
 
 	if (r == -1 && errno == EINTR) {

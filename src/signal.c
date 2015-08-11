@@ -15,7 +15,7 @@
 #include <errno.h>
 
 #include "debug.h"
-#include "readfd.h"
+#include "readbuf.h"
 #include "signal.h"
 #include "hook.h"
 
@@ -122,7 +122,7 @@ fail:
 }
 
 int
-ss_readfd(int fd, char **s, size_t *n)
+ss_readbuf(int fd, char **s, size_t *n)
 {
 	fd_set fds;
 	int max;
@@ -202,7 +202,7 @@ ss_readfd(int fd, char **s, size_t *n)
 			goto fail;
 		}
 
-		r = readfd(fd, s, n);
+		r = readbuf(fd, s, n);
 
 		if (-1 == sigprocmask(SIG_BLOCK, &ss_chld, NULL)) {
 			perror("sigprocmask SIG_BLOCK");

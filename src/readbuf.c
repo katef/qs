@@ -10,10 +10,10 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "readfd.h"
+#include "readbuf.h"
 
 int
-readfd(int fd, char **s, size_t *n)
+readbuf(int fd, char **s, size_t *n)
 {
 	ssize_t r;
 	size_t l;
