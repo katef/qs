@@ -52,10 +52,10 @@
 	#define RESTORE_LEXER    act_state->t.type = act_state->save;
 
 	static void
-	err_syntax(const struct lex_state *lex_state,
-		const char *msg)
+	err_syntax(const char *buf, const struct pos *pos, const char *msg)
 	{
-		assert(lex_state != NULL);
+		assert(buf != NULL);
+		assert(pos != NULL);
 
 		fprintf(stderr, "syntax error: ");
 
@@ -74,24 +74,25 @@
 		 * were not at the start of a line.
 		 */
 
-		/* TODO: conditionally on DEBUG_SRC (default to true) */
+		/* TODO: conditionally on DEBUG_SRC (default to true) and buf != NULL */
+		/* TODO: also position conditionally on pos != NULL */
 		{
 			size_t i;
 			int r;
 
-			r = fprintf(stderr, "at %lu:%lu: ", lex_state->pos.line, lex_state->pos.col);
+			r = fprintf(stderr, "at %lu:%lu: ", pos->line, pos->col);
 			if (r < 0) {
 				perror("fprintf");
 				return;
 			}
 
-			fprintf(stderr, "%.*s\n", (int) strcspn(lex_state->buf, "\n"), lex_state->buf);
+			fprintf(stderr, "%.*s\n", (int) strcspn(buf, "\n"), buf);
 
 			for (i = 0; (int) i < r; i++) {
 				fprintf(stderr, "-");
 			}
 
-			for (i = 1; i < lex_state->pos.col; i++) {
+			for (i = 1; i < pos->col; i++) {
 				fprintf(stderr, "-");
 			}
 
@@ -231,12 +232,12 @@
 	@};
 
 	<err-expected-sep> = @{
-		err_syntax(lex_state, "expected { '\\n' | ';' | '&' }");
+		err_syntax(lex_state->buf, &act_state->t.pos, "expected { '\\n' | ';' | '&' }");
 		@!;
 	@};
 
 	<err-syntax> = @{
-		err_syntax(lex_state, NULL);
+		err_syntax(lex_state->buf, &act_state->t.pos, NULL);
 		@!;
 	@};
 
