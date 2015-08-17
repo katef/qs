@@ -4,6 +4,7 @@
 	type;
 	code;
 	mark;
+	rule;
 
 %terminals%
 
@@ -63,7 +64,11 @@
 	<code-push>: (:code &, :type)        -> ();
 	<code-wind>: (:code &, :code)        -> ();
 
-	<err-expected-sep>;
+	<expected-sep>:   () -> (:rule);
+	<expected-pair>:  () -> (:rule);
+	<expected-value>: () -> (:rule);
+
+	<err-expected>:  (:rule)   -> ();
 	<err-unmatched>: (:mark &) -> ();
 	<err-syntax>;
 
@@ -193,6 +198,10 @@
 			c = item;
 		||
 			c = block;
+		##
+			c = <empty-code>;
+			r = <expected-value>;
+			<err-expected>(r);
 		};
 
 	] = {
@@ -314,6 +323,10 @@
 
 			t1 = <type-null>;
 			<code-push>(&c, t1);
+		##
+			c = <empty-code>;
+			r = <expected-pair>;
+			<err-expected>(r);
 		};
 
 		pair-box: () -> (c :code) = {
@@ -430,7 +443,8 @@
 		||
 			semi;
 		##
-			<err-expected-sep>;
+			r = <expected-sep>;
+			<err-expected>(r);
 		};
 
 		::expr: () -> (c :code) = {

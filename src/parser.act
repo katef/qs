@@ -14,6 +14,7 @@
 	type   -> type;
 	code   -> code;
 	mark   -> mark;
+	rule   -> rule;
 
 %header% @{
 
@@ -55,6 +56,7 @@
 	typedef enum code_type type;
 	typedef struct code *code;
 	typedef struct act_mark mark;
+	typedef const char * rule;
 
 	#define CURRENT_TERMINAL act_state->t.type
 	#define ERROR_TERMINAL   tok_error
@@ -264,8 +266,13 @@
 		@=c = @ci;
 	@};
 
-	<err-expected-sep> = @{
-		err_syntax(lex_state->buf, &act_state->t.pos, "expected %s", "{ '\\n' | ';' | '&' }");
+	<expected-sep>:   () -> (r :rule) = @{ @r = "'\\n' | ';' | '&'"; @};
+	<expected-pair>:  () -> (r :rule) = @{ @r = "m '=' n | m '=' | m | x '|' y"; @};
+	<expected-value>: () -> (r :rule) = @{ @r = "$var | word | `word | `{ ... } | { ... } | ( ... )"; @};
+
+	<err-expected>: (r :rule) -> () = @{
+		assert(@r != NULL);
+		err_syntax(lex_state->buf, &act_state->t.pos, "expected %s", @r);
 		@!;
 	@};
 
