@@ -25,6 +25,8 @@ enum lex_type {
 	tok_exec    = 'e'
 };
 
+typedef char lex_buf[4096];
+
 struct lex_tok {
 	enum lex_type type;
 	struct pos pos;
@@ -33,7 +35,7 @@ struct lex_tok {
 };
 
 struct lex_state {
-	char buf[4096];
+	lex_buf buf;
 	const char *p;
 	FILE *f;
 	struct pos pos;

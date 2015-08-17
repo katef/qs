@@ -13,6 +13,7 @@
 	string -> string;
 	type   -> type;
 	code   -> code;
+	mark   -> mark;
 
 %header% @{
 
@@ -22,6 +23,7 @@
 	#include <stdarg.h>
 	#include <stdlib.h>
 	#include <stdio.h>
+	#include <ctype.h>
 	#include <errno.h>
 
 	#include <unistd.h>
@@ -36,15 +38,23 @@
 		const char *e;
 	};
 
+	struct act_mark {
+		lex_buf buf; /* XXX: large; i don't like passing this around in automatic storage */
+		struct pos pos;
+		enum lex_type type;
+	};
+
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type save;
+		struct act_mark mark;
 		int (*dispatch)(struct code *);
 	};
 
 	typedef struct act_string string;
 	typedef enum code_type type;
 	typedef struct code *code;
+	typedef struct act_mark mark;
 
 	#define CURRENT_TERMINAL act_state->t.type
 	#define ERROR_TERMINAL   tok_error
@@ -144,6 +154,24 @@
 		}
 	@};
 
+	obrace: () -> (m :mark) = @{
+		strcpy(@m.buf, lex_state->buf);
+		@m.pos  = act_state->t.pos;
+		@m.type = act_state->t.type;
+	@};
+
+	oparen: () -> (m :mark) = @{
+		strcpy(@m.buf, lex_state->buf);
+		@m.pos  = act_state->t.pos;
+		@m.type = act_state->t.type;
+	@};
+
+	osquare: () -> (m :mark) = @{
+		strcpy(@m.buf, lex_state->buf);
+		@m.pos  = act_state->t.pos;
+		@m.type = act_state->t.type;
+	@};
+
 %actions%
 
 	<dispatch>: (c :code &) -> () = @{
@@ -238,6 +266,12 @@
 
 	<err-expected-sep> = @{
 		err_syntax(lex_state->buf, &act_state->t.pos, "expected %s", "{ '\\n' | ';' | '&' }");
+		@!;
+	@};
+
+	<err-unmatched>: (m :mark &) -> () = @{
+		assert((isprint)(@&m->type));
+		err_syntax(@&m->buf, &@&m->pos, "unmatched '%c'", (unsigned char) @&m->type);
 		@!;
 	@};
 

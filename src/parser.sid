@@ -3,6 +3,7 @@
 	string;
 	type;
 	code;
+	mark;
 
 %terminals%
 
@@ -18,9 +19,9 @@
 	!dot;
 	tick;
 	bar;
-	obrace;  cbrace;
-	oparen;  cparen;
-	osquare; csquare;
+	obrace:  () -> (:mark); cbrace;
+	oparen:  () -> (:mark); cparen;
+	osquare: () -> (:mark); csquare;
 	or;
 	and;
 	!exec;
@@ -63,6 +64,7 @@
 	<code-wind>: (:code &, :code)        -> ();
 
 	<err-expected-sep>;
+	<err-unmatched>: (:mark &) -> ();
 	<err-syntax>;
 
 	block:     () -> (:code);
@@ -180,9 +182,13 @@
 	assign-expr: () -> (c :code) [
 
 		value: () -> (c :code) = {
-			oparen;
+			m = oparen;
 			c = list;
-			cparen;
+			{
+				cparen;
+			##
+				<err-unmatched>(&m);
+			};
 		||
 			c = item;
 		||
@@ -203,13 +209,19 @@
 	};
 
 	block: () -> (c :code) = {
-		obrace;
+		m = obrace;
+
 		{
 			c = expr-list;
 		||
 			c = <empty-code>;
 		};
-		cbrace;
+
+		{
+			cbrace;
+		##
+			<err-unmatched>(&m);
+		};
 	};
 
 	command: () -> (c :code) = {
@@ -305,9 +317,13 @@
 		};
 
 		pair-box: () -> (c :code) = {
-			osquare;
+			m = osquare;
 			dx = pair-list;
-			csquare;
+			{
+				csquare;
+			##
+				<err-unmatched>(&m);
+			};
 
 			c = <empty-code>;
 
