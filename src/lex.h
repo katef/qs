@@ -27,6 +27,7 @@ enum lex_type {
 
 struct lex_tok {
 	enum lex_type type;
+	struct pos pos;
 	const char *s;
 	const char *e;
 };

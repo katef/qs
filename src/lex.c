@@ -129,11 +129,13 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 				perror("fgets");
 
 				t->type = tok_error;
+				t->pos  = l->pos;
 
 				return;
 			}
 
 			t->type = tok_eof;
+			t->pos  = l->pos;
 
 			return;
 		}
@@ -162,6 +164,7 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 			l->pos.line++;
 
 			t->type = tok_panic;
+			t->pos  = l->pos;
 
 			return;
 		}
@@ -172,6 +175,8 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 	t->type = lex_push(&l->p, &t->s, &t->e);
 
 	l->pos.col = t->s - l->buf + 1;
+
+	t->pos  = l->pos;
 
 	if (debug & DEBUG_LEX) {
 		const char *name;
@@ -185,7 +190,7 @@ lex_next(struct lex_state *l, struct lex_tok *t)
 		}
 
 		fprintf(stderr, "<%s%lu:%lu \"%.*s\">\n",
-			name, l->pos.line, l->pos.col,
+			name, t->pos.line, t->pos.col,
 			(int) (t->e - t->s), t->s);
 	}
 }
