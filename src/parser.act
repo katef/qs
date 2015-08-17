@@ -37,7 +37,7 @@
 
 	struct act_state {
 		struct lex_tok t;
-		enum lex_type type, save;
+		enum lex_type save;
 		int (*dispatch)(struct code *);
 	};
 
@@ -45,12 +45,11 @@
 	typedef enum code_type type;
 	typedef struct code *code;
 
-	#define CURRENT_TERMINAL act_state->type
+	#define CURRENT_TERMINAL act_state->t.type
 	#define ERROR_TERMINAL   tok_error
-	#define ADVANCE_LEXER    lex_next(lex_state, &act_state->t); \
-							 act_state->type = act_state->t.type;
-	#define SAVE_LEXER(tok)  act_state->save = tok;
-	#define RESTORE_LEXER    act_state->type = act_state->save;
+	#define ADVANCE_LEXER    lex_next(lex_state, &act_state->t);
+	#define SAVE_LEXER(type) act_state->save   = type;
+	#define RESTORE_LEXER    act_state->t.type = act_state->save;
 
 	static void
 	err_syntax(const struct lex_state *lex_state,
