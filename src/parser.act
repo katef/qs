@@ -19,6 +19,7 @@
 	#include <assert.h>
 	#include <limits.h>
 	#include <string.h>
+	#include <stdarg.h>
 	#include <stdlib.h>
 	#include <stdio.h>
 	#include <errno.h>
@@ -52,15 +53,19 @@
 	#define RESTORE_LEXER    act_state->t.type = act_state->save;
 
 	static void
-	err_syntax(const char *buf, const struct pos *pos, const char *msg)
+	err_syntax(const char *buf, const struct pos *pos, const char *fmt, ...)
 	{
 		assert(buf != NULL);
 		assert(pos != NULL);
 
 		fprintf(stderr, "syntax error: ");
 
-		if (msg != NULL) {
-			fprintf(stderr, "%s", msg);
+		if (fmt != NULL) {
+			va_list ap;
+
+			va_start(ap, fmt);
+			vfprintf(stderr, fmt, ap);
+			va_end(ap);
 		}
 
 		fprintf(stderr, "\n");
@@ -232,7 +237,7 @@
 	@};
 
 	<err-expected-sep> = @{
-		err_syntax(lex_state->buf, &act_state->t.pos, "expected { '\\n' | ';' | '&' }");
+		err_syntax(lex_state->buf, &act_state->t.pos, "expected %s", "{ '\\n' | ';' | '&' }");
 		@!;
 	@};
 
