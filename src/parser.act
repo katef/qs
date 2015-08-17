@@ -54,14 +54,14 @@
 
 	static void
 	err_syntax(const struct lex_state *lex_state,
-		const char *expected)
+		const char *msg)
 	{
 		assert(lex_state != NULL);
 
 		fprintf(stderr, "syntax error: ");
 
-		if (expected != NULL) {
-			fprintf(stderr, "expected %s", expected);
+		if (msg != NULL) {
+			fprintf(stderr, "%s", msg);
 		}
 
 		fprintf(stderr, "\n");
@@ -232,7 +232,7 @@
 	@};
 
 	<err-expected-sep> = @{
-		err_syntax(lex_state, "{ '\\n' | ';' | '&' }");
+		err_syntax(lex_state, "expected { '\\n' | ';' | '&' }");
 		@!;
 	@};
 
