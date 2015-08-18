@@ -34,6 +34,12 @@
 	#include "code.h"
 	#include "parser.h"
 
+	enum err_state {
+		ERR_NONE,
+		ERR_SYNTAX,
+		ERR_ERRNO
+	};
+
 	struct act_string {
 		const char *s;
 		const char *e;
@@ -49,6 +55,7 @@
 		struct lex_tok t;
 		enum lex_type save;
 		struct act_mark mark;
+		enum err_state e;
 		int (*dispatch)(struct code *);
 	};
 
@@ -65,7 +72,8 @@
 	#define RESTORE_LEXER    act_state->t.type = act_state->save;
 
 	static void
-	err_syntax(const char *buf, const struct pos *pos, const char *fmt, ...)
+	err_syntax(const char *buf, const struct pos *pos,
+		const char *fmt, ...)
 	{
 		assert(buf != NULL);
 		assert(pos != NULL);
@@ -272,19 +280,31 @@
 
 	<err-expected>: (r :rule) -> () = @{
 		assert(@r != NULL);
-		err_syntax(lex_state->buf, &act_state->t.pos, "expected %s", @r);
-		@!;
+
+		if (act_state->e == ERR_NONE) {
+			err_syntax(lex_state->buf, &act_state->t.pos, "expected %s", @r);
+			act_state->e = ERR_SYNTAX;
+		}
 	@};
 
 	<err-unmatched>: (m :mark &) -> () = @{
 		assert((isprint)(@&m->type));
-		err_syntax(@&m->buf, &@&m->pos, "unmatched '%c'", (unsigned char) @&m->type);
-		@!;
+
+		if (act_state->e == ERR_NONE) {
+			err_syntax(@&m->buf, &@&m->pos, "unmatched '%c'", (unsigned char) @&m->type);
+			act_state->e = ERR_SYNTAX;
+		}
 	@};
 
 	<err-syntax> = @{
-		err_syntax(lex_state->buf, &act_state->t.pos, NULL);
-		@!;
+		if (act_state->e == ERR_NONE) {
+			err_syntax(lex_state->buf, &act_state->t.pos, NULL);
+			act_state->e = ERR_SYNTAX;
+		}
+
+		if (act_state->e == ERR_ERRNO) {
+			@!;
+		}
 	@};
 
 %trailer% @{
@@ -301,10 +321,40 @@
 		act_state->dispatch = dispatch;
 		lex_state->p = lex_state->buf;
 
-		ADVANCE_LEXER;  /* XXX: what if the first token is unrecognised? */
+		do {
+			act_state->e = ERR_NONE;
 
-		/* TODO: handle raising an error or ## */
-		p_script(lex_state, act_state);
+			ADVANCE_LEXER;
+
+			p_script(lex_state, act_state);
+			if (CURRENT_TERMINAL == @$error) {
+				/* lexer error (e.g. fgets failing) */
+				return -1;
+			}
+
+			if (act_state->e == ERR_ERRNO) {
+				/* dispatch error */
+				return -1;
+			}
+
+			if (act_state->e == ERR_SYNTAX) {
+				if (debug & DEBUG_ACT) {
+					fprintf(stderr, "<panic mode> ...\n");
+				}
+
+				/* panic mode */
+				while (CURRENT_TERMINAL != @$semi && CURRENT_TERMINAL != @$nl) {
+					ADVANCE_LEXER;
+					if (CURRENT_TERMINAL == @$error) {
+						return -1;
+					}
+				}
+
+				if (debug & DEBUG_ACT) {
+					fprintf(stderr, "... <end panic>\n");
+				}
+			}
+		} while (act_state->e == ERR_SYNTAX);
 
 		return 0;
 	}
