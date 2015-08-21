@@ -1,50 +1,38 @@
-SID  ?= sid
-CC   ?= gcc
-KILL ?= /bin/kill
+.include "../share/mk/top.mk"
 
-CFLAGS += -ansi -pedantic
-CFLAGS += -Wall -W
-#CFLAGS += -Werror
-CFLAGS += -Og -g -ggdb
+SRC += src/dup.c
+SRC += src/lex.c
+SRC += src/parser.c
+SRC += src/main.c
+SRC += src/var.c
+SRC += src/frame.c
+SRC += src/code.c
+SRC += src/data.c
+SRC += src/readbuf.c
+SRC += src/eval.c
+SRC += src/args.c
+SRC += src/pair.c
+SRC += src/proc.c
+SRC += src/status.c
+SRC += src/builtin.c
+SRC += src/signal.c
+SRC += src/task.c
 
-SID_CFLAGS += -s no-numeric-terminals -s no-terminals
+PARSER += src/parser.sid
 
-OBJS += dup.o
-OBJS += lex.o
-OBJS += parser.o
-OBJS += main.o
-OBJS += var.o
-OBJS += frame.o
-OBJS += code.o
-OBJS += data.o
-OBJS += readbuf.o
-OBJS += eval.o
-OBJS += args.o
-OBJS += pair.o
-OBJS += proc.o
-OBJS += status.o
-OBJS += builtin.o
-OBJS += signal.o
-OBJS += task.o
+PROG += qs
 
-qs: $(OBJS)
-	$(CC) -o $@ $>
+INCDIR_src/signal.c += ${BUILD}/src
 
-.c.o:
-	$(CC) $(CFLAGS) -o $@ -c $<
+.for src in ${SRC:Msrc/*.c}
+${BUILD}/bin/qs: ${BUILD}/${src:R}.o
+.endfor
 
-clean:
-	rm -f $(OBJS) qs
-
-parser.h: parser.sid parser.act
-parser.c: parser.sid parser.act
-	$(SID) -l test parser.sid
-	$(SID) $(SID_CFLAGS) parser.sid parser.act parser.c parser.h
-
-signal.o: siglist.h
-siglist.h:
+# not committed, because it's specific to your system
+${BUILD}/src/signal.o: ${BUILD}/src/siglist.h
+${BUILD}/src/siglist.h:
 	echo 'static const struct siglist siglist[] = {' > $@
-	$(KILL) -l                             \
+	${KILL} -l                             \
 	| grep -v '^[0-9]'                     \
 	| grep -v '^RT'                        \
 	| tr ' ' '\n'                          \
