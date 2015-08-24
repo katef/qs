@@ -1,7 +1,7 @@
 %types%
 
 	string;
-	type;
+	opcode;
 	code;
 	mark;
 	rule;
@@ -42,29 +42,29 @@
 	!<stdout>:() -> (:string);
 	!<stderr>:() -> (:string);
 
-	<type-call>: () -> (:type);
-	!<type-join>:() -> (:type);
-	<type-not>:  () -> (:type);
-	<type-null>: () -> (:type);
-	<type-run>:  () -> (:type);
-	<type-push>: () -> (:type);
-	<type-pop>:  () -> (:type);
-	<type-clhs>: () -> (:type);
-	<type-crhs>: () -> (:type);
-	<type-ctck>: () -> (:type);
+	<op-call>: () -> (:opcode);
+	!<op-join>:() -> (:opcode);
+	<op-not>:  () -> (:opcode);
+	<op-null>: () -> (:opcode);
+	<op-run>:  () -> (:opcode);
+	<op-push>: () -> (:opcode);
+	<op-pop>:  () -> (:opcode);
+	<op-clhs>: () -> (:opcode);
+	<op-crhs>: () -> (:opcode);
+	<op-ctck>: () -> (:opcode);
 
-	!<type-data>:() -> (:type);
-	<type-dup>:  () -> (:type);
-	<type-asc>:  () -> (:type);
-	<type-if>:   () -> (:type);
-	<type-pipe>: () -> (:type);
-	<type-set>:  () -> (:type);
-	<type-tick>: () -> (:type);
+	!<op-data>:() -> (:opcode);
+	<op-dup>:  () -> (:opcode);
+	<op-asc>:  () -> (:opcode);
+	<op-if>:   () -> (:opcode);
+	<op-pipe>: () -> (:opcode);
+	<op-set>:  () -> (:opcode);
+	<op-tick>: () -> (:opcode);
 
-	<code-anon>: (:code &, :type, :code) -> ();
-	<code-data>: (:code &, :string)      -> ();
-	<code-push>: (:code &, :type)        -> ();
-	<code-wind>: (:code &, :code)        -> ();
+	<code-anon>: (:code &, :opcode, :code) -> ();
+	<code-data>: (:code &, :string)        -> ();
+	<code-push>: (:code &, :opcode)        -> ();
+	<code-wind>: (:code &, :code)          -> ();
 
 	<expected-sep>:   () -> (:rule);
 	<expected-pair>:  () -> (:rule);
@@ -87,39 +87,39 @@
 	frame: (ci :code) -> (c :code) = {
 		c = <empty-code>;
 
-		t0 = <type-pop>;
-		<code-push>(&c, t0);
+		o0 = <op-pop>;
+		<code-push>(&c, o0);
 
 		<code-wind>(&c, ci);
 
-		t1 = <type-push>;
-		<code-push>(&c, t1);
+		o1 = <op-push>;
+		<code-push>(&c, o1);
 	};
 
 	pipe: (lhs :code, rhs :code) -> (c :code) [
 
-		side: (t :type, ci :code) -> (c :code) = {
-			t0 = <type-dup>;
+		side: (op :opcode, ci :code) -> (c :code) = {
+			o0 = <op-dup>;
 
-			<code-push>(&ci, t0);
+			<code-push>(&ci, o0);
 
 			cx = <empty-code>;
 
-			<code-push>(&cx, t);
+			<code-push>(&cx, op);
 			<code-wind>(&cx, ci);
 
 			c = frame(cx);
 		};
 
 	] = {
-		t1 = <type-clhs>;
-		t2 = <type-crhs>;
+		o1 = <op-clhs>;
+		o2 = <op-crhs>;
 
-		l = side(t1, lhs);
-		c = side(t2, rhs);
+		l = side(o1, lhs);
+		c = side(o2, rhs);
 
-		t0 = <type-pipe>;
-		<code-anon>(&c, t0, l);
+		o0 = <op-pipe>;
+		<code-anon>(&c, o0, l);
 	};
 
 	list: () -> (c :code) [
@@ -132,9 +132,9 @@
 		||
 			s = var;
 
-			c = <empty-code>;
-			t = <type-call>;
-			<code-push>(&c, t);
+			c  = <empty-code>;
+			op = <op-call>;
+			<code-push>(&c, op);
 			<code-data>(&c, s);
 		||
 			tick;
@@ -145,13 +145,13 @@
 
 				ci = <empty-code>;
 
-				t1 = <type-run>;
-				<code-push>(&ci, t1);
+				o1 = <op-run>;
+				<code-push>(&ci, o1);
 
 				<code-wind>(&ci, cx);
 
-				t0 = <type-null>;
-				<code-push>(&ci, t0);
+				o0 = <op-null>;
+				<code-push>(&ci, o0);
 			||
 				ci = block;
 			};
@@ -159,8 +159,8 @@
 			{
 				lhs = <empty-code>;
 
-				t4 = <type-ctck>;
-				<code-push>(&lhs, t4);
+				o4 = <op-ctck>;
+				<code-push>(&lhs, o4);
 
 				<code-wind>(&lhs, ci);
 			};
@@ -168,8 +168,8 @@
 			{
 				rhs = <empty-code>;
 
-				t3 = <type-tick>;
-				<code-push>(&rhs, t3);
+				o3 = <op-tick>;
+				<code-push>(&rhs, o3);
 			};
 
 			c = pipe(lhs, rhs);
@@ -213,8 +213,8 @@
 
 		c = <empty-code>;
 
-		t = <type-set>;
-		<code-anon>(&c, t, ci);
+		op = <op-set>;
+		<code-anon>(&c, op, ci);
 
 		<code-data>(&c, s);
 	};
@@ -240,13 +240,13 @@
 
 		c = <empty-code>;
 
-		t0 = <type-run>;
-		<code-push>(&c, t0);
+		o0 = <op-run>;
+		<code-push>(&c, o0);
 
 		<code-wind>(&c, cx);
 
-		t1 = <type-null>;
-		<code-push>(&c, t1);
+		o1 = <op-null>;
+		<code-push>(&c, o1);
 	};
 
 	dup-expr: () -> (c :code) [
@@ -260,16 +260,16 @@
 		||
 			s = var;
 
-			c = <empty-code>;
-			t = <type-call>;
-			<code-push>(&c, t);
+			c  = <empty-code>;
+			op = <op-call>;
+			<code-push>(&c, op);
 			<code-data>(&c, s);
 		};
 
 		close: () -> (c :code) = {
-			c = <empty-code>;
-			t = <type-null>;
-			<code-push>(&c, t);
+			c  = <empty-code>;
+			op = <op-null>;
+			<code-push>(&c, op);
 		};
 
 		default: () -> (c :code) = {
@@ -300,10 +300,10 @@
 		pair-list: () -> (c :code) = {
 			{
 				(m, n) = dup-pair;
-				t0 = <type-dup>;
+				o0 = <op-dup>;
 			||
 				(m, n) = asc-pair;
-				t0 = <type-asc>;
+				o0 = <op-asc>;
 			};
 
 			{
@@ -318,13 +318,13 @@
 			 * so that latter pairs may evaluate to overwrite previous pairs.
 			 */
 
-			<code-push>(&c, t0);
+			<code-push>(&c, o0);
 
 			<code-wind>(&c, m);
 			<code-wind>(&c, n);
 
-			t1 = <type-null>;
-			<code-push>(&c, t1);
+			o1 = <op-null>;
+			<code-push>(&c, o1);
 		##
 			c = <empty-code>;
 			r = <expected-pair>;
@@ -407,8 +407,8 @@
 
 			c = <empty-code>;
 
-			t2 = <type-if>;
-			<code-anon>(&c, t2, ci);
+			o2 = <op-if>;
+			<code-anon>(&c, o2, ci);
 
 			<code-wind>(&c, cx);
 		||
@@ -426,11 +426,11 @@
 
 			c = <empty-code>;
 
-			t2 = <type-if>;
-			<code-anon>(&c, t2, ci);
+			o2 = <op-if>;
+			<code-anon>(&c, o2, ci);
 
-			t1 = <type-not>;
-			<code-push>(&c, t1);
+			o1 = <op-not>;
+			<code-push>(&c, o1);
 
 			<code-wind>(&c, cx);
 		||

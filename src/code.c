@@ -8,27 +8,27 @@
 #include "code.h"
 
 const char *
-code_name(enum code_type type)
+op_name(enum opcode op)
 {
-	switch (type) {
-	case CODE_CALL: return "call";
-	case CODE_JOIN: return "join";
-	case CODE_NOT:  return "not";
-	case CODE_NULL: return "null";
-	case CODE_RUN:  return "run";
-	case CODE_TICK: return "tick";
-	case CODE_DUP:  return "dup";
-	case CODE_ASC:  return "asc";
-	case CODE_PUSH: return "push";
-	case CODE_POP:  return "pop";
-	case CODE_CLHS: return "clhs";
-	case CODE_CRHS: return "crhs";
-	case CODE_CTCK: return "ctck";
+	switch (op) {
+	case OP_CALL: return "call";
+	case OP_JOIN: return "join";
+	case OP_NOT:  return "not";
+	case OP_NULL: return "null";
+	case OP_RUN:  return "run";
+	case OP_TICK: return "tick";
+	case OP_DUP:  return "dup";
+	case OP_ASC:  return "asc";
+	case OP_PUSH: return "push";
+	case OP_POP:  return "pop";
+	case OP_CLHS: return "clhs";
+	case OP_CRHS: return "crhs";
+	case OP_CTCK: return "ctck";
 
-	case CODE_DATA: return "data";
-	case CODE_IF:   return "if";
-	case CODE_PIPE: return "pipe";
-	case CODE_SET:  return "set";
+	case OP_DATA: return "data";
+	case OP_IF:   return "if";
+	case OP_PIPE: return "pipe";
+	case OP_SET:  return "set";
 	}
 
 	return "?";
@@ -36,7 +36,7 @@ code_name(enum code_type type)
 
 struct code *
 code_anon(struct code **head, const struct pos *pos,
-	enum code_type type, struct code *code)
+	enum opcode op, struct code *code)
 {
 	struct code *new;
 
@@ -49,14 +49,14 @@ code_anon(struct code **head, const struct pos *pos,
 	}
 
 	new->pos    = *pos;
-	new->type   = type;
+	new->op     = op;
 	new->u.code = code;
 
 	new->next = *head;
 	*head = new;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %s\n", code_name(new->type));
+		fprintf(stderr, "code -> %s\n", op_name(new->op));
 		/* TODO: could dump code here */
 	}
 
@@ -79,7 +79,7 @@ code_data(struct code **head, const struct pos *pos,
 	}
 
 	new->pos    = *pos;
-	new->type   = CODE_DATA;
+	new->op     = OP_DATA;
 	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
 	new->u.s[n] = '\0';
 
@@ -87,7 +87,7 @@ code_data(struct code **head, const struct pos *pos,
 	*head = new;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %s \"%.*s\"\n", code_name(new->type), (int) n, s);
+		fprintf(stderr, "code -> %s \"%.*s\"\n", op_name(new->op), (int) n, s);
 	}
 
 	return new;
@@ -95,27 +95,27 @@ code_data(struct code **head, const struct pos *pos,
 
 struct code *
 code_push(struct code **head, const struct pos *pos,
-	enum code_type type)
+	enum opcode op)
 {
 	struct code *new;
 
 	assert(head != NULL);
 	assert(pos != NULL);
-	assert(type & CODE_NONE);
+	assert(op & CODE_NONE);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->pos   = *pos;
-	new->type  = type;
+	new->pos = *pos;
+	new->op  = op;
 
 	new->next = *head;
 	*head = new;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code -> %s\n", code_name(new->type));
+		fprintf(stderr, "code -> %s\n", op_name(new->op));
 	}
 
 	return new;
@@ -124,12 +124,12 @@ code_push(struct code **head, const struct pos *pos,
 static struct code *
 code_clone(struct code **head, const struct code *code)
 {
-	switch (code->type) {
-	case CODE_DATA: return code_data(head, &code->pos, strlen(code->u.s), code->u.s);
-	case CODE_IF:   return code_anon(head, &code->pos, code->type, code->u.code);
-	case CODE_PIPE: return code_anon(head, &code->pos, code->type, code->u.code);
-	case CODE_SET:  return code_anon(head, &code->pos, code->type, code->u.code);
-	default:        return code_push(head, &code->pos, code->type);
+	switch (code->op) {
+	case OP_DATA: return code_data(head, &code->pos, strlen(code->u.s), code->u.s);
+	case OP_IF:   return code_anon(head, &code->pos, code->op, code->u.code);
+	case OP_PIPE: return code_anon(head, &code->pos, code->op, code->u.code);
+	case OP_SET:  return code_anon(head, &code->pos, code->op, code->u.code);
+	default:      return code_push(head, &code->pos, code->op);
 	}
 
 	errno = EINVAL;
@@ -175,7 +175,7 @@ code_pop(struct code **head)
 	node->next = NULL;
 
 	if (debug & DEBUG_STACK) {
-		fprintf(stderr, "code <- %s\n", code_name(node->type));
+		fprintf(stderr, "code <- %s\n", op_name(node->op));
 	}
 
 	return node;
@@ -201,16 +201,16 @@ code_dumpinline(FILE *f, const struct code *code)
 	assert(f != NULL);
 
 	for (p = code; p != NULL; p = p->next) {
-		fprintf(f, "#%s/%lu:%lu", code_name(p->type), p->pos.line, p->pos.col);
+		fprintf(f, "#%s/%lu:%lu", op_name(p->op), p->pos.line, p->pos.col);
 
-		switch (p->type) {
-		case CODE_DATA:
+		switch (p->op) {
+		case OP_DATA:
 			fprintf(f, "'%s'", p->u.s);
 			break;
 
-		case CODE_IF:
-		case CODE_SET:
-		case CODE_PIPE:
+		case OP_IF:
+		case OP_SET:
+		case OP_PIPE:
 			fprintf(f, "{ ");
 			code_dumpinline(f, p->u.code);
 			fprintf(f, " }");

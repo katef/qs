@@ -500,7 +500,7 @@ yield:
 	 * wait() to reap the exited child. So we return -1 with EINTR here.
 	 */
 
-	if (!code_push(next, pos, CODE_TICK)) {
+	if (!code_push(next, pos, OP_TICK)) {
 		goto error;
 	}
 
@@ -780,24 +780,24 @@ eval_task(struct task **tasks, struct task *task)
 
 	assert(node != NULL);
 
-	switch (node->type) {
-	case CODE_NULL: r = eval_null(&task->data, &node->pos);                                      break;
-	case CODE_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
-	case CODE_PIPE: r = eval_pipe(tasks, task, task->frame, &node->pos, &node->u.code);          break;
-	case CODE_NOT:  r = eval_not ();                                                             break;
-	case CODE_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
-	case CODE_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
-	case CODE_CALL: r = eval_call(&task->code, &task->data, task->frame);                        break;
-	case CODE_TICK: r = eval_tick(&task->code, &task->data, task->frame, &node->pos, &task->ts); break;
-	case CODE_SET:  r = eval_set (&task->data, task->frame, &node->u.code);                      break;
-	case CODE_PUSH: r = eval_frame(&task->frame, frame_push);                                    break;
-	case CODE_POP:  r = eval_frame(&task->frame, frame_pop);                                     break;
-	case CODE_JOIN: r = eval_binop(&task->data, task->frame, op_join);                           break;
-	case CODE_DUP:  r = eval_pair(&task->data, &task->frame->dup);                               break;
-	case CODE_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
-	case CODE_CLHS: r = eval_close(task->frame, close_lhs);                                      break;
-	case CODE_CRHS: r = eval_close(task->frame, close_rhs);                                      break;
-	case CODE_CTCK: r = eval_ctck (task->frame);                                                 break;
+	switch (node->op) {
+	case OP_NULL: r = eval_null(&task->data, &node->pos);                                      break;
+	case OP_DATA: r = eval_data(&task->data, &node->pos, node->u.s);                           break;
+	case OP_PIPE: r = eval_pipe(tasks, task, task->frame, &node->pos, &node->u.code);          break;
+	case OP_NOT:  r = eval_not ();                                                             break;
+	case OP_IF:   r = eval_if  (&task->code, &node->u.code);                                   break;
+	case OP_RUN:  r = eval_run (&task->code, &task->data, task->frame, &node->pos, task);      break;
+	case OP_CALL: r = eval_call(&task->code, &task->data, task->frame);                        break;
+	case OP_TICK: r = eval_tick(&task->code, &task->data, task->frame, &node->pos, &task->ts); break;
+	case OP_SET:  r = eval_set (&task->data, task->frame, &node->u.code);                      break;
+	case OP_PUSH: r = eval_frame(&task->frame, frame_push);                                    break;
+	case OP_POP:  r = eval_frame(&task->frame, frame_pop);                                     break;
+	case OP_JOIN: r = eval_binop(&task->data, task->frame, op_join);                           break;
+	case OP_DUP:  r = eval_pair(&task->data, &task->frame->dup);                               break;
+	case OP_ASC:  r = eval_pair(&task->data, &task->frame->asc);                               break;
+	case OP_CLHS: r = eval_close(task->frame, close_lhs);                                      break;
+	case OP_CRHS: r = eval_close(task->frame, close_rhs);                                      break;
+	case OP_CTCK: r = eval_ctck (task->frame);                                                 break;
 
 	default:
 		code_free(node);

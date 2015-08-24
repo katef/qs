@@ -11,7 +11,7 @@
 %maps%
 
 	string -> string;
-	type   -> type;
+	opcode -> opcode;
 	code   -> code;
 	mark   -> mark;
 	rule   -> rule;
@@ -60,7 +60,7 @@
 	};
 
 	typedef struct act_string string;
-	typedef enum code_type type;
+	typedef enum opcode opcode;
 	typedef struct code *code;
 	typedef struct act_mark mark;
 	typedef const char * rule;
@@ -208,32 +208,32 @@
 	<stdout>: () -> (s :string) = @{ @s.s = "1"; @s.e = @s.s + 1; @};
 	<stderr>: () -> (s :string) = @{ @s.s = "2"; @s.e = @s.s + 1; @};
 
-	<type-call>: () -> (t :type) = @{ @t = CODE_CALL; @};
-	<type-join>: () -> (t :type) = @{ @t = CODE_JOIN; @};
-	<type-not>:  () -> (t :type) = @{ @t = CODE_NOT;  @};
-	<type-null>: () -> (t :type) = @{ @t = CODE_NULL; @};
-	<type-run>:  () -> (t :type) = @{ @t = CODE_RUN;  @};
-	<type-tick>: () -> (t :type) = @{ @t = CODE_TICK; @};
-	<type-push>: () -> (t :type) = @{ @t = CODE_PUSH; @};
-	<type-pop>:  () -> (t :type) = @{ @t = CODE_POP;  @};
-	<type-clhs>: () -> (t :type) = @{ @t = CODE_CLHS; @};
-	<type-crhs>: () -> (t :type) = @{ @t = CODE_CRHS; @};
-	<type-ctck>: () -> (t :type) = @{ @t = CODE_CTCK; @};
+	<op-call>: () -> (op :opcode) = @{ @op = OP_CALL; @};
+	<op-join>: () -> (op :opcode) = @{ @op = OP_JOIN; @};
+	<op-not>:  () -> (op :opcode) = @{ @op = OP_NOT;  @};
+	<op-null>: () -> (op :opcode) = @{ @op = OP_NULL; @};
+	<op-run>:  () -> (op :opcode) = @{ @op = OP_RUN;  @};
+	<op-tick>: () -> (op :opcode) = @{ @op = OP_TICK; @};
+	<op-push>: () -> (op :opcode) = @{ @op = OP_PUSH; @};
+	<op-pop>:  () -> (op :opcode) = @{ @op = OP_POP;  @};
+	<op-clhs>: () -> (op :opcode) = @{ @op = OP_CLHS; @};
+	<op-crhs>: () -> (op :opcode) = @{ @op = OP_CRHS; @};
+	<op-ctck>: () -> (op :opcode) = @{ @op = OP_CTCK; @};
 
-	<type-data>: () -> (t :type) = @{ @t = CODE_DATA; @};
-	<type-dup>:  () -> (t :type) = @{ @t = CODE_DUP;  @};
-	<type-asc>:  () -> (t :type) = @{ @t = CODE_ASC;  @};
-	<type-if>:   () -> (t :type) = @{ @t = CODE_IF;   @};
-	<type-pipe>: () -> (t :type) = @{ @t = CODE_PIPE; @};
-	<type-set>:  () -> (t :type) = @{ @t = CODE_SET;  @};
+	<op-data>: () -> (op :opcode) = @{ @op = OP_DATA; @};
+	<op-dup>:  () -> (op :opcode) = @{ @op = OP_DUP;  @};
+	<op-asc>:  () -> (op :opcode) = @{ @op = OP_ASC;  @};
+	<op-if>:   () -> (op :opcode) = @{ @op = OP_IF;   @};
+	<op-pipe>: () -> (op :opcode) = @{ @op = OP_PIPE; @};
+	<op-set>:  () -> (op :opcode) = @{ @op = OP_SET;  @};
 
-	<code-anon>: (c :code &, t :type, ci :code) -> () = @{
+	<code-anon>: (c :code &, op :opcode, ci :code) -> () = @{
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<code-anon>\n");
 		}
 
 		/* XXX: leak */
-		if (!code_anon(@&c, &lex_state->pos, @t, @ci)) {
+		if (!code_anon(@&c, &lex_state->pos, @op, @ci)) {
 			@!;
 		}
 	@};
@@ -251,12 +251,12 @@
 		}
 	@};
 
-	<code-push>: (c :code &, t :type) -> () = @{
+	<code-push>: (c :code &, op :opcode) -> () = @{
 		if (debug & DEBUG_ACT) {
-			fprintf(stderr, "<code-push>: %s\n", code_name(@t));
+			fprintf(stderr, "<code-push>: %s\n", op_name(@op));
 		}
 
-		if (!code_push(@&c, &lex_state->pos, @t)) {
+		if (!code_push(@&c, &lex_state->pos, @op)) {
 			@!;
 		}
 	@};
