@@ -5,6 +5,7 @@
 	code;
 	mark;
 	rule;
+	term;
 
 %terminals%
 
@@ -20,12 +21,13 @@
 	!dot;
 	tick;
 	bar;
-	obrace:  () -> (:mark); cbrace;
-	oparen:  () -> (:mark); cparen;
-	osquare: () -> (:mark); csquare;
 	or;
 	and;
 	!exec;
+
+	obrace:  () -> (:term, :mark); cbrace;
+	oparen:  () -> (:term, :mark); cparen;
+	osquare: () -> (:term, :mark); csquare;
 
 	word: () -> (:string);
 	var:  () -> (:string);
@@ -68,8 +70,8 @@
 	<expected-pair>:  () -> (:rule);
 	<expected-value>: () -> (:rule);
 
-	<err-expected>:  (:rule)   -> ();
-	<err-unmatched>: (:mark &) -> ();
+	<err-expected>:  (:rule)          -> ();
+	<err-unmatched>: (:term, :mark &) -> ();
 	<err-syntax>;
 
 	block:     () -> (:code);
@@ -187,12 +189,12 @@
 	assign-expr: () -> (c :code) [
 
 		value: () -> (c :code) = {
-			m = oparen;
+			(t, m) = oparen;
 			c = list;
 			{
 				cparen;
 			##
-				<err-unmatched>(&m);
+				<err-unmatched>(t, &m);
 			};
 		||
 			c = item;
@@ -218,7 +220,7 @@
 	};
 
 	block: () -> (c :code) = {
-		m = obrace;
+		(t, m) = obrace;
 
 		{
 			c = expr-list;
@@ -229,7 +231,7 @@
 		{
 			cbrace;
 		##
-			<err-unmatched>(&m);
+			<err-unmatched>(t, &m);
 		};
 	};
 
@@ -330,12 +332,12 @@
 		};
 
 		pair-box: () -> (c :code) = {
-			m = osquare;
+			(t, m) = osquare;
 			dx = pair-list;
 			{
 				csquare;
 			##
-				<err-unmatched>(&m);
+				<err-unmatched>(t, &m);
 			};
 
 			c = <empty-code>;

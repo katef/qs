@@ -15,6 +15,7 @@
 	code   -> code;
 	mark   -> mark;
 	rule   -> rule;
+	term   -> term;
 
 %header% @{
 
@@ -48,7 +49,6 @@
 	struct act_mark {
 		lex_buf buf; /* XXX: large; i don't like passing this around in automatic storage */
 		struct pos pos;
-		enum lex_type type;
 	};
 
 	struct act_state {
@@ -64,6 +64,7 @@
 	typedef struct code *code;
 	typedef struct act_mark mark;
 	typedef const char * rule;
+	typedef enum lex_type term;
 
 	#define CURRENT_TERMINAL act_state->t.type
 	#define ERROR_TERMINAL   tok_error
@@ -164,22 +165,22 @@
 		}
 	@};
 
-	obrace: () -> (m :mark) = @{
+	obrace: () -> (t :term, m :mark) = @{
 		strcpy(@m.buf, lex_state->buf);
-		@m.pos  = act_state->t.pos;
-		@m.type = act_state->t.type;
+		@m.pos = act_state->t.pos;
+		@t     = act_state->t.type;
 	@};
 
-	oparen: () -> (m :mark) = @{
+	oparen: () -> (t :term, m :mark) = @{
 		strcpy(@m.buf, lex_state->buf);
-		@m.pos  = act_state->t.pos;
-		@m.type = act_state->t.type;
+		@m.pos = act_state->t.pos;
+		@t     = act_state->t.type;
 	@};
 
-	osquare: () -> (m :mark) = @{
+	osquare: () -> (t :term, m :mark) = @{
 		strcpy(@m.buf, lex_state->buf);
-		@m.pos  = act_state->t.pos;
-		@m.type = act_state->t.type;
+		@m.pos = act_state->t.pos;
+		@t     = act_state->t.type;
 	@};
 
 %actions%
@@ -287,11 +288,11 @@
 		}
 	@};
 
-	<err-unmatched>: (m :mark &) -> () = @{
-		assert((isprint)(@&m->type));
+	<err-unmatched>: (t :term, m :mark &) -> () = @{
+		assert((isprint)(@t));
 
 		if (act_state->e == ERR_NONE) {
-			err_syntax(@&m->buf, &@&m->pos, "unmatched '%c'", (unsigned char) @&m->type);
+			err_syntax(@&m->buf, &@&m->pos, "unmatched '%c'", (unsigned char) @t);
 			act_state->e = ERR_SYNTAX;
 		}
 	@};
