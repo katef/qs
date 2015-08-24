@@ -5,7 +5,7 @@
 	code;
 	mark;
 	rule;
-	term;
+	type;
 
 %terminals%
 
@@ -25,9 +25,9 @@
 	and;
 	!exec;
 
-	obrace:  () -> (:term, :mark); cbrace;
-	oparen:  () -> (:term, :mark); cparen;
-	osquare: () -> (:term, :mark); csquare;
+	obrace:  () -> (:type, :mark); cbrace;
+	oparen:  () -> (:type, :mark); cparen;
+	osquare: () -> (:type, :mark); csquare;
 
 	word: () -> (:string);
 	var:  () -> (:string);
@@ -71,7 +71,7 @@
 	<expected-value>: () -> (:rule);
 
 	<err-expected>:  (:rule)          -> ();
-	<err-unmatched>: (:term, :mark &) -> ();
+	<err-unmatched>: (:type, :mark &) -> ();
 	<err-syntax>;
 
 	block:     () -> (:code);

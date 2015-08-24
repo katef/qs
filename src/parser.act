@@ -15,7 +15,7 @@
 	code   -> code;
 	mark   -> mark;
 	rule   -> rule;
-	term   -> term;
+	type   -> type;
 
 %header% @{
 
@@ -64,7 +64,7 @@
 	typedef struct code *code;
 	typedef struct act_mark mark;
 	typedef const char * rule;
-	typedef enum lex_type term;
+	typedef enum lex_type type;
 
 	#define CURRENT_TERMINAL act_state->t.type
 	#define ERROR_TERMINAL   tok_error
@@ -165,19 +165,19 @@
 		}
 	@};
 
-	obrace: () -> (t :term, m :mark) = @{
+	obrace: () -> (t :type, m :mark) = @{
 		strcpy(@m.buf, lex_state->buf);
 		@m.pos = act_state->t.pos;
 		@t     = act_state->t.type;
 	@};
 
-	oparen: () -> (t :term, m :mark) = @{
+	oparen: () -> (t :type, m :mark) = @{
 		strcpy(@m.buf, lex_state->buf);
 		@m.pos = act_state->t.pos;
 		@t     = act_state->t.type;
 	@};
 
-	osquare: () -> (t :term, m :mark) = @{
+	osquare: () -> (t :type, m :mark) = @{
 		strcpy(@m.buf, lex_state->buf);
 		@m.pos = act_state->t.pos;
 		@t     = act_state->t.type;
@@ -288,7 +288,7 @@
 		}
 	@};
 
-	<err-unmatched>: (t :term, m :mark &) -> () = @{
+	<err-unmatched>: (t :type, m :mark &) -> () = @{
 		assert((isprint)(@t));
 
 		if (act_state->e == ERR_NONE) {
