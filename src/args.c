@@ -50,19 +50,19 @@ make_args(const struct data *data, int n)
 }
 
 int
-set_args(const struct lex_pos *pos, struct frame *frame, char *args[])
+set_args(const struct lex_mark *mark, struct frame *frame, char *args[])
 {
 	struct code *ci;
 	int i;
 
-	assert(pos != NULL);
+	assert(mark != NULL);
 	assert(frame != NULL);
 	assert(args != NULL);
 
 	ci = NULL;
 
 	for (i = 0; args[i] != NULL; i++) {
-		if (!code_data(&ci, pos, strlen(args[i]), args[i])) {
+		if (!code_data(&ci, mark, strlen(args[i]), args[i])) {
 			goto error;
 		}
 	}

@@ -181,6 +181,12 @@ main(int argc, char *argv[])
 
 	{
 		struct frame *q;
+		struct lex_mark m;
+
+		/* TODO: in set_args, construct string from argv[] and .col per arg */
+		m.buf = "";
+		m.pos.line = 0;
+		m.pos.col  = 0;
 
 		if (!frame_push(&top)) {
 			return 1;
@@ -193,7 +199,7 @@ main(int argc, char *argv[])
 			goto error;
 		}
 
-		if (-1 == set_args(&l.pos, top, argv)) {
+		if (-1 == set_args(&m, top, argv)) {
 			/* TODO: free frame */
 			goto error;
 		}

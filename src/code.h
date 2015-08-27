@@ -27,7 +27,7 @@ enum opcode {
 };
 
 struct code {
-	struct lex_pos pos;
+	struct lex_mark *mark;
 	enum opcode op;
 
 	union {
@@ -44,15 +44,15 @@ const char *
 op_name(enum opcode op);
 
 struct code *
-code_anon(struct code **head, const struct lex_pos *pos,
+code_anon(struct code **head, const struct lex_mark *mark,
 	enum opcode op, struct code *code);
 
 struct code *
-code_data(struct code **head, const struct lex_pos *pos,
+code_data(struct code **head, const struct lex_mark *mark,
 	size_t n, const char *s);
 
 struct code *
-code_push(struct code **head, const struct lex_pos *pos,
+code_push(struct code **head, const struct lex_mark *mark,
 	enum opcode op);
 
 int

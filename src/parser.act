@@ -46,11 +46,6 @@
 		const char *e;
 	};
 
-	struct act_mark {
-		const char *buf;
-		struct lex_pos pos;
-	};
-
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type save;
@@ -61,7 +56,7 @@
 	typedef struct act_string string;
 	typedef enum opcode opcode;
 	typedef struct code *code;
-	typedef struct act_mark *mark;
+	typedef struct lex_mark *mark;
 	typedef const char * rule;
 	typedef enum lex_type type;
 
@@ -125,27 +120,6 @@
 		}
 	}
 
-	static struct act_mark *
-	make_mark(const char *buf, struct lex_pos pos)
-	{
-		struct act_mark *new;
-		size_t z;
-
-		assert(buf != NULL);
-
-		z = strlen(buf);
-
-		new = malloc(sizeof *new + z + 1);
-		if (new == NULL) {
-			return NULL;
-		}
-
-		new->buf = strcpy((char *) new + sizeof *new, buf);
-		new->pos = pos;
-
-		return new;
-	}
-
 @}, @{
 
 	#include <stdio.h>
@@ -186,7 +160,7 @@
 	@};
 
 	obrace: () -> (t :type, m :mark) = @{
-		@m = make_mark(lex_state->buf, act_state->t.pos);
+		@m = lex_mark(lex_state->buf, act_state->t.pos);
 		if (@m == NULL) {
 			/* TODO: error out */
 		}
@@ -195,7 +169,7 @@
 	@};
 
 	oparen: () -> (t :type, m :mark) = @{
-		@m = make_mark(lex_state->buf, act_state->t.pos);
+		@m = lex_mark(lex_state->buf, act_state->t.pos);
 		if (@m == NULL) {
 			/* TODO: error out */
 		}
@@ -204,7 +178,7 @@
 	@};
 
 	osquare: () -> (t :type, m :mark) = @{
-		@m = make_mark(lex_state->buf, act_state->t.pos);
+		@m = lex_mark(lex_state->buf, act_state->t.pos);
 		if (@m == NULL) {
 			/* TODO: error out */
 		}
@@ -257,17 +231,24 @@
 	<op-set>:  () -> (op :opcode) = @{ @op = OP_SET;  @};
 
 	<code-anon>: (c :code &, op :opcode, ci :code) -> () = @{
+		struct lex_mark m;
+
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<code-anon>\n");
 		}
 
+		m.buf = lex_state->buf;
+		m.pos = lex_state->pos;
+
 		/* XXX: leak */
-		if (!code_anon(@&c, &lex_state->pos, @op, @ci)) {
+		if (!code_anon(@&c, &m, @op, @ci)) {
 			@!;
 		}
 	@};
 
 	<code-data>: (c :code &, s :string) -> () = @{
+		struct lex_mark m;
+
 		assert(@s.s != NULL && @s.e != NULL);
 		assert(@s.e >= @s.s);
 
@@ -275,17 +256,25 @@
 			fprintf(stderr, "<code-data>: \"%.*s\"\n", (int) (@s.e - @s.s), @s.s);
 		}
 
-		if (!code_data(@&c, &lex_state->pos, @s.e - @s.s, @s.s)) {
+		m.buf = lex_state->buf;
+		m.pos = lex_state->pos;
+
+		if (!code_data(@&c, &m, @s.e - @s.s, @s.s)) {
 			@!;
 		}
 	@};
 
 	<code-push>: (c :code &, op :opcode) -> () = @{
+		struct lex_mark m;
+
 		if (debug & DEBUG_ACT) {
 			fprintf(stderr, "<code-push>: %s\n", op_name(@op));
 		}
 
-		if (!code_push(@&c, &lex_state->pos, @op)) {
+		m.buf = lex_state->buf;
+		m.pos = lex_state->pos;
+
+		if (!code_push(@&c, &m, @op)) {
 			@!;
 		}
 	@};

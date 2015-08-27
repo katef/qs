@@ -36,20 +36,25 @@ op_name(enum opcode op)
 }
 
 struct code *
-code_anon(struct code **head, const struct lex_pos *pos,
+code_anon(struct code **head, const struct lex_mark *mark,
 	enum opcode op, struct code *code)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(pos != NULL);
+	assert(mark != NULL);
 
 	new = malloc(sizeof *new);
 	if (new == NULL) {
 		return NULL;
 	}
 
-	new->pos    = *pos;
+	new->mark = lex_mark(mark->buf, mark->pos);
+	if (new->mark == NULL) {
+		free(new);
+		return NULL;
+	}
+
 	new->op     = op;
 	new->u.code = code;
 
@@ -65,13 +70,13 @@ code_anon(struct code **head, const struct lex_pos *pos,
 }
 
 struct code *
-code_data(struct code **head, const struct lex_pos *pos,
+code_data(struct code **head, const struct lex_mark *mark,
 	size_t n, const char *s)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(pos != NULL);
+	assert(mark != NULL);
 	assert(s != NULL);
 
 	new = malloc(sizeof *new + n + 1);
@@ -79,7 +84,12 @@ code_data(struct code **head, const struct lex_pos *pos,
 		return NULL;
 	}
 
-	new->pos    = *pos;
+	new->mark = lex_mark(mark->buf, mark->pos);
+	if (new->mark == NULL) {
+		free(new);
+		return NULL;
+	}
+
 	new->op     = OP_DATA;
 	new->u.s    = memcpy((char *) new + sizeof *new, s, n);
 	new->u.s[n] = '\0';
@@ -95,13 +105,13 @@ code_data(struct code **head, const struct lex_pos *pos,
 }
 
 struct code *
-code_push(struct code **head, const struct lex_pos *pos,
+code_push(struct code **head, const struct lex_mark *mark,
 	enum opcode op)
 {
 	struct code *new;
 
 	assert(head != NULL);
-	assert(pos != NULL);
+	assert(mark != NULL);
 	assert(op & CODE_NONE);
 
 	new = malloc(sizeof *new);
@@ -109,8 +119,13 @@ code_push(struct code **head, const struct lex_pos *pos,
 		return NULL;
 	}
 
-	new->pos = *pos;
-	new->op  = op;
+	new->mark = lex_mark(mark->buf, mark->pos);
+	if (new->mark == NULL) {
+		free(new);
+		return NULL;
+	}
+
+	new->op = op;
 
 	new->next = *head;
 	*head = new;
@@ -126,11 +141,11 @@ static struct code *
 code_clone(struct code **head, const struct code *code)
 {
 	switch (code->op) {
-	case OP_DATA: return code_data(head, &code->pos, strlen(code->u.s), code->u.s);
-	case OP_IF:   return code_anon(head, &code->pos, code->op, code->u.code);
-	case OP_PIPE: return code_anon(head, &code->pos, code->op, code->u.code);
-	case OP_SET:  return code_anon(head, &code->pos, code->op, code->u.code);
-	default:      return code_push(head, &code->pos, code->op);
+	case OP_DATA: return code_data(head, code->mark, strlen(code->u.s), code->u.s);
+	case OP_IF:   return code_anon(head, code->mark, code->op, code->u.code);
+	case OP_PIPE: return code_anon(head, code->mark, code->op, code->u.code);
+	case OP_SET:  return code_anon(head, code->mark, code->op, code->u.code);
+	default:      return code_push(head, code->mark, code->op);
 	}
 
 	errno = EINVAL;
@@ -190,6 +205,7 @@ code_free(struct code *code)
 	for (p = code; p != NULL; p = next) {
 		next = p->next;
 
+		free(p->mark);
 		free(p);
 	}
 }
@@ -202,7 +218,8 @@ code_dumpinline(FILE *f, const struct code *code)
 	assert(f != NULL);
 
 	for (p = code; p != NULL; p = p->next) {
-		fprintf(f, "#%s/%lu:%lu", op_name(p->op), p->pos.line, p->pos.col);
+		fprintf(f, "#%s/%lu:%lu",
+			op_name(p->op), p->mark->pos.line, p->mark->pos.col);
 
 		switch (p->op) {
 		case OP_DATA:

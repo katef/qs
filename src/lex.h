@@ -30,6 +30,11 @@ struct lex_pos {
 	unsigned long col;
 };
 
+struct lex_mark {
+	const char *buf;
+	struct lex_pos pos;
+};
+
 struct lex_tok {
 	enum lex_type type;
 	struct lex_pos pos;
@@ -46,6 +51,9 @@ struct lex_state {
 
 void
 lex_next(struct lex_state *l, struct lex_tok *t);
+
+struct lex_mark *
+lex_mark(const char *buf, struct lex_pos pos);
 
 #endif
 

@@ -8,13 +8,13 @@
 #include "data.h"
 
 struct data *
-data_push(struct data **head, const struct lex_pos *pos,
+data_push(struct data **head, const struct lex_mark *mark,
 	size_t n, const char *s)
 {
 	struct data *new;
 
 	assert(head != NULL);
-	assert(pos != NULL);
+	assert(mark != NULL);
 	assert(s != NULL || n == 0);
 
 	new = malloc(sizeof *new + n + !!s);
@@ -22,7 +22,11 @@ data_push(struct data **head, const struct lex_pos *pos,
 		return NULL;
 	}
 
-	new->pos = *pos;
+	new->mark = lex_mark(mark->buf, mark->pos);
+	if (new->mark == NULL) {
+		free(new);
+		return NULL;
+	}
 
 	if (s != NULL) {
 		new->s    = memcpy((char *) new + sizeof *new, s, n);
@@ -42,20 +46,21 @@ data_push(struct data **head, const struct lex_pos *pos,
 }
 
 struct data *
-data_int(struct data **head, const struct lex_pos *pos,
+data_int(struct data **head, const struct lex_mark *mark,
 	int n)
 {
 	char s[32]; /* XXX */
 	int r;
 
 	assert(head != NULL);
+	assert(mark != NULL);
 
 	r = sprintf(s, "%d", n);
 	if (r == -1) {
 		return NULL;
 	}
 
-	return data_push(head, pos, r, s);
+	return data_push(head, mark, r, s);
 }
 
 struct data *
@@ -85,6 +90,7 @@ data_free(struct data *data)
 	for (p = data; p != NULL; p = next) {
 		next = p->next;
 
+		free(p->mark);
 		free(p);
 	}
 }

@@ -2,17 +2,17 @@
 #define DATA_H
 
 struct data {
-	struct lex_pos pos;
+	struct lex_mark *mark;
 	char *s;
 	struct data *next;
 };
 
 struct data *
-data_push(struct data **head, const struct lex_pos *pos,
+data_push(struct data **head, const struct lex_mark *mark,
 	size_t n, const char *s);
 
 struct data *
-data_int(struct data **head, const struct lex_pos *pos,
+data_int(struct data **head, const struct lex_mark *mark,
 	int n);
 
 struct data *
