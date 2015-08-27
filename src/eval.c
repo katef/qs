@@ -21,6 +21,7 @@
 #include "builtin.h"
 #include "signal.h"
 #include "task.h"
+#include "err.h"
 
 /* push .s=NULL to data */
 static int
@@ -271,7 +272,8 @@ eval_call(struct code **next, struct data **data,
 
 	v = frame_get(frame, strlen(a->s), a->s);
 	if (v == NULL) {
-		fprintf(stderr, "no such variable: $%s\n", a->s);
+		err_printf(NULL, a->mark->buf, &a->mark->pos,
+			"no such variable: $%s", a->s);
 		errno = 0;
 		return -1;
 	}

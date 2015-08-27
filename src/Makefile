@@ -1,6 +1,7 @@
 .include "../share/mk/top.mk"
 
 SRC += src/dup.c
+SRC += src/err.c
 SRC += src/lex.c
 SRC += src/parser.c
 SRC += src/main.c
