@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #include "debug.h"
+#include "lex.h"
 #include "var.h"
 #include "dup.h"
 #include "data.h"
@@ -23,7 +24,7 @@
 
 /* push .s=NULL to data */
 static int
-eval_null(struct data **data, const struct pos *pos)
+eval_null(struct data **data, const struct lex_pos *pos)
 {
 	assert(data != NULL);
 	assert(pos != NULL);
@@ -37,7 +38,7 @@ eval_null(struct data **data, const struct pos *pos)
 
 /* push .s="xyz" to data */
 static int
-eval_data(struct data **data, const struct pos *pos, const char *s)
+eval_data(struct data **data, const struct lex_pos *pos, const char *s)
 {
 	assert(data != NULL);
 	assert(pos != NULL);
@@ -51,7 +52,7 @@ eval_data(struct data **data, const struct pos *pos, const char *s)
 }
 
 static int
-eval_pipe(struct task **tasks, struct task *task, struct frame *frame, const struct pos *pos, struct code **code)
+eval_pipe(struct task **tasks, struct task *task, struct frame *frame, const struct lex_pos *pos, struct code **code)
 {
 	struct data *lhs, *rhs;
 	const struct frame *f;
@@ -291,7 +292,7 @@ eval_call(struct code **next, struct data **data,
 /* eat whole data stack upto .s=NULL, make argv and execute */
 static int
 eval_run(struct code **next, struct data **data,
-	struct frame *frame, const struct pos *pos, struct task *task)
+	struct frame *frame, const struct lex_pos *pos, struct task *task)
 {
 	struct data *p, *pnext;
 	struct var *v;
@@ -426,7 +427,7 @@ fail:
 /* note will need to be able to re-enter here after EINTR */
 static int
 eval_tick(struct code **next, struct data **data,
-	struct frame *frame, const struct pos *pos, struct tick_state *ts)
+	struct frame *frame, const struct lex_pos *pos, struct tick_state *ts)
 {
 	int in;
 	int r;

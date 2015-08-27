@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "debug.h"
+#include "lex.h"
 #include "code.h"
 
 const char *
@@ -35,7 +36,7 @@ op_name(enum opcode op)
 }
 
 struct code *
-code_anon(struct code **head, const struct pos *pos,
+code_anon(struct code **head, const struct lex_pos *pos,
 	enum opcode op, struct code *code)
 {
 	struct code *new;
@@ -64,7 +65,7 @@ code_anon(struct code **head, const struct pos *pos,
 }
 
 struct code *
-code_data(struct code **head, const struct pos *pos,
+code_data(struct code **head, const struct lex_pos *pos,
 	size_t n, const char *s)
 {
 	struct code *new;
@@ -94,7 +95,7 @@ code_data(struct code **head, const struct pos *pos,
 }
 
 struct code *
-code_push(struct code **head, const struct pos *pos,
+code_push(struct code **head, const struct lex_pos *pos,
 	enum opcode op)
 {
 	struct code *new;

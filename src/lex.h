@@ -25,11 +25,16 @@ enum lex_type {
 	tok_exec    = 'e'
 };
 
+struct lex_pos {
+	unsigned long line;
+	unsigned long col;
+};
+
 typedef char lex_buf[4096];
 
 struct lex_tok {
 	enum lex_type type;
-	struct pos pos;
+	struct lex_pos pos;
 	const char *s;
 	const char *e;
 };
@@ -38,7 +43,7 @@ struct lex_state {
 	lex_buf buf;
 	const char *p;
 	FILE *f;
-	struct pos pos;
+	struct lex_pos pos;
 };
 
 void

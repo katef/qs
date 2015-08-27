@@ -9,6 +9,7 @@
 #include <ctype.h>
 
 #include "debug.h"
+#include "lex.h"
 #include "code.h"
 #include "data.h"
 #include "var.h"

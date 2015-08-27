@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "debug.h"
+#include "lex.h"
 #include "code.h"
 #include "var.h"
 

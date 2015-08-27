@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <errno.h>
 
-#include "debug.h"
+#include "lex.h"
 #include "data.h"
 #include "code.h"
 #include "args.h"
@@ -50,7 +50,7 @@ make_args(const struct data *data, int n)
 }
 
 int
-set_args(const struct pos *pos, struct frame *frame, char *args[])
+set_args(const struct lex_pos *pos, struct frame *frame, char *args[])
 {
 	struct code *ci;
 	int i;

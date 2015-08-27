@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "status.h"
+#include "lex.h"
 #include "data.h"
 #include "code.h"
 #include "frame.h"

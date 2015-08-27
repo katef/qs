@@ -48,7 +48,7 @@
 
 	struct act_mark {
 		lex_buf buf; /* XXX: large; i don't like passing this around in automatic storage */
-		struct pos pos;
+		struct lex_pos pos;
 	};
 
 	struct act_state {
@@ -73,7 +73,7 @@
 	#define RESTORE_LEXER    act_state->t.type = act_state->save;
 
 	static void
-	err_syntax(const char *buf, const struct pos *pos,
+	err_syntax(const char *buf, const struct lex_pos *pos,
 		const char *fmt, ...)
 	{
 		assert(buf != NULL);

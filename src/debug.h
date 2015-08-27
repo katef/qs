@@ -16,11 +16,6 @@ enum {
 	DEBUG_FD    = 1 << 11
 };
 
-struct pos {
-	unsigned long line;
-	unsigned long col;
-};
-
 extern unsigned debug;
 
 #endif
