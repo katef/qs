@@ -70,9 +70,11 @@
 	<expected-pair>:  () -> (:rule);
 	<expected-value>: () -> (:rule);
 
-	<err-expected>:  (:rule)          -> ();
-	<err-unmatched>: (:type, :mark &) -> ();
+	<err-expected>:  (:rule)        -> ();
+	<err-unmatched>: (:type, :mark) -> ();
 	<err-syntax>;
+
+	<free-mark>: (:mark) -> ();
 
 	block:     () -> (:code);
 	expr-list: () -> (:code);
@@ -190,12 +192,15 @@
 
 		value: () -> (c :code) = {
 			(t, m) = oparen;
+
 			c = list;
 			{
 				cparen;
 			##
-				<err-unmatched>(t, &m);
+				<err-unmatched>(t, m);
 			};
+
+			<free-mark>(m);
 		||
 			c = item;
 		||
@@ -231,8 +236,10 @@
 		{
 			cbrace;
 		##
-			<err-unmatched>(t, &m);
+			<err-unmatched>(t, m);
 		};
+
+		<free-mark>(m);
 	};
 
 	command: () -> (c :code) = {
@@ -333,12 +340,15 @@
 
 		pair-box: () -> (c :code) = {
 			(t, m) = osquare;
+
 			dx = pair-list;
 			{
 				csquare;
 			##
-				<err-unmatched>(t, &m);
+				<err-unmatched>(t, m);
 			};
+
+			<free-mark>(m);
 
 			c = <empty-code>;
 

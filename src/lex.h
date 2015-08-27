@@ -30,8 +30,6 @@ struct lex_pos {
 	unsigned long col;
 };
 
-typedef char lex_buf[4096];
-
 struct lex_tok {
 	enum lex_type type;
 	struct lex_pos pos;
@@ -40,7 +38,7 @@ struct lex_tok {
 };
 
 struct lex_state {
-	lex_buf buf;
+	char buf[4096];
 	const char *p;
 	FILE *f;
 	struct lex_pos pos;

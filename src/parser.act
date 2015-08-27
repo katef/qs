@@ -47,14 +47,13 @@
 	};
 
 	struct act_mark {
-		lex_buf buf; /* XXX: large; i don't like passing this around in automatic storage */
+		const char *buf;
 		struct lex_pos pos;
 	};
 
 	struct act_state {
 		struct lex_tok t;
 		enum lex_type save;
-		struct act_mark mark;
 		enum err_state e;
 		int (*dispatch)(struct code *);
 	};
@@ -62,7 +61,7 @@
 	typedef struct act_string string;
 	typedef enum opcode opcode;
 	typedef struct code *code;
-	typedef struct act_mark mark;
+	typedef struct act_mark *mark;
 	typedef const char * rule;
 	typedef enum lex_type type;
 
@@ -126,6 +125,27 @@
 		}
 	}
 
+	static struct act_mark *
+	make_mark(const char *buf, struct lex_pos pos)
+	{
+		struct act_mark *new;
+		size_t z;
+
+		assert(buf != NULL);
+
+		z = strlen(buf);
+
+		new = malloc(sizeof *new + z + 1);
+		if (new == NULL) {
+			return NULL;
+		}
+
+		new->buf = strcpy((char *) new + sizeof *new, buf);
+		new->pos = pos;
+
+		return new;
+	}
+
 @}, @{
 
 	#include <stdio.h>
@@ -166,21 +186,30 @@
 	@};
 
 	obrace: () -> (t :type, m :mark) = @{
-		strcpy(@m.buf, lex_state->buf);
-		@m.pos = act_state->t.pos;
-		@t     = act_state->t.type;
+		@m = make_mark(lex_state->buf, act_state->t.pos);
+		if (@m == NULL) {
+			/* TODO: error out */
+		}
+
+		@t = act_state->t.type;
 	@};
 
 	oparen: () -> (t :type, m :mark) = @{
-		strcpy(@m.buf, lex_state->buf);
-		@m.pos = act_state->t.pos;
-		@t     = act_state->t.type;
+		@m = make_mark(lex_state->buf, act_state->t.pos);
+		if (@m == NULL) {
+			/* TODO: error out */
+		}
+
+		@t = act_state->t.type;
 	@};
 
 	osquare: () -> (t :type, m :mark) = @{
-		strcpy(@m.buf, lex_state->buf);
-		@m.pos = act_state->t.pos;
-		@t     = act_state->t.type;
+		@m = make_mark(lex_state->buf, act_state->t.pos);
+		if (@m == NULL) {
+			/* TODO: error out */
+		}
+
+		@t = act_state->t.type;
 	@};
 
 %actions%
@@ -288,11 +317,12 @@
 		}
 	@};
 
-	<err-unmatched>: (t :type, m :mark &) -> () = @{
+	<err-unmatched>: (t :type, m :mark) -> () = @{
 		assert((isprint)(@t));
+		assert(@m != NULL);
 
 		if (act_state->e == ERR_NONE) {
-			err_syntax(@&m->buf, &@&m->pos, "unmatched '%c'", (unsigned char) @t);
+			err_syntax(@m->buf, &@m->pos, "unmatched '%c'", (unsigned char) @t);
 			act_state->e = ERR_SYNTAX;
 		}
 	@};
@@ -306,6 +336,10 @@
 		if (act_state->e == ERR_ERRNO) {
 			@!;
 		}
+	@};
+
+	<free-mark>: (m :mark) -> () = @{
+		free(@m);
 	@};
 
 %trailer% @{
