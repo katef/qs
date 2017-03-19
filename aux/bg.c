@@ -1,3 +1,9 @@
+/*
+ * Copyright 2013-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #include <sys/types.h>
 
 #include <unistd.h>

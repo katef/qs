@@ -1,3 +1,9 @@
+/*
+ * Copyright 2013-2017 Katherine Flavel
+ *
+ * See LICENCE for the full copyright terms.
+ */
+
 #ifndef PAIR_H
 #define PAIR_H
 
