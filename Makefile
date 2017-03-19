@@ -1,4 +1,4 @@
-.MAKEFLAGS: -r -m share
+.MAKEFLAGS: -r -m share/mk
 
 # targets
 all::  mkdir .WAIT dep prog
@@ -18,14 +18,14 @@ KILL   ?= /bin/kill
 SUBDIR += aux
 SUBDIR += src
 
-.include <mk/subdir.mk>
-.include <mk/sid.mk>
-.include <mk/obj.mk>
-.include <mk/dep.mk>
-.include <mk/ar.mk>
-.include <mk/so.mk>
-.include <mk/prog.mk>
-.include <mk/mkdir.mk>
-.include <mk/install.mk>
-.include <mk/clean.mk>
+.include <subdir.mk>
+.include <sid.mk>
+.include <obj.mk>
+.include <dep.mk>
+.include <ar.mk>
+.include <so.mk>
+.include <prog.mk>
+.include <mkdir.mk>
+.include <install.mk>
+.include <clean.mk>
 
