@@ -31,6 +31,7 @@ ${BUILD}/bin/qs: ${BUILD}/${src:R}.o
 
 # not committed, because it's specific to your system
 ${BUILD}/src/signal.o: ${BUILD}/src/siglist.h
+${BUILD}/src/signal.mk: ${BUILD}/src/siglist.h
 ${BUILD}/src/siglist.h:
 	echo 'static const struct siglist siglist[] = {' > $@
 	${KILL} -l                             \
