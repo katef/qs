@@ -23,7 +23,7 @@ PARSER += src/parser.sid
 
 PROG += qs
 
-INCDIR_src/signal.c += ${BUILD}/src
+INCDIR.src/signal.c += ${BUILD}/src
 
 .for src in ${SRC:Msrc/*.c}
 ${BUILD}/bin/qs: ${BUILD}/${src:R}.o
